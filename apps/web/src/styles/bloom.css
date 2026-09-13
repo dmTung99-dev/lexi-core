@@ -2574,6 +2574,21 @@ button.btn-google svg {
   margin: 20px 0 10px;
 }
 
+/* Section headers pair an h3 with a small "✎ Sửa" trigger — the row itself
+   carries the h3's usual vertical rhythm so the two stay on one baseline. */
+.knowledge-detail-col .knowledge-header-row {
+  margin: 20px 0 10px;
+}
+
+.knowledge-detail-col .knowledge-header-row h3 {
+  margin: 0;
+}
+
+.knowledge-header-row .vb-chip {
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
 .knowledge-detail-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

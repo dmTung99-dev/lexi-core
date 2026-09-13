@@ -11,6 +11,10 @@ interface KnowledgeNoteFormFieldsProps {
   targetLanguage: TargetLanguage;
 }
 
+interface FieldProps {
+  form: KnowledgeNoteFormState;
+}
+
 const CEFR_LEVELS: CefrLevel[] = ["a1", "a2", "b1", "b2", "c1", "c2"];
 const NO_CEFR = "";
 const NO_GROUP = "";
@@ -21,41 +25,42 @@ const CEFR_OPTIONS: SimpleDropdownOption<string>[] = [
 ];
 
 /**
- * The form's fields, laid out in two columns by KnowledgeNoteFormPage:
- * prose (title/summary/explanation/pitfalls) on the left, reference
- * material + metadata (patterns/examples/group/CEFR/tags) on the right —
- * mirrors KnowledgeNoteView's detail layout.
+ * Individual fields, exported separately so KnowledgeSectionEditModal can
+ * render just one field/group of fields per section, while
+ * KnowledgeNoteFormFields below composes all of them for the full create
+ * form and the AI-draft review page.
  */
-export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteFormFieldsProps) {
-  const groupOptions: SimpleDropdownOption<string>[] = knowledgeGroupsFor(targetLanguage).map((g) => ({
-    value: g.id,
-    label: g.label,
-  }));
-
-  const titleField = (
-    <label className="modal-field" key="title">
+export function TitleField({ form }: FieldProps) {
+  return (
+    <label className="modal-field">
       <span>Tiêu đề</span>
       <input value={form.title} onChange={(e) => form.setTitle(e.target.value)} />
     </label>
   );
+}
 
-  const summaryField = (
-    <label className="modal-field knowledge-field-summary" key="summary">
+export function SummaryField({ form }: FieldProps) {
+  return (
+    <label className="modal-field knowledge-field-summary">
       <span>Tóm tắt</span>
       <textarea value={form.summary} onChange={(e) => form.setSummary(e.target.value)} />
     </label>
   );
+}
 
-  const explanationField = (
-    <label className="modal-field knowledge-field-explanation" key="explanation">
+export function ExplanationField({ form }: FieldProps) {
+  return (
+    <label className="modal-field knowledge-field-explanation">
       <span>Giải thích</span>
       <textarea value={form.explanation} onChange={(e) => form.setExplanation(e.target.value)} />
       <span className="modal-hint">bọc **...** để in đậm</span>
     </label>
   );
+}
 
-  const patternsField = (
-    <div className="modal-field" key="patterns">
+export function PatternsField({ form }: FieldProps) {
+  return (
+    <div className="modal-field">
       <span>Mẫu câu</span>
       {form.patterns.map((p, i) => (
         <div className="modal-example-row" key={i}>
@@ -75,9 +80,11 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       </button>
     </div>
   );
+}
 
-  const examplesField = (
-    <div className="modal-field" key="examples">
+export function ExamplesField({ form }: FieldProps) {
+  return (
+    <div className="modal-field">
       <span>Ví dụ</span>
       {form.examples.map((ex, i) => (
         <div className="modal-example-row" key={i}>
@@ -108,9 +115,11 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       </button>
     </div>
   );
+}
 
-  const pitfallsField = (
-    <div className="modal-field" key="pitfalls">
+export function PitfallsField({ form }: FieldProps) {
+  return (
+    <div className="modal-field">
       <span>Lỗi thường gặp</span>
       {form.pitfalls.map((p, i) => (
         <div className="modal-example-row" key={i}>
@@ -130,9 +139,16 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       </button>
     </div>
   );
+}
 
-  const groupField = (
-    <div className="modal-field" key="group">
+export function GroupField({ form, targetLanguage }: FieldProps & { targetLanguage: TargetLanguage }) {
+  const groupOptions: SimpleDropdownOption<string>[] = knowledgeGroupsFor(targetLanguage).map((g) => ({
+    value: g.id,
+    label: g.label,
+  }));
+
+  return (
+    <div className="modal-field">
       <span>Nhóm</span>
       <SimpleDropdown
         ariaLabel="Nhóm"
@@ -144,9 +160,11 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       />
     </div>
   );
+}
 
-  const cefrField = (
-    <div className="modal-field" key="cefr">
+export function CefrField({ form }: FieldProps) {
+  return (
+    <div className="modal-field">
       <span>Cấp độ CEFR</span>
       <SimpleDropdown
         ariaLabel="Cấp độ CEFR"
@@ -158,9 +176,11 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       />
     </div>
   );
+}
 
-  const tagsField = (
-    <div className="modal-field" key="tags">
+export function TagsField({ form }: FieldProps) {
+  return (
+    <div className="modal-field">
       <span>Thẻ</span>
       <div className="chip-row">
         {form.tags.map((tag) => (
@@ -181,21 +201,29 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       </div>
     </div>
   );
+}
 
+/**
+ * The full form's fields, laid out in two columns by KnowledgeNoteFormPage:
+ * prose (title/summary/explanation/pitfalls) on the left, reference
+ * material + metadata (patterns/examples/group/CEFR/tags) on the right —
+ * mirrors KnowledgeNoteView's detail layout.
+ */
+export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteFormFieldsProps) {
   return (
     <div className="knowledge-detail-columns">
       <div className="knowledge-detail-col">
-        {titleField}
-        {summaryField}
-        {explanationField}
-        {pitfallsField}
+        <TitleField form={form} />
+        <SummaryField form={form} />
+        <ExplanationField form={form} />
+        <PitfallsField form={form} />
       </div>
       <div className="knowledge-detail-col">
-        {patternsField}
-        {examplesField}
-        {groupField}
-        {cefrField}
-        {tagsField}
+        <PatternsField form={form} />
+        <ExamplesField form={form} />
+        <GroupField form={form} targetLanguage={targetLanguage} />
+        <CefrField form={form} />
+        <TagsField form={form} />
       </div>
     </div>
   );

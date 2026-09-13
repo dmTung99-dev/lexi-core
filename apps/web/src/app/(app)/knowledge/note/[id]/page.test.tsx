@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
-import { getKnowledgeNotes } from "@/lib/knowledgeNotes";
+import { getKnowledgeNotes, upsertKnowledgeNote } from "@/lib/knowledgeNotes";
 import { getVocabRecords } from "@/lib/vocabRecords";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { noteFixture, renderKnowledgePage } from "@/components/knowledge/testUtils";
@@ -14,26 +14,34 @@ vi.mock("@/lib/SettingsContext", () => ({ useSettingsContext: vi.fn() }));
 vi.mock("@/lib/knowledgeNotes", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/knowledgeNotes")>("@/lib/knowledgeNotes");
-  return { ...actual, getKnowledgeNotes: vi.fn() };
+  return { ...actual, getKnowledgeNotes: vi.fn(), upsertKnowledgeNote: vi.fn() };
 });
 vi.mock("@/lib/vocabRecords", () => ({ getVocabRecords: vi.fn() }));
 vi.mock("@/components/SignInButton", () => ({
   SignInButton: () => <button>Đăng nhập với Google</button>,
 }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(upsertKnowledgeNote).mockResolvedValue(undefined);
+});
 
 describe("KnowledgeNoteDetailPage", () => {
-  it("links Sửa to the absolute edit route for this note — the route-level regression test for the broken relative link bug", async () => {
+  it("saving a section edit calls upsertKnowledgeNote with the updated note", async () => {
     renderKnowledgePage(<NoteDetailPage params={Promise.resolve({ id: "n1" })} />, {
       notes: [noteFixture({ id: "n1", title: "Câu điều kiện loại 2" })],
     });
 
     expect(await screen.findByRole("heading", { name: "Câu điều kiện loại 2" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sửa" })).toHaveAttribute(
-      "href",
-      "/knowledge/note/n1/edit",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu đề & tóm tắt" }));
+    fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Tiêu đề mới" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+
+    await waitFor(() => expect(upsertKnowledgeNote).toHaveBeenCalled());
+    expect(vi.mocked(upsertKnowledgeNote).mock.calls[0][1]).toMatchObject({
+      id: "n1",
+      title: "Tiêu đề mới",
+    });
   });
 
   it("still renders the note when the vocab-bank fetch fails", async () => {

@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { useRouteParams } from "@/lib/useRouteParams";
-import { deleteKnowledgeNote, getKnowledgeNotes, type KnowledgeNote } from "@/lib/knowledgeNotes";
+import {
+  deleteKnowledgeNote,
+  getKnowledgeNotes,
+  upsertKnowledgeNote,
+  type KnowledgeNote,
+} from "@/lib/knowledgeNotes";
 import { getVocabRecords } from "@/lib/vocabRecords";
 import { KnowledgeNoteView } from "@/components/knowledge/KnowledgeNoteView";
 import { SignInButton } from "@/components/SignInButton";
@@ -58,10 +63,21 @@ export default function KnowledgeNoteDetailPage({ params }: { params: Promise<{ 
     }
   };
 
+  const handleSaveSection = async (updated: KnowledgeNote) => {
+    await upsertKnowledgeNote(user.uid, updated);
+    setNotes((prev) => (prev ? prev.map((n) => (n.id === updated.id ? updated : n)) : prev));
+  };
+
   return (
     <div>
       {deleteError && <p role="alert">Lỗi xoá ghi chú: {deleteError}</p>}
-      <KnowledgeNoteView note={note} knownHeadwords={knownHeadwords} onDelete={() => void handleDelete()} />
+      <KnowledgeNoteView
+        note={note}
+        knownHeadwords={knownHeadwords}
+        targetLanguage={settings.targetLanguage}
+        onDelete={() => void handleDelete()}
+        onSave={handleSaveSection}
+      />
     </div>
   );
 }

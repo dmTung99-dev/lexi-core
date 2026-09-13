@@ -80,34 +80,4 @@ describe("KnowledgeNoteFormPage", () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/Nhập tiêu đề/)).toBeInTheDocument();
   });
-
-  it("editing an existing note pre-fills the heading with its title", () => {
-    const existingNote: KnowledgeNote = {
-      id: "m2",
-      title: "Ghi chú cũ",
-      summary: "S cũ",
-      explanation: "E cũ",
-      patterns: [],
-      examples: [],
-      pitfalls: [],
-      groupId: "en_conditionals",
-      tags: [],
-      cefrLevel: "b1",
-      targetLanguage: "english",
-      source: "manual",
-      sourcePrompt: null,
-      createdAt: "2019-05-01T00:00:00.000Z",
-      updatedAt: "2019-05-01T00:00:00.000Z",
-    };
-    render(
-      <KnowledgeNoteFormPage
-        initial={existingNote}
-        targetLanguage="english"
-        existingNotes={[existingNote]}
-        onClose={() => {}}
-        onSave={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: 'Sửa "Ghi chú cũ"' })).toBeInTheDocument();
-  });
 });

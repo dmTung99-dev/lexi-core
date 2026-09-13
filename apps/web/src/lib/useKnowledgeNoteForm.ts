@@ -17,8 +17,9 @@ export interface UseKnowledgeNoteFormArgs {
 
 /**
  * All state + save logic for the write/edit/review-draft form, used by
- * KnowledgeNoteFormPage — the full-page create/edit screens, and the
- * "ready" (review-draft) step of the "Nhờ AI soạn" flow. Exactly one of
+ * KnowledgeNoteFormPage (the full-page create screen and the "ready"
+ * review-draft step of "Nhờ AI soạn") and by KnowledgeSectionEditModal
+ * (editing one section of an existing note). Exactly one of
  * `initial` / `draft` is expected; the save formula (id/source/createdAt)
  * is the carried-forward Flutter whole-branch fix: "existing ?? initial"
  * (don't lose origin/createdAt if the notes list hasn't loaded yet) and
