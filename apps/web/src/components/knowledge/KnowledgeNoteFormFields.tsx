@@ -88,18 +88,20 @@ export function ExamplesField({ form }: FieldProps) {
       <span>Ví dụ</span>
       {form.examples.map((ex, i) => (
         <div className="modal-example-row" key={i}>
-          <textarea
-            rows={2}
-            value={ex.text}
-            placeholder="Câu ví dụ"
-            onChange={(e) => form.updateExampleText(i, e.target.value)}
-          />
-          <textarea
-            rows={2}
-            value={ex.translation}
-            placeholder="Bản dịch"
-            onChange={(e) => form.updateExampleTranslation(i, e.target.value)}
-          />
+          <div className="knowledge-example-fields">
+            <textarea
+              rows={2}
+              value={ex.text}
+              placeholder="Câu ví dụ"
+              onChange={(e) => form.updateExampleText(i, e.target.value)}
+            />
+            <textarea
+              rows={2}
+              value={ex.translation}
+              placeholder="Bản dịch"
+              onChange={(e) => form.updateExampleTranslation(i, e.target.value)}
+            />
+          </div>
           <button
             type="button"
             className="closex"

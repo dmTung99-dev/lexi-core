@@ -639,7 +639,7 @@ p.scr-sub {
 
 .modal-example-row {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 10px;
   margin-bottom: 8px;
 }
@@ -649,16 +649,24 @@ p.scr-sub {
   flex: 1;
 }
 
-/* closex has an explicit fixed size, so flex stretch leaves it alone by
-   spec — pinned here anyway for clarity/robustness across browsers. */
-.modal-example-row .closex {
-  align-self: flex-start;
+/* Ví dụ: câu and dịch stack top/bottom in their own column instead of
+   sitting side by side, so a longer translation just grows downward under
+   its own sentence instead of needing to match a sibling's width/height. */
+.knowledge-example-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Mẫu câu / Ví dụ rows: maxLine = 2. field-sizing lets each textarea size
-   itself to its own content between 1 and 2 lines; align-items: stretch
-   then matches câu and dịch to the taller of the pair, so they stay
-   visually paired instead of one scrolling while the other doesn't. */
+.knowledge-example-fields textarea {
+  flex: none;
+}
+
+/* Mẫu câu / Ví dụ: maxLine = 2. field-sizing lets each textarea size
+   itself to its own content between 1 and 2 lines instead of always
+   rendering at a flat height. */
 .modal-example-row textarea {
   field-sizing: content;
   min-height: 51px;
