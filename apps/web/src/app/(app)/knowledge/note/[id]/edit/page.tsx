@@ -6,7 +6,7 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { useRouteParams } from "@/lib/useRouteParams";
 import { getKnowledgeNotes, upsertKnowledgeNote, type KnowledgeNote } from "@/lib/knowledgeNotes";
-import { EditKnowledgeNoteModal } from "@/components/knowledge/EditKnowledgeNoteModal";
+import { KnowledgeNoteFormPage } from "@/components/knowledge/KnowledgeNoteFormPage";
 import { SignInButton } from "@/components/SignInButton";
 
 export default function KnowledgeNoteEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,7 +45,7 @@ export default function KnowledgeNoteEditPage({ params }: { params: Promise<{ id
   };
 
   return (
-    <EditKnowledgeNoteModal
+    <KnowledgeNoteFormPage
       initial={note}
       targetLanguage={settings.targetLanguage}
       existingNotes={notes}

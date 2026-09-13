@@ -2562,6 +2562,48 @@ button.btn-google svg {
   }
 }
 
+/* Scoped to the two-column form (KnowledgeNoteFormPage): .modal-field
+   normally gets its vertical rhythm from .modal-body's flex `gap`, but
+   here it's a plain block child of .knowledge-detail-col instead. */
+.knowledge-detail-columns .modal-field {
+  margin-bottom: 18px;
+}
+
+.knowledge-detail-columns .modal-field:last-child {
+  margin-bottom: 0;
+}
+
+.knowledge-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.knowledge-form-actions button {
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 11px 20px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.knowledge-form-actions button.save-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.knowledge-form-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .knowledge-patterns-grid,
 .knowledge-examples-grid {
   display: grid;

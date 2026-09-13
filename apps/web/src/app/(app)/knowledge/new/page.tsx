@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { getKnowledgeNotes, upsertKnowledgeNote, type KnowledgeNote } from "@/lib/knowledgeNotes";
-import { EditKnowledgeNoteModal } from "@/components/knowledge/EditKnowledgeNoteModal";
+import { KnowledgeNoteFormPage } from "@/components/knowledge/KnowledgeNoteFormPage";
 import { SignInButton } from "@/components/SignInButton";
 
 export default function KnowledgeNewPage() {
@@ -34,7 +34,7 @@ export default function KnowledgeNewPage() {
   if (settingsLoading || !settings || notes === null) return <p>Đang tải…</p>;
 
   return (
-    <EditKnowledgeNoteModal
+    <KnowledgeNoteFormPage
       targetLanguage={settings.targetLanguage}
       existingNotes={notes}
       onSave={async (note) => {
