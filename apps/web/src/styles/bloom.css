@@ -639,7 +639,7 @@ p.scr-sub {
 
 .modal-example-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   margin-bottom: 8px;
 }
@@ -649,18 +649,25 @@ p.scr-sub {
   flex: 1;
 }
 
-/* Mẫu câu / Ví dụ rows: maxLine = 2. */
+/* closex has an explicit fixed size, so flex stretch leaves it alone by
+   spec — pinned here anyway for clarity/robustness across browsers. */
+.modal-example-row .closex {
+  align-self: flex-start;
+}
+
+/* Mẫu câu / Ví dụ rows: maxLine = 2. field-sizing lets each textarea size
+   itself to its own content between 1 and 2 lines; align-items: stretch
+   then matches câu and dịch to the taller of the pair, so they stay
+   visually paired instead of one scrolling while the other doesn't. */
 .modal-example-row textarea {
-  height: 78px;
-  min-height: 78px;
+  field-sizing: content;
+  min-height: 51px;
   max-height: 78px;
   resize: none;
 }
 
 /* Lỗi thường gặp rows: maxLine = 4. */
 .knowledge-field-pitfalls .modal-example-row textarea {
-  height: 132px;
-  min-height: 132px;
   max-height: 132px;
 }
 
