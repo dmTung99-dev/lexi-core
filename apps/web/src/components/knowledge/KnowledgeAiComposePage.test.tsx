@@ -9,7 +9,7 @@ vi.mock("@/lib/SettingsContext", () => ({
 
 import { generateContent } from "@/lib/generateContent";
 import { useSettingsContext } from "@/lib/SettingsContext";
-import { AiComposeModal } from "./AiComposeModal";
+import { KnowledgeAiComposePage } from "./KnowledgeAiComposePage";
 import { noteFixture } from "./testUtils";
 
 const WITH_KEY = {
@@ -47,15 +47,32 @@ const okDraft = JSON.stringify({
   relatedNoteId: null,
 });
 
-describe("AiComposeModal", () => {
+describe("KnowledgeAiComposePage", () => {
   beforeEach(() => {
     vi.mocked(useSettingsContext).mockReturnValue(WITH_KEY as never);
   });
 
-  it("Layer-1 hit → shows the related banner; 'Vẫn tạo mới' generates and opens the editor", async () => {
+  it("is a plain page, not a modal — no dialog role, no backdrop", () => {
+    const { container } = render(
+      <KnowledgeAiComposePage existingNotes={[]} targetLanguage="english" onClose={() => {}} onSaved={vi.fn()} />,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(container.querySelector(".modal-backdrop")).toBeNull();
+  });
+
+  it("the back link calls onClose", () => {
+    const onClose = vi.fn();
+    render(
+      <KnowledgeAiComposePage existingNotes={[]} targetLanguage="english" onClose={onClose} onSaved={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "← Quay lại" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Layer-1 hit → shows the related banner; 'Vẫn tạo mới' generates and opens the full-page editor", async () => {
     vi.mocked(generateContent).mockResolvedValue({ text: okDraft });
     render(
-      <AiComposeModal
+      <KnowledgeAiComposePage
         existingNotes={[noteFixture({ id: "a", title: "Câu điều kiện loại 2 và 3" })]}
         targetLanguage="english"
         onClose={() => {}}
@@ -72,13 +89,16 @@ describe("AiComposeModal", () => {
     // after "Vẫn tạo mới" — not dropped/reset across that transition.
     const call = vi.mocked(generateContent).mock.calls.at(-1)?.[0];
     expect(call?.prompt).toContain("câu điều kiện loại 2");
+    // "ready" hands off to KnowledgeNoteFormPage — still no modal, a real
+    // page with the two-column layout, and the draft is prefilled.
     expect(await screen.findByDisplayValue("Câu điều kiện loại 2")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("no API key → shows the Cài đặt hint, no Soạn button", () => {
     vi.mocked(useSettingsContext).mockReturnValue(WITHOUT_KEY as never);
     render(
-      <AiComposeModal existingNotes={[]} targetLanguage="english" onClose={() => {}} onSaved={vi.fn()} />,
+      <KnowledgeAiComposePage existingNotes={[]} targetLanguage="english" onClose={() => {}} onSaved={vi.fn()} />,
     );
     expect(screen.getByText(/Cài đặt/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Soạn" })).not.toBeInTheDocument();
@@ -86,7 +106,9 @@ describe("AiComposeModal", () => {
 
   it("generateContent throws → error state + Thử lại", async () => {
     vi.mocked(generateContent).mockRejectedValue(new Error("boom"));
-    render(<AiComposeModal existingNotes={[]} targetLanguage="english" onClose={() => {}} onSaved={vi.fn()} />);
+    render(
+      <KnowledgeAiComposePage existingNotes={[]} targetLanguage="english" onClose={() => {}} onSaved={vi.fn()} />,
+    );
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "chủ đề mới toanh" } });
     fireEvent.click(screen.getByRole("button", { name: "Soạn" }));
     expect(await screen.findByText(/Không tạo được/)).toBeInTheDocument();

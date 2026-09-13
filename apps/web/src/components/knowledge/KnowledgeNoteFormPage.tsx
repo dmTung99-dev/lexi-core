@@ -55,7 +55,7 @@ export function KnowledgeNoteFormPage({
       <h2>{heading}</h2>
       {form.error && <p role="alert">Lỗi lưu: {form.error}</p>}
 
-      <KnowledgeNoteFormFields form={form} targetLanguage={targetLanguage} twoColumn />
+      <KnowledgeNoteFormFields form={form} targetLanguage={targetLanguage} />
 
       <div className="knowledge-form-actions">
         <button onClick={onClose} disabled={form.saving}>

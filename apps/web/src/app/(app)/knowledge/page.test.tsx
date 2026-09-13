@@ -83,21 +83,23 @@ describe("KnowledgePage", () => {
     expect(getKnowledgeNotes).toHaveBeenCalledWith("u1", "english");
   });
 
-  it("'+ Nhờ AI soạn' opens the AI-compose modal", async () => {
+  it("'+ Nhờ AI soạn' links to the compose page", async () => {
     renderKnowledgePage(<KnowledgePage />, {
       notes: [noteFixture({ id: "n1", groupId: "en_tenses", title: "Thì hiện tại đơn" })],
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "+ Nhờ AI soạn" }));
-
-    expect(await screen.findByRole("dialog", { name: "Nhờ AI soạn" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "+ Nhờ AI soạn" })).toHaveAttribute(
+      "href",
+      "/knowledge/compose",
+    );
   });
 
-  it("empty-state 'Nhờ AI soạn' opens the AI-compose modal", async () => {
+  it("empty-state 'Nhờ AI soạn' links to the compose page", async () => {
     renderKnowledgePage(<KnowledgePage />, { notes: [] });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Nhờ AI soạn" }));
-
-    expect(await screen.findByRole("dialog", { name: "Nhờ AI soạn" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Nhờ AI soạn" })).toHaveAttribute(
+      "href",
+      "/knowledge/compose",
+    );
   });
 });

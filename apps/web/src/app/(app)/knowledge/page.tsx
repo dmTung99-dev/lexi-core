@@ -2,16 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
-import {
-  getKnowledgeNotes,
-  restoreStarters,
-  seedStartersIfNeeded,
-  upsertKnowledgeNote,
-  type KnowledgeNote,
-} from "@/lib/knowledgeNotes";
+import { getKnowledgeNotes, restoreStarters, seedStartersIfNeeded, type KnowledgeNote } from "@/lib/knowledgeNotes";
 import { startersFor } from "@/lib/knowledgeStarters";
 import {
   applyKnowledgeFilter,
@@ -21,7 +14,6 @@ import {
 } from "@/lib/knowledgeFilters";
 import { KnowledgeGroupGrid } from "@/components/knowledge/KnowledgeGroupGrid";
 import { KnowledgeNoteCard } from "@/components/knowledge/KnowledgeNoteCard";
-import { AiComposeModal } from "@/components/knowledge/AiComposeModal";
 import { SignInButton } from "@/components/SignInButton";
 
 const EXAMPLE_PROMPTS = [
@@ -31,13 +23,11 @@ const EXAMPLE_PROMPTS = [
 ];
 
 export default function KnowledgePage() {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
   const { settings, loading: settingsLoading } = useSettingsContext();
   const [notes, setNotes] = useState<KnowledgeNote[] | null>(null);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const [composing, setComposing] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -116,9 +106,9 @@ export default function KnowledgePage() {
                 <li key={prompt}>{prompt}</li>
               ))}
             </ul>
-            <button type="button" className="btn-primary" onClick={() => setComposing(true)}>
+            <Link href="/knowledge/compose" className="btn-primary">
               Nhờ AI soạn
-            </button>
+            </Link>
           </div>
           <Link href="/knowledge/new" className="knowledge-write-link">
             + Tự viết
@@ -165,26 +155,14 @@ export default function KnowledgePage() {
           )}
 
           <div className="knowledge-bottom-actions">
-            <button type="button" className="btn-primary" onClick={() => setComposing(true)}>
+            <Link href="/knowledge/compose" className="btn-primary">
               + Nhờ AI soạn
-            </button>
+            </Link>
             <Link href="/knowledge/new" className="btn-secondary">
               + Tự viết
             </Link>
           </div>
         </>
-      )}
-
-      {composing && (
-        <AiComposeModal
-          existingNotes={notes}
-          targetLanguage={language}
-          onClose={() => setComposing(false)}
-          onSaved={async (note) => {
-            await upsertKnowledgeNote(user.uid, note);
-            router.push(`/knowledge/note/${note.id}`);
-          }}
-        />
       )}
     </div>
   );

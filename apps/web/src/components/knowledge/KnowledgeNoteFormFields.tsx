@@ -9,8 +9,6 @@ import { SimpleDropdown, type SimpleDropdownOption } from "@/components/shared/S
 interface KnowledgeNoteFormFieldsProps {
   form: KnowledgeNoteFormState;
   targetLanguage: TargetLanguage;
-  /** Two-column layout (full-page create/edit) instead of one flat stack (modal). */
-  twoColumn?: boolean;
 }
 
 const CEFR_LEVELS: CefrLevel[] = ["a1", "a2", "b1", "b2", "c1", "c2"];
@@ -23,11 +21,12 @@ const CEFR_OPTIONS: SimpleDropdownOption<string>[] = [
 ];
 
 /**
- * The form's fields, shared by the modal (single flat column) and the
- * full-page create/edit screens (two columns: prose on the left, reference
- * material + metadata on the right — mirrors KnowledgeNoteView's layout).
+ * The form's fields, laid out in two columns by KnowledgeNoteFormPage:
+ * prose (title/summary/explanation/pitfalls) on the left, reference
+ * material + metadata (patterns/examples/group/CEFR/tags) on the right —
+ * mirrors KnowledgeNoteView's detail layout.
  */
-export function KnowledgeNoteFormFields({ form, targetLanguage, twoColumn }: KnowledgeNoteFormFieldsProps) {
+export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteFormFieldsProps) {
   const groupOptions: SimpleDropdownOption<string>[] = knowledgeGroupsFor(targetLanguage).map((g) => ({
     value: g.id,
     label: g.label,
@@ -180,22 +179,6 @@ export function KnowledgeNoteFormFields({ form, targetLanguage, twoColumn }: Kno
       </div>
     </div>
   );
-
-  if (!twoColumn) {
-    return (
-      <>
-        {titleField}
-        {summaryField}
-        {explanationField}
-        {patternsField}
-        {examplesField}
-        {pitfallsField}
-        {groupField}
-        {cefrField}
-        {tagsField}
-      </>
-    );
-  }
 
   return (
     <div className="knowledge-detail-columns">

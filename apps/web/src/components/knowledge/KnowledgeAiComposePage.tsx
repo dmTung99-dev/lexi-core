@@ -14,10 +14,10 @@ import type { CefrLevel, KnowledgeNote } from "@/lib/knowledgeNotes";
 import type { TargetLanguage } from "@/lib/languages";
 import { knowledgeGroupsFor } from "@/lib/knowledgeGroups";
 import { SimpleDropdown, type SimpleDropdownOption } from "@/components/shared/SimpleDropdown";
-import { EditKnowledgeNoteModal } from "@/components/knowledge/EditKnowledgeNoteModal";
+import { KnowledgeNoteFormPage } from "@/components/knowledge/KnowledgeNoteFormPage";
 import { RelatedNotesBanner } from "@/components/knowledge/RelatedNotesBanner";
 
-interface AiComposeModalProps {
+interface KnowledgeAiComposePageProps {
   existingNotes: KnowledgeNote[];
   targetLanguage: TargetLanguage;
   onClose: () => void;
@@ -35,15 +35,14 @@ interface GenerateOpts {
   // Only true for the very first ("Soạn") submission when Layer 1 found no
   // client-side match — a fresh attempt may still resolve as a Layer-2 (AI
   // flagged `relatedNoteId`) hit. Never true for a proceedNew/extend
-  // regeneration, matching the task-13 brief.
+  // regeneration.
   resolveLayer2: boolean;
 }
 
 // Every non-idle state carries the `request` (and hint) that produced it, so
 // a regeneration triggered from ANY of these states (RelatedNotesBanner's
 // onExtend/onProceedNew, or "Thử lại" after an error) always has the
-// original request available — never a stale/empty closure capture. This is
-// the exact bug the Flutter port of this flow had to fix in review.
+// original request available — never a stale/empty closure capture.
 type ComposeState =
   | { status: "idle"; request: string; hints: Hints }
   | { status: "loading" }
@@ -59,7 +58,18 @@ const CEFR_OPTIONS: SimpleDropdownOption<string>[] = [
   ...CEFR_LEVELS.map((level) => ({ value: level, label: level.toUpperCase() })),
 ];
 
-export function AiComposeModal({ existingNotes, targetLanguage, onClose, onSaved }: AiComposeModalProps) {
+/**
+ * The "Nhờ AI soạn" flow as a full page (not a modal) — request → Layer-1
+ * dedup banner → generate → Layer-2 dedup banner / review. The "ready" step
+ * hands off to KnowledgeNoteFormPage, the same full-page form used by
+ * standalone create/edit, so review looks identical either way.
+ */
+export function KnowledgeAiComposePage({
+  existingNotes,
+  targetLanguage,
+  onClose,
+  onSaved,
+}: KnowledgeAiComposePageProps) {
   const { settings } = useSettingsContext();
   const [state, setState] = useState<ComposeState>({
     status: "idle",
@@ -78,8 +88,7 @@ export function AiComposeModal({ existingNotes, targetLanguage, onClose, onSaved
   }));
 
   // Explicit params (never read from `state`) so the caller decides exactly
-  // which request/hints/note this generation is for — see the ComposeState
-  // comment above for why that matters.
+  // which request/hints/note this generation is for.
   async function generate(request: string, hints: Hints, opts: GenerateOpts) {
     if (!activeConfig.apiKeyCiphertext) return;
     setState({ status: "loading" });
@@ -139,30 +148,9 @@ export function AiComposeModal({ existingNotes, targetLanguage, onClose, onSaved
     }
   }
 
-  if (!aiAvailable) {
-    return (
-      <div className="modal-backdrop" role="presentation" onClick={onClose}>
-        <div className="modal" role="dialog" aria-label="Nhờ AI soạn" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3>Nhờ AI soạn</h3>
-            <button className="closex" onClick={onClose} aria-label="Đóng">
-              ✕
-            </button>
-          </div>
-          <div className="modal-body">
-            <p className="compose-ai-hint">
-              Chưa có API key cho nhà cung cấp AI đang chọn — vào Cài đặt để thêm và nhờ AI soạn ghi
-              chú.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (state.status === "ready") {
     return (
-      <EditKnowledgeNoteModal
+      <KnowledgeNoteFormPage
         draft={state.draft}
         overwriteNoteId={state.overwriteNoteId}
         sourcePrompt={state.sourcePrompt}
@@ -174,113 +162,118 @@ export function AiComposeModal({ existingNotes, targetLanguage, onClose, onSaved
     );
   }
 
+  if (!aiAvailable) {
+    return (
+      <div className="knowledge-detail">
+        <button type="button" className="link-btn knowledge-back-link" onClick={onClose}>
+          ← Quay lại
+        </button>
+        <h2>Nhờ AI soạn</h2>
+        <p className="compose-ai-hint">
+          Chưa có API key cho nhà cung cấp AI đang chọn — vào Cài đặt để thêm và nhờ AI soạn ghi chú.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <div className="modal" role="dialog" aria-label="Nhờ AI soạn" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Nhờ AI soạn</h3>
-          <button className="closex" onClick={onClose} aria-label="Đóng">
-            ✕
+    <div className="knowledge-detail">
+      <button type="button" className="link-btn knowledge-back-link" onClick={onClose}>
+        ← Quay lại
+      </button>
+      <h2>Nhờ AI soạn</h2>
+
+      {state.status === "loading" && <p className="compose-loading">Đang soạn…</p>}
+
+      {state.status === "related" && (
+        <RelatedNotesBanner
+          related={state.related}
+          onOpen={() => onClose()}
+          onExtend={(note) =>
+            void generate(state.request, state.hints, {
+              extendingNote: note,
+              overwriteNoteId: note.id,
+              resolveLayer2: false,
+            })
+          }
+          onProceedNew={() =>
+            void generate(state.request, state.hints, {
+              extendingNote: null,
+              overwriteNoteId: null,
+              resolveLayer2: false,
+            })
+          }
+        />
+      )}
+
+      {state.status === "error" && (
+        <div>
+          <p role="alert">Không tạo được ghi chú: {state.message}</p>
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setState({ status: "idle", request: state.request, hints: state.hints })}
+          >
+            Thử lại
           </button>
         </div>
-        <div className="modal-body">
-          {state.status === "loading" && <p className="compose-loading">Đang soạn…</p>}
+      )}
 
-          {state.status === "related" && (
-            <RelatedNotesBanner
-              related={state.related}
-              onOpen={() => onClose()}
-              onExtend={(note) =>
-                void generate(state.request, state.hints, {
-                  extendingNote: note,
-                  overwriteNoteId: note.id,
-                  resolveLayer2: false,
-                })
-              }
-              onProceedNew={() =>
-                void generate(state.request, state.hints, {
-                  extendingNote: null,
-                  overwriteNoteId: null,
-                  resolveLayer2: false,
-                })
-              }
+      {state.status === "idle" && (
+        <>
+          <label className="modal-field">
+            <span>Bạn muốn ghi chú về điều gì?</span>
+            <textarea
+              value={state.request}
+              placeholder="Ví dụ: câu điều kiện loại 2"
+              onChange={(e) => setState({ status: "idle", request: e.target.value, hints: state.hints })}
             />
-          )}
-
-          {state.status === "error" && (
-            <div>
-              <p role="alert">Không tạo được ghi chú: {state.message}</p>
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => setState({ status: "idle", request: state.request, hints: state.hints })}
-              >
-                Thử lại
-              </button>
+          </label>
+          <div className="modal-field">
+            <span>Gợi ý (tuỳ chọn)</span>
+            <div className="chip-row">
+              <SimpleDropdown
+                ariaLabel="Nhóm gợi ý"
+                triggerLabel={
+                  state.hints.groupId
+                    ? (groupOptions.find((g) => g.value === state.hints.groupId)?.label ?? "Chọn nhóm")
+                    : "Chọn nhóm"
+                }
+                options={groupOptions}
+                value={state.hints.groupId ?? NO_GROUP}
+                onChange={(v) =>
+                  setState({
+                    status: "idle",
+                    request: state.request,
+                    hints: { ...state.hints, groupId: v === NO_GROUP ? null : v },
+                  })
+                }
+                active={state.hints.groupId !== null}
+              />
+              <SimpleDropdown
+                ariaLabel="Cấp độ CEFR gợi ý"
+                triggerLabel={state.hints.cefr ? state.hints.cefr.toUpperCase() : "Cấp độ CEFR"}
+                options={CEFR_OPTIONS}
+                value={state.hints.cefr ?? NO_CEFR}
+                onChange={(v) =>
+                  setState({
+                    status: "idle",
+                    request: state.request,
+                    hints: { ...state.hints, cefr: v === NO_CEFR ? null : (v as CefrLevel) },
+                  })
+                }
+                active={state.hints.cefr !== null}
+              />
             </div>
-          )}
-
-          {state.status === "idle" && (
-            <>
-              <label className="modal-field">
-                <span>Bạn muốn ghi chú về điều gì?</span>
-                <textarea
-                  value={state.request}
-                  placeholder="Ví dụ: câu điều kiện loại 2"
-                  onChange={(e) =>
-                    setState({ status: "idle", request: e.target.value, hints: state.hints })
-                  }
-                />
-              </label>
-              <div className="modal-field">
-                <span>Gợi ý (tuỳ chọn)</span>
-                <div className="chip-row">
-                  <SimpleDropdown
-                    ariaLabel="Nhóm gợi ý"
-                    triggerLabel={
-                      state.hints.groupId
-                        ? (groupOptions.find((g) => g.value === state.hints.groupId)?.label ?? "Chọn nhóm")
-                        : "Chọn nhóm"
-                    }
-                    options={groupOptions}
-                    value={state.hints.groupId ?? NO_GROUP}
-                    onChange={(v) =>
-                      setState({
-                        status: "idle",
-                        request: state.request,
-                        hints: { ...state.hints, groupId: v === NO_GROUP ? null : v },
-                      })
-                    }
-                    active={state.hints.groupId !== null}
-                  />
-                  <SimpleDropdown
-                    ariaLabel="Cấp độ CEFR gợi ý"
-                    triggerLabel={state.hints.cefr ? state.hints.cefr.toUpperCase() : "Cấp độ CEFR"}
-                    options={CEFR_OPTIONS}
-                    value={state.hints.cefr ?? NO_CEFR}
-                    onChange={(v) =>
-                      setState({
-                        status: "idle",
-                        request: state.request,
-                        hints: { ...state.hints, cefr: v === NO_CEFR ? null : (v as CefrLevel) },
-                      })
-                    }
-                    active={state.hints.cefr !== null}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        {state.status === "idle" && (
-          <div className="modal-footer">
+          </div>
+          <div className="knowledge-form-actions">
             <button onClick={onClose}>Huỷ</button>
             <button className="save-btn" onClick={handleCompose} disabled={state.request.trim().length === 0}>
               Soạn
             </button>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
