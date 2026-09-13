@@ -40,14 +40,14 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
   );
 
   const summaryField = (
-    <label className="modal-field" key="summary">
+    <label className="modal-field knowledge-field-summary" key="summary">
       <span>Tóm tắt</span>
       <textarea value={form.summary} onChange={(e) => form.setSummary(e.target.value)} />
     </label>
   );
 
   const explanationField = (
-    <label className="modal-field" key="explanation">
+    <label className="modal-field knowledge-field-explanation" key="explanation">
       <span>Giải thích</span>
       <textarea value={form.explanation} onChange={(e) => form.setExplanation(e.target.value)} />
       <span className="modal-hint">bọc **...** để in đậm</span>
@@ -59,7 +59,7 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       <span>Mẫu câu</span>
       {form.patterns.map((p, i) => (
         <div className="modal-example-row" key={i}>
-          <input value={p} onChange={(e) => form.updatePattern(i, e.target.value)} />
+          <textarea rows={2} value={p} onChange={(e) => form.updatePattern(i, e.target.value)} />
           <button
             type="button"
             className="closex"
@@ -81,12 +81,14 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       <span>Ví dụ</span>
       {form.examples.map((ex, i) => (
         <div className="modal-example-row" key={i}>
-          <input
+          <textarea
+            rows={2}
             value={ex.text}
             placeholder="Câu ví dụ"
             onChange={(e) => form.updateExampleText(i, e.target.value)}
           />
-          <input
+          <textarea
+            rows={2}
             value={ex.translation}
             placeholder="Bản dịch"
             onChange={(e) => form.updateExampleTranslation(i, e.target.value)}
@@ -112,7 +114,7 @@ export function KnowledgeNoteFormFields({ form, targetLanguage }: KnowledgeNoteF
       <span>Lỗi thường gặp</span>
       {form.pitfalls.map((p, i) => (
         <div className="modal-example-row" key={i}>
-          <input value={p} onChange={(e) => form.updatePitfall(i, e.target.value)} />
+          <textarea rows={2} value={p} onChange={(e) => form.updatePitfall(i, e.target.value)} />
           <button
             type="button"
             className="closex"

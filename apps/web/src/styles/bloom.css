@@ -621,15 +621,32 @@ p.scr-sub {
   resize: vertical;
 }
 
+/* Tóm tắt / Giải thích carry the bulk of a note's content — give them a lot
+   more room than the default textarea before the user has to scroll. */
+.knowledge-field-summary textarea {
+  min-height: 130px;
+}
+
+.knowledge-field-explanation textarea {
+  min-height: 280px;
+}
+
 .modal-example-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   margin-bottom: 8px;
 }
 
-.modal-example-row input {
+.modal-example-row input,
+.modal-example-row textarea {
   flex: 1;
+}
+
+.modal-example-row textarea {
+  /* Mẫu câu / Ví dụ / Lỗi thường gặp rows: at least ~2 lines visible so
+     longer content doesn't get clipped like a single-line <input> would. */
+  min-height: 56px;
 }
 
 .link-btn {
