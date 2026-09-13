@@ -621,14 +621,20 @@ p.scr-sub {
   resize: vertical;
 }
 
-/* Tóm tắt / Giải thích carry the bulk of a note's content — give them a lot
-   more room than the default textarea before the user has to scroll. */
+/* Tóm tắt carries a lot of a note's content — give it more room than the
+   default textarea before the user has to scroll. Giải thích, the row
+   fields below, and Lỗi thường gặp all get an explicit maxLine cap instead
+   (fixed height + internal scroll past that many lines). */
 .knowledge-field-summary textarea {
   min-height: 130px;
 }
 
+/* maxLine = 15 (18px font, 1.5 line-height => 27px/line) + field padding/border. */
 .knowledge-field-explanation textarea {
-  min-height: 280px;
+  height: 429px;
+  min-height: 429px;
+  max-height: 429px;
+  resize: none;
 }
 
 .modal-example-row {
@@ -643,10 +649,19 @@ p.scr-sub {
   flex: 1;
 }
 
+/* Mẫu câu / Ví dụ rows: maxLine = 2. */
 .modal-example-row textarea {
-  /* Mẫu câu / Ví dụ / Lỗi thường gặp rows: at least ~2 lines visible so
-     longer content doesn't get clipped like a single-line <input> would. */
-  min-height: 56px;
+  height: 78px;
+  min-height: 78px;
+  max-height: 78px;
+  resize: none;
+}
+
+/* Lỗi thường gặp rows: maxLine = 4. */
+.knowledge-field-pitfalls .modal-example-row textarea {
+  height: 132px;
+  min-height: 132px;
+  max-height: 132px;
 }
 
 .link-btn {

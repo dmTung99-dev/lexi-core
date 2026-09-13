@@ -119,7 +119,7 @@ export function ExamplesField({ form }: FieldProps) {
 
 export function PitfallsField({ form }: FieldProps) {
   return (
-    <div className="modal-field">
+    <div className="modal-field knowledge-field-pitfalls">
       <span>Lỗi thường gặp</span>
       {form.pitfalls.map((p, i) => (
         <div className="modal-example-row" key={i}>
