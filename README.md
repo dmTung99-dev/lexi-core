@@ -123,14 +123,10 @@ Tab riêng trên thanh điều hướng ("Tiến độ", giữa "Luyện tập" 
 - Từ đến hạn ôn tập hôm nay
 - Thống kê phân bố cấp độ CEFR
 
-### Đồng bộ đám mây (Firebase Sync) — app mobile
-- **Offline-first:** Hive là nguồn dữ liệu chính (app mobile; app web React đọc/ghi Firestore trực tiếp, không có lớp lưu cục bộ)
-- Đăng nhập Google để đồng bộ tự động lên Firestore
-- Đồng bộ hai chiều thời gian thực (Hive ↔ Firestore)
-- Ngăn echo-loop: guard set chặn lại Firestore write do chính sync tạo ra
-- Phát hiện từ trùng lặp O(1) bằng headword-index (`headword|language → id`)
-- Xử lý xung đột: giữ phiên bản mới hơn theo `updatedAt`
-- Cô lập tài khoản: xóa Hive khi đăng nhập tài khoản khác (không xóa khi đăng xuất)
+### Đồng bộ dữ liệu (Firebase) — cả 2 nền tảng
+- **Bắt buộc đăng nhập Google** để dùng app (không có chế độ ẩn danh/dùng thử) — cả app Flutter lẫn web React đều đọc/ghi **thẳng Cloud Firestore**, không qua backend trung gian cho CRUD từ vựng/chủ đề/bài luyện/ghi chú
+- **Không còn lớp cache cục bộ (offline-first) cho dữ liệu học tập** — khác kiến trúc ban đầu (Plan 2-4): `VocabRepositoryImpl` gọi Firestore trực tiếp trên mọi thao tác đọc/ghi, không có Hive ở đường đi runtime nữa; mất mạng thì thao tác lỗi thẳng, không có bản cache để hiển thị tạm
+- **Hive chỉ còn tồn tại như một bước di trú một lần** (`HiveMigrationService`) — dành cho tài khoản đã dùng app **trước khi** đăng nhập trở thành bắt buộc: khi tài khoản đó đăng nhập lần đầu sau nâng cấp, dữ liệu Hive cục bộ cũ (nếu còn) được đẩy lên Firestore đúng 1 lần rồi xoá box Hive; không chạy lại lần hai, và không đụng gì nếu Firestore của tài khoản đó đã có dữ liệu (tránh ghi đè bản mới hơn bằng bản Hive cũ hơn)
 - Cấu hình AI (provider, model) + API key **đã mã hoá** đồng bộ lên `users/{uid}/settings/config` — **dùng chung với app web**. Key dạng plaintext không bao giờ ghi lên Firestore / không bao giờ log.
 
 ### AI đa nhà cung cấp (Multi-Provider AI)
@@ -164,7 +160,8 @@ Hỗ trợ 3 nhà cung cấp LLM, có thể chuyển đổi trong Cài đặt:
 | Framework (web) | Next.js / React — [`apps/web/`](apps/web/), deploy Firebase App Hosting |
 | State Management | [Riverpod](https://riverpod.dev/) + `riverpod_annotation` + `build_runner` |
 | Routing | [go_router](https://pub.dev/packages/go_router) |
-| Local Storage | [Hive](https://pub.dev/packages/hive) + `hive_flutter` (app mobile) |
+| Lưu trữ chính | Cloud Firestore — client đọc/ghi trực tiếp, cả 2 nền tảng, không có lớp cache cục bộ |
+| Local Storage (chỉ di trú dữ liệu cũ) | [Hive](https://pub.dev/packages/hive) + `hive_flutter` (app mobile) — không còn dùng làm cache runtime, chỉ `HiveMigrationService` chạy 1 lần cho tài khoản dùng app trước khi bắt buộc đăng nhập |
 | User Preferences | [shared_preferences](https://pub.dev/packages/shared_preferences) |
 | Auth & Cloud | Firebase Auth + Cloud Firestore + Google Sign-In |
 | AI — Gemini | [google_generative_ai](https://pub.dev/packages/google_generative_ai) |
@@ -185,8 +182,8 @@ lib/
 │   ├── di/                  # Riverpod providers tổng hợp (app_providers.dart)
 │   ├── router/              # go_router cấu hình (app_router.dart)
 │   ├── services/
-│   │   ├── ai_client_factory.dart   # Factory đa provider (Gemini SDK / OpenAI HTTP)
-│   │   ├── sync_service.dart        # Hive ↔ Firestore bidirectional sync
+│   │   ├── ai_client_factory.dart   # Factory đa provider — mọi client proxy qua Cloud Function generateContent
+│   │   ├── hive_migration_service.dart  # Di trú Hive cũ → Firestore, chạy đúng 1 lần (không phải sync runtime)
 │   │   ├── stats_service.dart       # Tính toán tiến độ học tập
 │   │   └── notification_service.dart
 │   ├── theme/               # Bloom design system (bloom_tokens + bloom/), ported from apps/web
@@ -209,7 +206,7 @@ lib/
 │   │       └── widgets/     # SearchBar, ContextSelector, WordResult, SentenceResult
 │   │
 │   ├── vocabulary/
-│   │   ├── data/            # VocabRepositoryImpl (Hive)
+│   │   ├── data/            # VocabRepositoryImpl (Firestore trực tiếp, không cache cục bộ)
 │   │   ├── domain/
 │   │   │   ├── entities/    # VocabRecord, Topic, CEFRLevel
 │   │   │   └── use_cases/   # Save, Get, Update, Delete, GetTopics, AddTopic, DeleteTopic
@@ -296,17 +293,18 @@ UserSettingsNotifier (SharedPreferences)
                       └─ WordRadarSource
 ```
 
-### Luồng đồng bộ
+### Luồng dữ liệu từ vựng
 
 ```
-Hive (local)  ←──────────────────────→  Firestore (cloud)
-     │  watchBoxEvents()                      │  snapshots()
-     │                                        │
-     └──── SyncService ──────────────────────┘
-              │
-              ├─ Echo guard: _firestoreUpdatingVocab Set
-              ├─ Dedup: headword|language index (O(1))
-              └─ Conflict: giữ updatedAt mới hơn
+Flutter / React  ──── đọc/ghi trực tiếp ────→  Firestore
+                                                (users/{uid}/vocab_records_{language})
+```
+
+Không có lớp cache cục bộ hay đồng bộ hai chiều — client nào cũng gọi thẳng Firestore, Security Rules (quản lý qua Firebase Console, không version-control trong repo) là lớp kiểm soát duy nhất. `HiveMigrationService` chỉ chạy đúng 1 lần, cho tài khoản còn dữ liệu Hive từ trước khi đăng nhập trở thành bắt buộc:
+
+```
+Hive cũ (nếu còn)  ── đẩy 1 lần khi đăng nhập lần đầu ──→  Firestore
+                       (chỉ khi Firestore của tài khoản đó đang trống)
 ```
 
 ---
