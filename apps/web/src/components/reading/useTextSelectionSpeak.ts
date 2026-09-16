@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 export interface TextSelectionSpeak {
   text: string;
@@ -14,12 +14,17 @@ export interface TextSelectionSpeak {
  * tracked so a selection made without a mouse (e.g. keyboard/shift-arrow, or
  * extending an existing selection) still surfaces the button. Scrolling
  * dismisses the button outright rather than recomputing its position, since
- * the underlying selection's on-screen rect would otherwise go stale.
+ * the underlying selection's on-screen rect would otherwise go stale — but
+ * only once the drag is over: dragging a selection near a scrollable edge
+ * makes the browser auto-scroll to keep extending it, firing a real `scroll`
+ * event while the mouse is still down, and dismissing then would hide the
+ * button out from under a selection the user is still actively making.
  */
 export function useTextSelectionSpeak<T extends HTMLElement>(
   containerRef: RefObject<T | null>
 ): TextSelectionSpeak | null {
   const [selection, setSelection] = useState<TextSelectionSpeak | null>(null);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     function handleSelectionUpdate() {
@@ -38,15 +43,27 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       setSelection(text ? { text, rect: range.getBoundingClientRect() } : null);
     }
 
+    function handleMouseDown() {
+      isDraggingRef.current = true;
+    }
+
+    function handleMouseUp() {
+      isDraggingRef.current = false;
+      handleSelectionUpdate();
+    }
+
     function handleScroll() {
+      if (isDraggingRef.current) return;
       setSelection(null);
     }
 
-    document.addEventListener("mouseup", handleSelectionUpdate);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
     document.addEventListener("selectionchange", handleSelectionUpdate);
     document.addEventListener("scroll", handleScroll, { capture: true });
     return () => {
-      document.removeEventListener("mouseup", handleSelectionUpdate);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("selectionchange", handleSelectionUpdate);
       document.removeEventListener("scroll", handleScroll, { capture: true });
     };
