@@ -1,6 +1,6 @@
 import { createRef } from "react";
 import { describe, expect, it } from "vitest";
-import { renderHook, fireEvent } from "@testing-library/react";
+import { renderHook, fireEvent, act } from "@testing-library/react";
 import { useTextSelectionSpeak } from "./useTextSelectionSpeak";
 
 function setup(text: string) {
@@ -63,6 +63,31 @@ describe("useTextSelectionSpeak", () => {
 
     window.getSelection()!.removeAllRanges();
     fireEvent.mouseUp(document);
+
+    expect(result.current).toBeNull();
+  });
+
+  it("picks up a selection via selectionchange alone, without a mouseup", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    selectText(textNode, 0, 5); // "Hello"
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+
+    expect(result.current?.text).toBe("Hello");
+  });
+
+  it("clears the selection when the page scrolls", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    selectText(textNode, 0, 5);
+    fireEvent.mouseUp(document);
+    expect(result.current?.text).toBe("Hello");
+
+    fireEvent.scroll(document);
 
     expect(result.current).toBeNull();
   });

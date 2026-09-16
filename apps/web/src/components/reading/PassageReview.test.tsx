@@ -110,4 +110,14 @@ describe("PassageReview select-to-speak", () => {
     await waitFor(() => expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled());
     expect(synthesizeSpeech).toHaveBeenCalledWith({ text: "Hello there.", language: "en" });
   });
+
+  it("does not show a speak button for a selection longer than the server's 500-character limit", () => {
+    const longText = "word ".repeat(150).trim(); // 749 chars, well over the 500 limit
+    const longSentences = [{ target: longText, vietnamese: "Bản dịch dài.", vocabWords: [] }];
+    render(<PassageReview sentences={longSentences} />);
+
+    selectWithin(screen.getByText(longText));
+
+    expect(screen.queryByRole("button", { name: /Nghe phát âm/ })).toBeNull();
+  });
 });
