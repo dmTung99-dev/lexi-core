@@ -63,4 +63,14 @@ describe("SelectionSpeakButton", () => {
     rerender(<SelectionSpeakButton text="ongoing impasse" rect={rect} />);
     expect(screen.getByText("🔊")).toBeInTheDocument();
   });
+
+  it("prevents the default mousedown action so it doesn't collapse the active text selection", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    const event = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    button.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
 });

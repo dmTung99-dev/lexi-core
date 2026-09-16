@@ -37,6 +37,7 @@ export function SelectionSpeakButton({ text, rect }: SelectionSpeakButtonProps) 
       type="button"
       className="pron-btn selection-speak-btn"
       style={{ top: rect.top, left: rect.left + rect.width / 2 }}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={() => void handlePlay()}
       disabled={loading}
       aria-label={`Nghe phát âm: ${text}`}
