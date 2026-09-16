@@ -568,9 +568,8 @@ describe("BilingualReadingPage (result phase)", () => {
 
     expect(screen.getByText(/I saw a/)).toBeInTheDocument();
     expect(screen.getByText(/It was calm\./)).toBeInTheDocument();
-    expect(
-      screen.getByText("Tôi thấy một con mèo hôm nay. Nó rất bình tĩnh.")
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Tôi thấy một con mèo hôm nay\./)).toBeInTheDocument();
+    expect(screen.getByText(/Nó rất bình tĩnh\./)).toBeInTheDocument();
 
     const highlighted = screen.getByText("cat");
     expect(highlighted.tagName).toBe("MARK");

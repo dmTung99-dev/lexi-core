@@ -1958,6 +1958,11 @@ button.btn-google svg {
   margin: 0;
 }
 
+.reading-sentence-hover {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+
 .reading-result-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
