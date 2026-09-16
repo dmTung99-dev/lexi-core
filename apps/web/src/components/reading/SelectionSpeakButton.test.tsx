@@ -74,12 +74,12 @@ describe("SelectionSpeakButton", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("positions at the selection's end point (rect's right/bottom) when well within the viewport", () => {
+  it("positions horizontally at the selection's right edge and vertically at its top (floats above via CSS) when well within the viewport", () => {
     render(<SelectionSpeakButton text="favorable" rect={rect} />);
     const button = screen.getByRole("button", { name: /Nghe phát âm/ });
 
     expect(button.style.left).toBe(`${rect.right}px`);
-    expect(button.style.top).toBe(`${rect.bottom}px`);
+    expect(button.style.top).toBe(`${rect.top}px`);
   });
 
   it("clamps horizontal position so the button never renders past the right edge of the viewport", () => {
@@ -92,13 +92,14 @@ describe("SelectionSpeakButton", () => {
     expect(left).toBeLessThanOrEqual(window.innerWidth - 26 - 6 - 8);
   });
 
-  it("clamps vertical position so the button never renders past the bottom edge of the viewport", () => {
-    const overflowRect = new DOMRect(50, 50, 10, window.innerHeight + 500);
-    render(<SelectionSpeakButton text="favorable" rect={overflowRect} />);
+  it("clamps vertical position so the button (which floats above its anchor) never renders past the top edge of the viewport", () => {
+    const nearTopRect = new DOMRect(50, 5, 40, 10); // a selection right at the top of the viewport
+    render(<SelectionSpeakButton text="favorable" rect={nearTopRect} />);
     const button = screen.getByRole("button", { name: /Nghe phát âm/ });
 
     const top = parseFloat(button.style.top);
-    expect(top).toBeLessThanOrEqual(window.innerHeight - 26 - 6 - 8);
+    // 26px button height + 8px gap above the line + 8px margin must still fit above y=0.
+    expect(top).toBeGreaterThanOrEqual(26 + 8 + 8);
   });
 
   it("shows a disabled, explained state instead of disappearing when the selection is too long", () => {
