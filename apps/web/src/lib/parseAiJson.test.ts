@@ -24,4 +24,35 @@ describe("parseAiJsonObject", () => {
   it("throws when no JSON object can be found", () => {
     expect(() => parseAiJsonObject("no json here")).toThrow();
   });
+
+  // A real production failure: the AI occasionally emits a trailing comma
+  // before a closing `}`/`]` on longer structured output (translation +
+  // several suggestions), which strict JSON.parse rejects outright even
+  // though the rest of the payload is well-formed.
+  it("tolerates a trailing comma before a closing brace", () => {
+    expect(parseAiJsonObject('{"a":1,"b":2,}')).toEqual({ a: 1, b: 2 });
+  });
+
+  it("tolerates a trailing comma before a closing bracket", () => {
+    expect(parseAiJsonObject('{"suggestions":[{"headword":"a"},{"headword":"b"},]}')).toEqual({
+      suggestions: [{ headword: "a" }, { headword: "b" }],
+    });
+  });
+
+  it("tolerates a trailing comma nested inside an array of objects", () => {
+    expect(
+      parseAiJsonObject(
+        '{"translation":"x","suggestions":[{"headword":"a","synonyms":["s1","s2",]},]}'
+      )
+    ).toEqual({
+      translation: "x",
+      suggestions: [{ headword: "a", synonyms: ["s1", "s2"] }],
+    });
+  });
+
+  it("does not touch a trailing comma inside a string value", () => {
+    expect(parseAiJsonObject('{"a":"literally a trailing comma, right here"}')).toEqual({
+      a: "literally a trailing comma, right here",
+    });
+  });
 });
