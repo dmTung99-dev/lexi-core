@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { highlightVocabWords, type BilingualSentence } from "@/lib/readingPassage";
+import { useTextSelectionSpeak } from "./useTextSelectionSpeak";
+import { SelectionSpeakButton } from "./SelectionSpeakButton";
 
 interface PassageReviewProps {
   sentences: BilingualSentence[];
@@ -9,12 +11,14 @@ interface PassageReviewProps {
 
 export function PassageReview({ sentences }: PassageReviewProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const passageRef = useRef<HTMLParagraphElement>(null);
+  const selection = useTextSelectionSpeak(passageRef);
 
   if (sentences.length === 0) return null;
 
   return (
     <div className="reading-review">
-      <p className="reading-passage reading-review-passage">
+      <p className="reading-passage reading-review-passage" ref={passageRef}>
         {sentences.map((sentence, sIdx) => (
           <span
             key={sIdx}
@@ -48,6 +52,7 @@ export function PassageReview({ sentences }: PassageReviewProps) {
           </span>
         ))}
       </p>
+      {selection && <SelectionSpeakButton text={selection.text} rect={selection.rect} />}
     </div>
   );
 }

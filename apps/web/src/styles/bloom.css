@@ -1963,6 +1963,12 @@ button.btn-google svg {
   border-radius: 4px;
 }
 
+.selection-speak-btn {
+  position: fixed;
+  z-index: 20;
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
 .reading-result-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
