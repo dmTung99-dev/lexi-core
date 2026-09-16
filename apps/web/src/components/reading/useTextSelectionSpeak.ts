@@ -19,6 +19,14 @@ export interface TextSelectionSpeak {
  * makes the browser auto-scroll to keep extending it, firing a real `scroll`
  * event while the mouse is still down, and dismissing then would hide the
  * button out from under a selection the user is still actively making.
+ *
+ * The reported rect is anchored to the selection's actual end point, not
+ * `Range.getBoundingClientRect()` — for a selection spanning more than one
+ * line, that method returns the union of every line's rect, so its `right`
+ * edge tracks whichever line is widest rather than where the selection
+ * (and the user's cursor) currently ends. `getClientRects()` returns one
+ * rect per line/fragment in the range; its last entry is the line the
+ * selection actually ends on.
  */
 export function useTextSelectionSpeak<T extends HTMLElement>(
   containerRef: RefObject<T | null>
@@ -40,7 +48,16 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
         return;
       }
       const text = sel.toString().trim();
-      setSelection(text ? { text, rect: range.getBoundingClientRect() } : null);
+      if (!text) {
+        setSelection(null);
+        return;
+      }
+      const clientRects = range.getClientRects();
+      const rect =
+        clientRects.length > 0
+          ? clientRects[clientRects.length - 1]
+          : range.getBoundingClientRect();
+      setSelection({ text, rect });
     }
 
     function handleMouseDown() {

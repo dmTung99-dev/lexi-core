@@ -126,4 +126,33 @@ describe("useTextSelectionSpeak", () => {
     fireEvent.scroll(document);
     expect(result.current).toBeNull();
   });
+
+  // Regression test: for a selection spanning more than one line,
+  // Range.getBoundingClientRect() returns the union of every line's rect —
+  // its `right` edge tracks whichever line is widest, not where the
+  // selection (and the user's cursor) actually ends. That made the speak
+  // button drift away from the cursor and eventually render off-screen as
+  // a multi-line selection grew. The hook must anchor to the *last*
+  // client rect (the line the selection ends on) instead.
+  it("anchors the rect to the selection's last line, not the union bounding box", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    const firstLineRect = new DOMRect(0, 0, 400, 20); // a wide first line
+    const lastLineRect = new DOMRect(0, 20, 80, 20); // a narrower second line
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [firstLineRect, lastLineRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 11); // "Hello world"
+      fireEvent.mouseUp(document);
+
+      expect(result.current?.rect).toBe(lastLineRect);
+      expect(result.current?.rect).not.toBe(firstLineRect);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
 });
