@@ -91,4 +91,39 @@ describe("useTextSelectionSpeak", () => {
 
     expect(result.current).toBeNull();
   });
+
+  // Regression test: dragging a selection near a scrollable edge makes the
+  // browser auto-scroll to keep extending it, firing a real `scroll` event
+  // mid-drag — while the mouse button is still down, before mouseup. That
+  // scroll must not kill an in-progress selection; only a scroll that
+  // happens once the user is done selecting (no button held) should.
+  it("does not clear the selection when a scroll fires mid-drag (mousedown still held)", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    fireEvent.mouseDown(document);
+    selectText(textNode, 0, 5); // "Hello"
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    expect(result.current?.text).toBe("Hello");
+
+    // Simulates the browser's own auto-scroll while the drag continues.
+    fireEvent.scroll(document);
+    expect(result.current?.text).toBe("Hello");
+
+    // The drag keeps extending the selection after the auto-scroll.
+    selectText(textNode, 0, 11); // "Hello world"
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    expect(result.current?.text).toBe("Hello world");
+
+    fireEvent.mouseUp(document);
+    expect(result.current?.text).toBe("Hello world");
+
+    // Once the drag is over, a later scroll dismisses normally.
+    fireEvent.scroll(document);
+    expect(result.current).toBeNull();
+  });
 });
