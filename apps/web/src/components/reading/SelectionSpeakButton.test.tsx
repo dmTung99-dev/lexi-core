@@ -10,7 +10,7 @@ vi.mock("@/lib/synthesizeSpeechClient", async () => {
   return { ...actual, synthesizeSpeech: vi.fn() };
 });
 
-const rect = { top: 100, left: 50, width: 40, height: 20 } as DOMRect;
+const rect = new DOMRect(50, 100, 40, 20); // left: 50, top: 100, right: 90, bottom: 120
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,5 +72,32 @@ describe("SelectionSpeakButton", () => {
     button.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("positions at the selection's end point (rect's right/bottom) when well within the viewport", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    expect(button.style.left).toBe(`${rect.right}px`);
+    expect(button.style.top).toBe(`${rect.bottom}px`);
+  });
+
+  it("clamps horizontal position so the button never renders past the right edge of the viewport", () => {
+    const overflowRect = new DOMRect(50, 50, window.innerWidth + 500, 10);
+    render(<SelectionSpeakButton text="favorable" rect={overflowRect} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    const left = parseFloat(button.style.left);
+    // 26px button width + 6px CSS translate offset + 8px margin must still fit.
+    expect(left).toBeLessThanOrEqual(window.innerWidth - 26 - 6 - 8);
+  });
+
+  it("clamps vertical position so the button never renders past the bottom edge of the viewport", () => {
+    const overflowRect = new DOMRect(50, 50, 10, window.innerHeight + 500);
+    render(<SelectionSpeakButton text="favorable" rect={overflowRect} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    const top = parseFloat(button.style.top);
+    expect(top).toBeLessThanOrEqual(window.innerHeight - 26 - 6 - 8);
   });
 });
