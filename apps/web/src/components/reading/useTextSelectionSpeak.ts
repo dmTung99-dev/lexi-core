@@ -11,13 +11,11 @@ export interface TextSelectionSpeak {
  * anywhere (which collapses any prior selection — the browser's own default
  * behavior) naturally clears the result on the next mouseup, so no separate
  * "dismiss on click elsewhere" handling is needed. `selectionchange` is also
- * tracked so a selection made without a mouse (e.g. keyboard/shift-arrow, or
- * extending an existing selection) still surfaces the button, and so the
- * button's position keeps up live while a drag is still in progress.
+ * tracked so a selection made without a mouse (e.g. keyboard/shift-arrow)
+ * still surfaces the button.
  *
  * Scrolling *recomputes* from the current live selection rather than
- * dismissing it — recomputing is always safe (a Range's rect reflects
- * wherever it is now, scrolled or not) and avoids two real bugs a
+ * dismissing it — recomputing is always safe and avoids two real bugs a
  * dismiss-on-scroll approach had: (1) dragging a selection near a
  * scrollable edge makes the browser auto-scroll to keep extending it,
  * firing a real `scroll` event while the mouse is still down — dismissing
@@ -25,17 +23,22 @@ export interface TextSelectionSpeak {
  * actively making; (2) scrolling after finishing a selection would
  * otherwise leave no way to bring the button back without reselecting.
  *
- * The reported rect is anchored to the selection's actual end point, not
- * `Range.getBoundingClientRect()` — for a selection spanning more than one
- * line, that method returns the union of every line's rect, so its `right`
- * edge tracks whichever line is widest rather than where the selection
- * (and the user's cursor) currently ends. `getClientRects()` returns one
- * rect per line/fragment in the range; its last *non-empty* entry is the
- * line the selection actually ends on. A trailing zero-width/zero-height
- * entry is filtered out first — the browser can report one for the
- * collapsed trailing whitespace of a line that wraps, which visually
- * belongs to the *next* line and would otherwise drag the button one line
- * below the actual selection end.
+ * Positioning: on `mouseup`, the reported rect is anchored to the actual
+ * mouse pointer position (`clientX`/`clientY`) at that moment, not derived
+ * from `Range` geometry. `Range.getBoundingClientRect()`/`getClientRects()`
+ * turned out to have several real, hard-to-predict quirks in practice
+ * (union bounding boxes for multi-line selections tracking the widest line
+ * rather than the actual end; zero-width trailing rects for collapsed
+ * line-wrap whitespace; rects that can land far from the visible selection
+ * depending on how the passage's inline markup — highlighted `<mark>`s,
+ * per-sentence `<span>`s — happens to be structured at the selection's
+ * boundary) — the mouse pointer is unambiguous and exactly where the user
+ * expects the button to appear. `selectionchange`/`scroll` don't carry a
+ * pointer position (fired without a originating mouse event, or not at
+ * all for a keyboard-made selection), so they fall back to the same
+ * Range-based last-visible-rect approach, which is good enough for the
+ * button's position to merely track *along* during an in-progress
+ * selection — the mouseup that ends the gesture is what fixes it precisely.
  */
 export function useTextSelectionSpeak<T extends HTMLElement>(
   containerRef: RefObject<T | null>
@@ -43,7 +46,16 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
   const [selection, setSelection] = useState<TextSelectionSpeak | null>(null);
 
   useEffect(() => {
-    function handleSelectionUpdate() {
+    function rectFromRange(range: Range): DOMRect {
+      const rawRects = Array.from(range.getClientRects());
+      const visibleRects = rawRects.filter((r) => r.width > 0.5 && r.height > 0.5);
+      const candidates = visibleRects.length > 0 ? visibleRects : rawRects;
+      return candidates.length > 0
+        ? candidates[candidates.length - 1]
+        : range.getBoundingClientRect();
+    }
+
+    function handleSelectionUpdate(pointer: { x: number; y: number } | null) {
       const container = containerRef.current;
       const sel = window.getSelection();
       if (!container || !sel || sel.isCollapsed || sel.rangeCount === 0) {
@@ -60,23 +72,29 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
         setSelection(null);
         return;
       }
-      const rawRects = Array.from(range.getClientRects());
-      const visibleRects = rawRects.filter((r) => r.width > 0.5 && r.height > 0.5);
-      const candidates = visibleRects.length > 0 ? visibleRects : rawRects;
-      const rect =
-        candidates.length > 0
-          ? candidates[candidates.length - 1]
-          : range.getBoundingClientRect();
+      const rect = pointer ? new DOMRect(pointer.x, pointer.y, 0, 0) : rectFromRange(range);
       setSelection({ text, rect });
     }
 
-    document.addEventListener("mouseup", handleSelectionUpdate);
-    document.addEventListener("selectionchange", handleSelectionUpdate);
-    document.addEventListener("scroll", handleSelectionUpdate, { capture: true });
+    function handleMouseUp(event: MouseEvent) {
+      handleSelectionUpdate({ x: event.clientX, y: event.clientY });
+    }
+
+    function handleSelectionChange() {
+      handleSelectionUpdate(null);
+    }
+
+    function handleScroll() {
+      handleSelectionUpdate(null);
+    }
+
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("selectionchange", handleSelectionChange);
+    document.addEventListener("scroll", handleScroll, { capture: true });
     return () => {
-      document.removeEventListener("mouseup", handleSelectionUpdate);
-      document.removeEventListener("selectionchange", handleSelectionUpdate);
-      document.removeEventListener("scroll", handleSelectionUpdate, { capture: true });
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("scroll", handleScroll, { capture: true });
     };
   }, [containerRef]);
 
