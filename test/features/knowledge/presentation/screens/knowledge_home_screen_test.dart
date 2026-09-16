@@ -38,4 +38,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(svc.restoreCalls, 1);
   });
+
+  testWidgets('caps the tag bar and opens a sheet with the rest on "+N"',
+      (tester) async {
+    // 10 distinct tags across notes — exceeds the 8-tag cap, so 2 must be
+    // tucked behind the "+2" trigger instead of rendering unbounded.
+    final svc = FakeKnowledgeService()
+      ..store.addAll([
+        for (var i = 0; i < 10; i++)
+          noteFixture(id: 'n$i', tags: ['tag-$i']),
+      ]);
+    await pumpHome(tester, svc);
+
+    for (var i = 0; i < 8; i++) {
+      expect(find.text('tag-$i'), findsOneWidget);
+    }
+    expect(find.text('tag-8'), findsNothing);
+    expect(find.text('tag-9'), findsNothing);
+    expect(find.text('+2'), findsOneWidget);
+
+    await tester.tap(find.text('+2'));
+    await tester.pumpAndSettle();
+
+    // The sheet's option list is a lazily-built ListView taller than the
+    // sheet's initial size — scroll it so the last (hidden-behind-the-cap)
+    // items are actually built before asserting on them.
+    await tester.dragUntilVisible(
+      find.text('tag-9'),
+      find.byType(Scrollable).last,
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('tag-8'), findsOneWidget);
+    expect(find.text('tag-9'), findsOneWidget);
+  });
+
+  testWidgets('selecting a hidden tag from the sheet filters the list',
+      (tester) async {
+    final svc = FakeKnowledgeService()
+      ..store.addAll([
+        for (var i = 0; i < 10; i++)
+          noteFixture(id: 'n$i', title: 'Note $i', tags: ['tag-$i']),
+      ]);
+    await pumpHome(tester, svc);
+
+    await tester.tap(find.text('+2'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('tag-9'),
+      find.byType(Scrollable).last,
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('tag-9'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Áp dụng (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Note 9'), findsOneWidget);
+    expect(find.text('Note 0'), findsNothing);
+  });
 }

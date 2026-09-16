@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/bloom/bloom.dart';
+import '../../../../core/widgets/selection_sheets.dart';
 import '../../../dictionary/domain/entities/language.dart';
 import '../../../dictionary/presentation/providers/user_settings_provider.dart';
 import '../../domain/entities/knowledge_group.dart';
@@ -21,6 +22,12 @@ const _examplePrompts = <String>[
   'Câu điều kiện loại 2',
   'Phân biệt "make" và "do"',
 ];
+
+// The tag bar is the union of every note's tags — unlike a single note's own
+// tags, this list only grows as more notes/tags accumulate, so it needs a
+// hard display cap (see visibleKnowledgeTags) rather than relying on notes
+// staying small.
+const _maxVisibleTags = 8;
 
 /// The "Kiến thức" home: a search box + tag chips over a grid of grammar
 /// groups, switching to a flat filtered list once a query or tag is active.
@@ -49,6 +56,18 @@ class _KnowledgeHomeScreenState extends ConsumerState<KnowledgeHomeScreen> {
     final next = {..._filter.tags};
     if (!next.remove(tag)) next.add(tag);
     setState(() => _filter = _filter.copyWith(tags: next));
+  }
+
+  Future<void> _openTagFilterSheet(List<String> allTags) async {
+    final result = await showMultiSelectSheet<String>(
+      context: context,
+      title: 'Lọc theo thẻ',
+      options: [for (final t in allTags) SelectOption(value: t, label: t)],
+      initialSelected: _filter.tags,
+    );
+    if (result != null) {
+      setState(() => _filter = _filter.copyWith(tags: result));
+    }
   }
 
   Future<void> _restoreStarters() async {
@@ -126,6 +145,8 @@ class _KnowledgeHomeScreenState extends ConsumerState<KnowledgeHomeScreen> {
     }
 
     final tags = knowledgeAllTags(allNotes);
+    final visibleTags =
+        visibleKnowledgeTags(tags, _filter.tags, _maxVisibleTags);
     return Column(
       children: [
         Padding(
@@ -147,13 +168,18 @@ class _KnowledgeHomeScreenState extends ConsumerState<KnowledgeHomeScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final t in tags)
+                  for (final t in visibleTags.visible)
                     BloomChip(
                       label: t,
                       style: _filter.tags.contains(t)
                           ? BloomChipStyle.active
                           : BloomChipStyle.neutral,
                       onTap: () => _toggleTag(t),
+                    ),
+                  if (visibleTags.hiddenCount > 0)
+                    BloomChip(
+                      label: '+${visibleTags.hiddenCount}',
+                      onTap: () => _openTagFilterSheet(tags),
                     ),
                 ],
               ),

@@ -102,4 +102,80 @@ describe("KnowledgePage", () => {
       "/knowledge/compose",
     );
   });
+
+  it("caps the tag bar and opens a modal with the rest on '+N'", async () => {
+    // 10 distinct tags across notes — exceeds the 8-tag cap, so 2 must be
+    // tucked behind the "+2" trigger instead of rendering unbounded.
+    const tags = Array.from({ length: 10 }, (_, i) => `tag-${i}`);
+    renderKnowledgePage(<KnowledgePage />, {
+      notes: tags.map((tag, i) => noteFixture({ id: `n${i}`, tags: [tag] })),
+    });
+
+    await screen.findByText("tag-0");
+    for (let i = 0; i < 8; i++) {
+      expect(screen.getByText(`tag-${i}`)).toBeInTheDocument();
+    }
+    expect(screen.queryByText("tag-8")).toBeNull();
+    expect(screen.queryByText("tag-9")).toBeNull();
+
+    fireEvent.click(screen.getByText("+2"));
+
+    expect(screen.getByRole("dialog", { name: "Lọc theo thẻ" })).toBeInTheDocument();
+    expect(screen.getByText("tag-8")).toBeInTheDocument();
+    expect(screen.getByText("tag-9")).toBeInTheDocument();
+  });
+
+  it("selecting a hidden tag from the modal filters the list", async () => {
+    const tags = Array.from({ length: 10 }, (_, i) => `tag-${i}`);
+    renderKnowledgePage(<KnowledgePage />, {
+      notes: tags.map((tag, i) => noteFixture({ id: `n${i}`, title: `Note ${i}`, tags: [tag] })),
+    });
+
+    await screen.findByText("tag-0");
+    fireEvent.click(screen.getByText("+2"));
+    fireEvent.click(screen.getByText("tag-9"));
+
+    expect(await screen.findByText("Note 9")).toBeInTheDocument();
+    expect(screen.queryByText("Note 0")).toBeNull();
+  });
+
+  it("'Xoá lọc' on the home tag bar clears the tag selection", async () => {
+    renderKnowledgePage(<KnowledgePage />, {
+      notes: [
+        noteFixture({ id: "n1", title: "Note 1", tags: ["toeic"] }),
+        noteFixture({ id: "n2", title: "Note 2" }),
+      ],
+    });
+
+    fireEvent.click(await screen.findByText("toeic"));
+    expect(await screen.findByText("Note 1")).toBeInTheDocument();
+    expect(screen.queryByText("Note 2")).toBeNull();
+
+    fireEvent.click(screen.getByText("✕ Xoá lọc"));
+
+    // Clearing the only active filter drops back to the group grid (no
+    // query, no tags = not list mode) rather than a flat note list.
+    await waitFor(() => expect(screen.queryByText("✕ Xoá lọc")).toBeNull());
+    expect(screen.getByText("toeic")).not.toHaveClass("active");
+  });
+
+  it("'Bỏ chọn hết' inside the tag modal clears the selection without closing it", async () => {
+    const tags = Array.from({ length: 10 }, (_, i) => `tag-${i}`);
+    renderKnowledgePage(<KnowledgePage />, {
+      notes: tags.map((tag, i) => noteFixture({ id: `n${i}`, title: `Note ${i}`, tags: [tag] })),
+    });
+
+    await screen.findByText("tag-0");
+    fireEvent.click(screen.getByText("+2"));
+    fireEvent.click(screen.getByText("tag-9"));
+    expect(await screen.findByText("Note 9")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Bỏ chọn hết"));
+
+    // Modal stays open (unlike the outer "✕ Xoá lọc", this is a bulk-clear
+    // inside an already-open picker, not a dismiss action) even though
+    // clearing the selection drops the page back out of list mode.
+    expect(screen.getByRole("dialog", { name: "Lọc theo thẻ" })).toBeInTheDocument();
+    expect(screen.queryByText("Bỏ chọn hết")).toBeNull();
+  });
 });

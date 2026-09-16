@@ -45,4 +45,35 @@ void main() {
     expect(knowledgeGroupCounts(notes)['en_conditionals'], 2);
     expect(knowledgeAllTags(notes), ['toeic']);
   });
+
+  group('visibleKnowledgeTags', () {
+    const tags = ['a', 'b', 'c', 'd', 'e'];
+
+    test('returns every tag with no overflow when under the cap', () {
+      final r = visibleKnowledgeTags(tags, const {}, 8);
+      expect(r.visible, tags);
+      expect(r.hiddenCount, 0);
+    });
+
+    test('caps at max and reports how many are hidden', () {
+      final r = visibleKnowledgeTags(tags, const {}, 3);
+      expect(r.visible, ['a', 'b', 'c']);
+      expect(r.hiddenCount, 2);
+    });
+
+    test('prioritizes selected tags so an active filter is never hidden', () {
+      // "e" is selected but would otherwise fall outside a cap of 3 by
+      // plain order.
+      final r = visibleKnowledgeTags(tags, const {'e'}, 3);
+      expect(r.visible, ['e', 'a', 'b']);
+      expect(r.hiddenCount, 2);
+    });
+
+    test('keeps all selected tags visible even if they exceed the cap alone',
+        () {
+      final r = visibleKnowledgeTags(tags, const {'b', 'd', 'e'}, 2);
+      expect(r.visible, ['b', 'd', 'e']);
+      expect(r.hiddenCount, 2);
+    });
+  });
 }

@@ -76,3 +76,35 @@ Map<String, int> knowledgeGroupCounts(List<KnowledgeNote> notes) {
 
 List<String> knowledgeAllTags(List<KnowledgeNote> notes) =>
     (notes.expand((n) => n.tags).toSet().toList()..sort());
+
+class VisibleKnowledgeTags {
+  const VisibleKnowledgeTags({required this.visible, required this.hiddenCount});
+  final List<String> visible;
+  final int hiddenCount;
+}
+
+/// Caps the home screen's tag filter bar at [max] chips so it can't grow
+/// unbounded as more notes/tags accumulate (unlike a single note's own tags,
+/// this list is the union across every note). Already-selected tags are
+/// always kept visible — including past the cap — so an active filter is
+/// never silently hidden by the cap; the rest of [max] is filled with
+/// unselected tags in their original (sorted) order.
+VisibleKnowledgeTags visibleKnowledgeTags(
+  List<String> allTags,
+  Set<String> selectedTags,
+  int max,
+) {
+  if (allTags.length <= max) {
+    return VisibleKnowledgeTags(visible: allTags, hiddenCount: 0);
+  }
+
+  final selected = allTags.where(selectedTags.contains).toList();
+  final remainingSlots = (max - selected.length).clamp(0, allTags.length);
+  final unselected =
+      allTags.where((t) => !selectedTags.contains(t)).take(remainingSlots);
+  final visible = [...selected, ...unselected];
+  return VisibleKnowledgeTags(
+    visible: visible,
+    hiddenCount: allTags.length - visible.length,
+  );
+}

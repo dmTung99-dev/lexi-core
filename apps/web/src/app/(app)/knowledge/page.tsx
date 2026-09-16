@@ -10,10 +10,12 @@ import {
   applyKnowledgeFilter,
   knowledgeAllTags,
   knowledgeGroupCounts,
+  visibleKnowledgeTags,
   type KnowledgeFilter,
 } from "@/lib/knowledgeFilters";
 import { KnowledgeGroupGrid } from "@/components/knowledge/KnowledgeGroupGrid";
 import { KnowledgeNoteCard } from "@/components/knowledge/KnowledgeNoteCard";
+import { KnowledgeTagFilterModal } from "@/components/knowledge/KnowledgeTagFilterModal";
 import { SignInButton } from "@/components/SignInButton";
 
 const EXAMPLE_PROMPTS = [
@@ -22,6 +24,12 @@ const EXAMPLE_PROMPTS = [
   'Phân biệt "make" và "do"',
 ];
 
+// The tag bar is the union of every note's tags — unlike a single note's own
+// tags, this list only grows as more notes/tags accumulate, so it needs a
+// hard display cap (see visibleKnowledgeTags) rather than relying on notes
+// staying small.
+const MAX_VISIBLE_TAGS = 8;
+
 export default function KnowledgePage() {
   const { user, loading: authLoading } = useAuthUser();
   const { settings, loading: settingsLoading } = useSettingsContext();
@@ -29,6 +37,7 @@ export default function KnowledgePage() {
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !settings) return;
@@ -82,6 +91,7 @@ export default function KnowledgePage() {
   const listMode = query.trim() !== "" || selectedTags.size > 0;
   const counts = knowledgeGroupCounts(notes);
   const allTags = knowledgeAllTags(notes);
+  const { visible: visibleTags, hiddenCount } = visibleKnowledgeTags(allTags, selectedTags, MAX_VISIBLE_TAGS);
   const filtered = listMode ? applyKnowledgeFilter(notes, filter) : [];
 
   return (
@@ -127,7 +137,7 @@ export default function KnowledgePage() {
           </div>
           {allTags.length > 0 && (
             <div className="vb-toolbar">
-              {allTags.map((tag) => (
+              {visibleTags.map((tag) => (
                 <button
                   key={tag}
                   type="button"
@@ -137,7 +147,31 @@ export default function KnowledgePage() {
                   {tag}
                 </button>
               ))}
+              {hiddenCount > 0 && (
+                <button type="button" className="vb-chip" onClick={() => setTagModalOpen(true)}>
+                  +{hiddenCount}
+                </button>
+              )}
+              {selectedTags.size > 0 && (
+                <button
+                  type="button"
+                  className="vb-chip vb-chip-clear"
+                  onClick={() => setSelectedTags(new Set())}
+                >
+                  ✕ Xoá lọc
+                </button>
+              )}
             </div>
+          )}
+
+          {tagModalOpen && (
+            <KnowledgeTagFilterModal
+              allTags={allTags}
+              selectedTags={selectedTags}
+              onToggle={toggleTag}
+              onClearAll={() => setSelectedTags(new Set())}
+              onClose={() => setTagModalOpen(false)}
+            />
           )}
 
           {listMode ? (
