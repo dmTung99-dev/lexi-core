@@ -1976,8 +1976,11 @@ button.btn-google svg {
      action" icon placement. Vertically: floats ABOVE the selection's own
      line (-100% + a small gap), not below it — anchoring below used to
      land the button inside the *next* line's text given this passage's
-     generous line-height. */
-  transform: translate(6px, calc(-100% - 8px));
+     generous line-height. Kept deliberately small (see
+     SelectionSpeakButton.tsx) — the anchor is already the real
+     mouse-release point, so a bigger gap here only adds to any felt
+     distance from natural imprecision in where the user let go. */
+  transform: translate(3px, calc(-100% - 4px));
 }
 
 .reading-result-stats {
