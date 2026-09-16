@@ -9,7 +9,12 @@ import 'dart:convert';
 /// balanced-brace JSON object substring (respecting string literals, so a
 /// `{`/`}` inside a JSON string value doesn't throw off the brace count).
 Map<String, dynamic> parseAiJsonObject(String raw) {
-  final stripped = _stripCodeFences(raw.trim());
+  // Trailing commas are stripped unconditionally (a no-op when absent) rather
+  // than only as a fallback after a parse failure: the AI emits them often
+  // enough on long structured output (translation + several suggestions,
+  // each with nested arrays) that it's worth never hitting the strict
+  // jsonDecode with one in the first place.
+  final stripped = _stripTrailingCommas(_stripCodeFences(raw.trim()));
   try {
     return jsonDecode(stripped) as Map<String, dynamic>;
   } on FormatException {
@@ -24,6 +29,47 @@ final _fencePattern = RegExp(r'^```(?:json)?\s*([\s\S]*?)\s*```$');
 String _stripCodeFences(String text) {
   final match = _fencePattern.firstMatch(text);
   return match?.group(1)?.trim() ?? text;
+}
+
+/// Removes a comma that appears (outside any string literal) immediately
+/// before the next `}` or `]`, ignoring whitespace between them — a comma
+/// that's part of a string value (e.g. "a trailing comma, right here") is
+/// left untouched since it's never immediately followed by a closing
+/// brace/bracket once whitespace is skipped.
+String _stripTrailingCommas(String text) {
+  final buffer = StringBuffer();
+  var inString = false;
+  var escaped = false;
+  for (var i = 0; i < text.length; i++) {
+    final char = text[i];
+    if (inString) {
+      buffer.write(char);
+      if (escaped) {
+        escaped = false;
+      } else if (char == '\\') {
+        escaped = true;
+      } else if (char == '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char == '"') {
+      inString = true;
+      buffer.write(char);
+      continue;
+    }
+    if (char == ',') {
+      var j = i + 1;
+      while (j < text.length && text[j].trim().isEmpty) {
+        j++;
+      }
+      if (j < text.length && (text[j] == '}' || text[j] == ']')) {
+        continue; // drop this comma
+      }
+    }
+    buffer.write(char);
+  }
+  return buffer.toString();
 }
 
 String? _extractBalancedObject(String text) {
