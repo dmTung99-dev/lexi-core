@@ -105,22 +105,44 @@ final class VocabRecord {
         'synonyms': synonyms,
       };
 
+  // Most fields below fall back to a safe default instead of an unguarded
+  // `as String`/`as List` cast: every in-app write path always produces a
+  // complete record, but historical admin scripts (bulk import, the
+  // per-language migration) wrote/copied Firestore documents straight from
+  // external data with no field validation, so a stray null/missing field
+  // here is a real possibility — and since the Vocab Bank list maps every
+  // document through this factory in one pass, an unguarded cast on any one
+  // malformed document used to take down the whole list.
   factory VocabRecord.fromJson(Map<String, dynamic> json) => VocabRecord(
-        id: json['id'] as String,
-        headword: json['headword'] as String,
-        inputType: InputType.values.byName(json['inputType'] as String),
-        ipa: json['ipa'] as String,
-        meaning: json['meaning'] as String,
-        examples: List<String>.from(json['examples'] as List),
+        id: json['id'] as String? ?? '',
+        headword: json['headword'] as String? ?? '',
+        inputType: json['inputType'] != null
+            ? InputType.values.byName(json['inputType'] as String)
+            : InputType.word,
+        ipa: json['ipa'] as String? ?? '',
+        meaning: json['meaning'] as String? ?? '',
+        examples: json['examples'] != null
+            ? List<String>.from(json['examples'] as List)
+            : const [],
         personalNotes: json['personalNotes'] as String? ?? '',
-        topicIds: List<String>.from(json['topicIds'] as List),
-        targetLanguage:
-            Language.values.byName(json['targetLanguage'] as String),
-        cefrLevel: CEFRLevel.values.byName(json['cefrLevel'] as String),
-        activeContext:
-            AppContext.values.byName(json['activeContext'] as String),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
+        topicIds: json['topicIds'] != null
+            ? List<String>.from(json['topicIds'] as List)
+            : const [],
+        targetLanguage: json['targetLanguage'] != null
+            ? Language.values.byName(json['targetLanguage'] as String)
+            : Language.english,
+        cefrLevel: json['cefrLevel'] != null
+            ? CEFRLevel.values.byName(json['cefrLevel'] as String)
+            : CEFRLevel.a1,
+        activeContext: json['activeContext'] != null
+            ? AppContext.values.byName(json['activeContext'] as String)
+            : AppContext.general,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.fromMillisecondsSinceEpoch(0),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'] as String)
+            : DateTime.fromMillisecondsSinceEpoch(0),
         nextReviewAt: json['nextReviewAt'] != null
             ? DateTime.parse(json['nextReviewAt'] as String)
             : null,

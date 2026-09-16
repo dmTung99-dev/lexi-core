@@ -274,11 +274,17 @@ void main() {
   test(
       'skips a Hive record whose JSON is well-formed but fails to parse into a VocabRecord',
       () async {
-    // Valid JSON, but missing required VocabRecord fields (e.g. targetLanguage,
-    // inputType) — VocabRecord.fromJson throws on this, and it must be
-    // skipped the same way a jsonDecode failure is.
+    // Valid JSON, but with a value VocabRecord.fromJson can't map to any
+    // enum member (fromJson defaults *missing* fields defensively — see its
+    // own doc comment — but an invalid, non-null enum name still throws) —
+    // it must be skipped the same way a jsonDecode failure is.
     await vocabBox.put(
-        'bad', jsonEncode({'id': 'bad', 'headword': 'incomplete'}));
+        'bad',
+        jsonEncode({
+          'id': 'bad',
+          'headword': 'incomplete',
+          'cefrLevel': 'not-a-real-level',
+        }));
     await vocabBox.put('v1', jsonEncode(_vocabJson('v1', headword: 'apple')));
 
     final service = HiveMigrationService(firestore: firestore, prefs: prefs);
