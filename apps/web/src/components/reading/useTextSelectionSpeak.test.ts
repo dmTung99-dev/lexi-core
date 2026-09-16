@@ -79,14 +79,47 @@ describe("useTextSelectionSpeak", () => {
     expect(result.current?.text).toBe("Hello");
   });
 
-  // Regression test: a scroll used to unconditionally clear the selection,
-  // which had two real bugs: dragging a selection near a scrollable edge
-  // makes the browser auto-scroll to keep extending it, firing a real
-  // `scroll` event while the mouse is still down — the button would vanish
-  // mid-drag; and scrolling after finishing a selection left no way to
-  // bring the button back short of reselecting. Scroll must instead
-  // *recompute* from the live selection.
-  it("recomputes (not clears) the selection on scroll, live selection permitting", () => {
+  // Regression test: browsers can fire one more `selectionchange` right
+  // around `mouseup` for the very same gesture (the selection "settling"),
+  // with no guaranteed ordering relative to mouseup itself. Letting that
+  // freely recompute via Range geometry clobbered the mouseup's precise,
+  // pointer-based position with a less precise one — reported live as
+  // "released the mouse on 'old', but the icon showed up near 'system'".
+  it("does not let a trailing selectionchange for the same gesture override the mouseup's precise position", () => {
+    const { textNode, ref, container } = setup("Hello world");
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    // Stands in for the Range-geometry quirks that produced a wrong
+    // position in practice — if this were used, the test below would fail.
+    const wrongRect = new DOMRect(150, 10, 10, 10);
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [wrongRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 5); // "Hello"
+      fireEvent.mouseUp(document, { clientX: 60, clientY: 20 }); // inside the container
+      expect(result.current?.rect.left).toBe(60);
+
+      act(() => {
+        document.dispatchEvent(new Event("selectionchange"));
+      });
+
+      expect(result.current?.text).toBe("Hello");
+      expect(result.current?.rect.left).toBe(60); // still the mouseup position, not wrongRect's 150
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
+  // Dragging a selection near a scrollable edge makes the browser
+  // auto-scroll to keep extending it, firing a real `scroll` event while
+  // the mouse is still down (no mouseup yet for the current text) —
+  // recompute rather than dismiss, so that auto-scroll doesn't hide the
+  // button out from under a selection the user is still actively making.
+  it("recomputes (does not dismiss) the selection on scroll while still mid-drag", () => {
     const { textNode, ref } = setup("Hello world");
     const { result } = renderHook(() => useTextSelectionSpeak(ref));
 
@@ -99,13 +132,27 @@ describe("useTextSelectionSpeak", () => {
     fireEvent.scroll(document);
     expect(result.current?.text).toBe("Hello");
 
+    // The drag keeps extending the selection after the auto-scroll.
+    selectText(textNode, 0, 11); // "Hello world"
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    expect(result.current?.text).toBe("Hello world");
+  });
+
+  // Once mouseup has already anchored a precise, fixed-viewport position,
+  // a later scroll makes that point stale relative to the now-scrolled
+  // page — dismiss rather than show a now-wrong position.
+  it("dismisses on scroll once the gesture is finished and precisely anchored", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    selectText(textNode, 0, 5);
     fireEvent.mouseUp(document);
     expect(result.current?.text).toBe("Hello");
 
-    // A scroll once the selection is finished still just recomputes — stays
-    // visible rather than disappearing.
     fireEvent.scroll(document);
-    expect(result.current?.text).toBe("Hello");
+    expect(result.current).toBeNull();
   });
 
   it("scrolling after the selection has already collapsed correctly reports null", () => {
@@ -133,8 +180,6 @@ describe("useTextSelectionSpeak", () => {
     container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
     const { result } = renderHook(() => useTextSelectionSpeak(ref));
 
-    // A deliberately "wrong" Range rect, to prove it's ignored once a real
-    // pointer position is available.
     const originalGetClientRects = Range.prototype.getClientRects;
     Range.prototype.getClientRects = function () {
       return [new DOMRect(9999, 9999, 10, 10)] as unknown as DOMRectList;
@@ -183,13 +228,13 @@ describe("useTextSelectionSpeak", () => {
     }
   });
 
-  // selectionchange (fired without an originating mouse event — e.g. while
-  // a drag is still in progress, before mouseup) has no pointer position
-  // available, so it falls back to Range geometry: the last *visible*
-  // client rect, skipping a trailing zero-width artifact (the browser can
-  // report one for a line's collapsed trailing whitespace at a wrap point,
-  // positioned at the start of the *next* line rather than the real end of
-  // the selection).
+  // Regression test: for a selection spanning more than one line,
+  // Range.getBoundingClientRect() returns the union of every line's rect —
+  // its `right` edge tracks whichever line is widest, not where the
+  // selection actually ends. getClientRects()'s last entry is the line the
+  // selection actually ends on, and a trailing zero-width rect (the
+  // browser can report one for a line's collapsed trailing whitespace at a
+  // wrap point) is skipped in favor of the last *visible* one.
   it("falls back to the last visible Range rect for selectionchange (no pointer available)", () => {
     const { textNode, ref } = setup("Hello world");
     const { result } = renderHook(() => useTextSelectionSpeak(ref));
