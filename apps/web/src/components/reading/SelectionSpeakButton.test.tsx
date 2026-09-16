@@ -88,8 +88,8 @@ describe("SelectionSpeakButton", () => {
     const button = screen.getByRole("button", { name: /Nghe phát âm/ });
 
     const left = parseFloat(button.style.left);
-    // 26px button width + 6px CSS translate offset + 8px margin must still fit.
-    expect(left).toBeLessThanOrEqual(window.innerWidth - 26 - 6 - 8);
+    // 26px button width + 3px CSS translate offset + 8px margin must still fit.
+    expect(left).toBeLessThanOrEqual(window.innerWidth - 26 - 3 - 8);
   });
 
   it("clamps vertical position so the button (which floats above its anchor) never renders past the top edge of the viewport", () => {
@@ -98,8 +98,8 @@ describe("SelectionSpeakButton", () => {
     const button = screen.getByRole("button", { name: /Nghe phát âm/ });
 
     const top = parseFloat(button.style.top);
-    // 26px button height + 8px gap above the line + 8px margin must still fit above y=0.
-    expect(top).toBeGreaterThanOrEqual(26 + 8 + 8);
+    // 26px button height + 4px gap above the line + 8px margin must still fit above y=0.
+    expect(top).toBeGreaterThanOrEqual(26 + 4 + 8);
   });
 
   it("shows a disabled, explained state instead of disappearing when the selection is too long", () => {

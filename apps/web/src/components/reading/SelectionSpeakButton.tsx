@@ -14,17 +14,22 @@ interface SelectionSpeakButtonProps {
 }
 
 // Matches .pron-btn's fixed size and .selection-speak-btn's CSS
-// translate(6px, calc(-100% - 8px)) offset (bloom.css) — the button floats
+// translate(3px, calc(-100% - 4px)) offset (bloom.css) — the button floats
 // ABOVE its anchor point, not below: this passage's line-height (1.8) is
 // generous enough that anchoring below the selection (this component's
 // first version used rect.bottom) landed the button visually inside the
 // *next* line's own text, especially for a single-line selection near the
 // end of a line. Floating above avoids that regardless of line-height.
+// BUTTON_OFFSET/ABOVE_LINE_GAP are kept deliberately small — the anchor
+// point is already the real mouse-release position (see
+// useTextSelectionSpeak.ts), so on top of that any natural imprecision in
+// where the user actually let go, a larger added gap here just compounds
+// into a bigger felt distance between the button and the selection.
 // Kept in sync here so the button can be clamped to stay fully inside the
 // viewport instead of rendering off-screen for a selection near an edge.
 const BUTTON_SIZE = 26;
-const BUTTON_OFFSET = 6;
-const ABOVE_LINE_GAP = 8;
+const BUTTON_OFFSET = 3;
+const ABOVE_LINE_GAP = 4;
 const VIEWPORT_MARGIN = 8;
 
 export function SelectionSpeakButton({ text, rect, tooLong = false }: SelectionSpeakButtonProps) {
