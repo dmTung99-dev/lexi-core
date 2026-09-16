@@ -21,7 +21,17 @@ class HighlightedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = style ?? DefaultTextStyle.of(context).style;
+    // A caller-supplied `style` is used as-is below (unlike the `Text`
+    // widget, `RichText`/`TextSpan` never merge in `DefaultTextStyle`'s
+    // color), so a style that only sets e.g. fontSize leaves `color: null`
+    // on the span. The rendering engine's fallback for that is white, not
+    // the ambient text color — invisible on a light background. Fill in
+    // `context.bloom.ink` whenever the resolved style doesn't already
+    // specify a color, instead of ever leaving it unset.
+    final resolvedStyle = style ?? DefaultTextStyle.of(context).style;
+    final base = resolvedStyle.color == null
+        ? resolvedStyle.copyWith(color: context.bloom.ink)
+        : resolvedStyle;
     final hi = highlightStyle ??
         base.copyWith(
           fontWeight: FontWeight.w700,
