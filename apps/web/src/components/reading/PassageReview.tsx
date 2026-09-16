@@ -9,9 +9,10 @@ interface PassageReviewProps {
   sentences: BilingualSentence[];
 }
 
-// Mirrors functions/src/synthesizeSpeech.ts's 500-character server-side limit —
-// kept here so a too-long selection never shows a speak button that's
-// guaranteed to fail, instead of surfacing an unexplained ⚠️.
+// Mirrors functions/src/synthesizeSpeech.ts's 500-character server-side limit
+// — a too-long selection still shows the button (so it doesn't just vanish
+// with no explanation), but disabled with a tooltip, instead of letting the
+// user click it into a guaranteed, unexplained ⚠️.
 const MAX_SELECTION_SPEAK_LENGTH = 500;
 
 export function PassageReview({ sentences }: PassageReviewProps) {
@@ -57,8 +58,12 @@ export function PassageReview({ sentences }: PassageReviewProps) {
           </span>
         ))}
       </p>
-      {selection && selection.text.length <= MAX_SELECTION_SPEAK_LENGTH && (
-        <SelectionSpeakButton text={selection.text} rect={selection.rect} />
+      {selection && (
+        <SelectionSpeakButton
+          text={selection.text}
+          rect={selection.rect}
+          tooLong={selection.text.length > MAX_SELECTION_SPEAK_LENGTH}
+        />
       )}
     </div>
   );

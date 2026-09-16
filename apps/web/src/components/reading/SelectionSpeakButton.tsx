@@ -6,6 +6,11 @@ import { synthesizeSpeech, toAudioDataUrl } from "@/lib/synthesizeSpeechClient";
 interface SelectionSpeakButtonProps {
   text: string;
   rect: DOMRect;
+  // True when `text` exceeds the server's TTS length limit. Still rendered
+  // (disabled, with an explanation) rather than omitted outright — a
+  // selection that simply grows past the limit used to make the button
+  // disappear with no indication why.
+  tooLong?: boolean;
 }
 
 // Matches .pron-btn's fixed size and .selection-speak-btn's CSS
@@ -16,7 +21,7 @@ const BUTTON_SIZE = 26;
 const BUTTON_OFFSET = 6;
 const VIEWPORT_MARGIN = 8;
 
-export function SelectionSpeakButton({ text, rect }: SelectionSpeakButtonProps) {
+export function SelectionSpeakButton({ text, rect, tooLong = false }: SelectionSpeakButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -45,18 +50,22 @@ export function SelectionSpeakButton({ text, rect }: SelectionSpeakButtonProps) 
     }
   }
 
+  const title = tooLong
+    ? `Vùng chọn quá dài để đọc (tối đa 500 ký tự, đang chọn ${text.length}) — chọn đoạn ngắn hơn`
+    : "Nghe phát âm";
+
   return (
     <button
       type="button"
       className="pron-btn selection-speak-btn"
       style={{ top, left }}
       onMouseDown={(event) => event.preventDefault()}
-      onClick={() => void handlePlay()}
-      disabled={loading}
-      aria-label={`Nghe phát âm: ${text}`}
-      title="Nghe phát âm"
+      onClick={tooLong ? undefined : () => void handlePlay()}
+      disabled={loading || tooLong}
+      aria-label={tooLong ? title : `Nghe phát âm: ${text}`}
+      title={title}
     >
-      {loading ? "…" : error ? "⚠️" : "🔊"}
+      {tooLong ? "🔇" : loading ? "…" : error ? "⚠️" : "🔊"}
     </button>
   );
 }

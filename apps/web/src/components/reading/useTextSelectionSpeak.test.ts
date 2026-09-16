@@ -79,36 +79,27 @@ describe("useTextSelectionSpeak", () => {
     expect(result.current?.text).toBe("Hello");
   });
 
-  it("clears the selection when the page scrolls", () => {
-    const { textNode, ref } = setup("Hello world");
-    const { result } = renderHook(() => useTextSelectionSpeak(ref));
-
-    selectText(textNode, 0, 5);
-    fireEvent.mouseUp(document);
-    expect(result.current?.text).toBe("Hello");
-
-    fireEvent.scroll(document);
-
-    expect(result.current).toBeNull();
-  });
-
-  // Regression test: dragging a selection near a scrollable edge makes the
+  // Regression test: a scroll used to unconditionally clear the selection
+  // (matching a too-literal reading of "disappears on... scroll"), which had
+  // two real bugs: dragging a selection near a scrollable edge makes the
   // browser auto-scroll to keep extending it, firing a real `scroll` event
-  // mid-drag — while the mouse button is still down, before mouseup. That
-  // scroll must not kill an in-progress selection; only a scroll that
-  // happens once the user is done selecting (no button held) should.
-  it("does not clear the selection when a scroll fires mid-drag (mousedown still held)", () => {
+  // while the mouse is still down — the button would vanish mid-drag, out
+  // from under a selection the user was still actively making; and scrolling
+  // after finishing a selection left no way to bring the button back short of
+  // reselecting. Scroll must instead *recompute* from the live selection —
+  // safe unconditionally, since a Range's rect always reflects its current,
+  // possibly-scrolled position.
+  it("recomputes (not clears) the selection on scroll, live selection permitting", () => {
     const { textNode, ref } = setup("Hello world");
     const { result } = renderHook(() => useTextSelectionSpeak(ref));
 
-    fireEvent.mouseDown(document);
+    // Selection still in progress (mouse held down) when an auto-scroll fires.
     selectText(textNode, 0, 5); // "Hello"
     act(() => {
       document.dispatchEvent(new Event("selectionchange"));
     });
     expect(result.current?.text).toBe("Hello");
 
-    // Simulates the browser's own auto-scroll while the drag continues.
     fireEvent.scroll(document);
     expect(result.current?.text).toBe("Hello");
 
@@ -122,8 +113,23 @@ describe("useTextSelectionSpeak", () => {
     fireEvent.mouseUp(document);
     expect(result.current?.text).toBe("Hello world");
 
-    // Once the drag is over, a later scroll dismisses normally.
+    // A scroll once the selection is finished still just recomputes — stays
+    // visible rather than disappearing.
     fireEvent.scroll(document);
+    expect(result.current?.text).toBe("Hello world");
+  });
+
+  it("scrolling after the selection has already collapsed correctly reports null", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    selectText(textNode, 0, 5);
+    fireEvent.mouseUp(document);
+    expect(result.current?.text).toBe("Hello");
+
+    window.getSelection()!.removeAllRanges();
+    fireEvent.scroll(document);
+
     expect(result.current).toBeNull();
   });
 
@@ -151,6 +157,34 @@ describe("useTextSelectionSpeak", () => {
 
       expect(result.current?.rect).toBe(lastLineRect);
       expect(result.current?.rect).not.toBe(firstLineRect);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
+  // Regression test: when a selection ends right where a line wraps, the
+  // browser can report a trailing zero-width client rect for the collapsed
+  // whitespace — positioned at the *start of the next line*, not the actual
+  // end of the selected text. Anchoring to that (rather than the last
+  // *visible* rect) drags the button one line below where it belongs, and
+  // enough of these in a row can push it off-screen entirely.
+  it("skips a trailing zero-width rect (line-wrap whitespace artifact) when anchoring", () => {
+    const { textNode, ref } = setup("Hello world");
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    const realLastLineRect = new DOMRect(0, 20, 80, 20);
+    const wrapArtifactRect = new DOMRect(0, 40, 0, 20); // zero width — not real content
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [realLastLineRect, wrapArtifactRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 11); // "Hello world"
+      fireEvent.mouseUp(document);
+
+      expect(result.current?.rect).toBe(realLastLineRect);
+      expect(result.current?.rect).not.toBe(wrapArtifactRect);
     } finally {
       Range.prototype.getClientRects = originalGetClientRects;
     }
