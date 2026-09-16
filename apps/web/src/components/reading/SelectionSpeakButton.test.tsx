@@ -100,4 +100,21 @@ describe("SelectionSpeakButton", () => {
     const top = parseFloat(button.style.top);
     expect(top).toBeLessThanOrEqual(window.innerHeight - 26 - 6 - 8);
   });
+
+  it("shows a disabled, explained state instead of disappearing when the selection is too long", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} tooLong />);
+    const button = screen.getByRole("button");
+
+    expect(button).toBeInTheDocument();
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent("🔇");
+    expect(button.title).toMatch(/quá dài/i);
+  });
+
+  it("does not call synthesizeSpeech when clicked while tooLong", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} tooLong />);
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(synthesizeSpeech).not.toHaveBeenCalled();
+  });
 });
