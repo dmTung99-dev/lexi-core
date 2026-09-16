@@ -1971,10 +1971,13 @@ button.btn-google svg {
 .selection-speak-btn {
   position: fixed;
   z-index: 20;
-  /* Anchored to the selection's end corner (bottom-right in LTR text), not
-     centered above it — matches the familiar native "selection action"
-     icon placement. */
-  transform: translate(6px, 6px);
+  /* Horizontally: past the selection's right edge (end corner in LTR
+     text), not centered above it — matches the familiar native "selection
+     action" icon placement. Vertically: floats ABOVE the selection's own
+     line (-100% + a small gap), not below it — anchoring below used to
+     land the button inside the *next* line's text given this passage's
+     generous line-height. */
+  transform: translate(6px, calc(-100% - 8px));
 }
 
 .reading-result-stats {
