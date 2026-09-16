@@ -122,14 +122,15 @@ describe("useTextSelectionSpeak", () => {
     expect(result.current).toBeNull();
   });
 
-  // The core fix: on mouseup, the reported rect is the actual mouse pointer
-  // position at that moment — not anything derived from Range geometry,
-  // which turned out to have several real, hard-to-predict quirks (union
-  // bounding boxes for multi-line selections, zero-width trailing rects at
-  // line wraps, rects landing far from the visible selection depending on
-  // inline markup structure). The pointer is unambiguous.
-  it("anchors to the actual mouse position on mouseup, not Range geometry", () => {
-    const { textNode, ref } = setup("Hello world");
+  // The core fix: on mouseup near the passage, the reported rect is the
+  // actual mouse pointer position at that moment — not anything derived
+  // from Range geometry, which turned out to have several real,
+  // hard-to-predict quirks (union bounding boxes for multi-line
+  // selections, zero-width trailing rects at line wraps). The pointer is
+  // unambiguous for a release that's actually part of the selection drag.
+  it("anchors to the actual mouse position on mouseup, when it's near the container", () => {
+    const { textNode, ref, container } = setup("Hello world");
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
     const { result } = renderHook(() => useTextSelectionSpeak(ref));
 
     // A deliberately "wrong" Range rect, to prove it's ignored once a real
@@ -141,12 +142,42 @@ describe("useTextSelectionSpeak", () => {
 
     try {
       selectText(textNode, 0, 5); // "Hello"
-      fireEvent.mouseUp(document, { clientX: 123, clientY: 456 });
+      fireEvent.mouseUp(document, { clientX: 60, clientY: 20 }); // inside the container
 
-      expect(result.current?.rect.left).toBe(123);
-      expect(result.current?.rect.top).toBe(456);
-      expect(result.current?.rect.right).toBe(123);
-      expect(result.current?.rect.bottom).toBe(456);
+      expect(result.current?.rect.left).toBe(60);
+      expect(result.current?.rect.top).toBe(20);
+      expect(result.current?.rect.right).toBe(60);
+      expect(result.current?.rect.bottom).toBe(20);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
+  // Regression test: mouseup fires for *any* mouse release, not just ones
+  // that adjust the selection — e.g. right-clicking to open the browser's
+  // own DevTools while a selection is still active also fires one, at
+  // wherever that click happened. Trusting that pointer position
+  // unconditionally put the speak button far from the actual selection
+  // (this exact scenario, reported live: a stray mouseup at x≈1130 on a
+  // ~540px-wide passage card). A pointer far from the passage must fall
+  // back to Range geometry instead of being trusted outright.
+  it("falls back to Range geometry when mouseup happens far from the container (e.g. an unrelated click elsewhere)", () => {
+    const { textNode, ref, container } = setup("Hello world");
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    const rangeRect = new DOMRect(10, 5, 40, 15);
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [rangeRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 5); // "Hello"
+      fireEvent.mouseUp(document, { clientX: 1130, clientY: 211 }); // far outside the container
+
+      expect(result.current?.text).toBe("Hello");
+      expect(result.current?.rect).toBe(rangeRect);
     } finally {
       Range.prototype.getClientRects = originalGetClientRects;
     }

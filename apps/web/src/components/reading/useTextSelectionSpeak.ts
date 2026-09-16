@@ -25,21 +25,23 @@ export interface TextSelectionSpeak {
  *
  * Positioning: on `mouseup`, the reported rect is anchored to the actual
  * mouse pointer position (`clientX`/`clientY`) at that moment, not derived
- * from `Range` geometry. `Range.getBoundingClientRect()`/`getClientRects()`
+ * from `Range` geometry — `Range.getBoundingClientRect()`/`getClientRects()`
  * turned out to have several real, hard-to-predict quirks in practice
  * (union bounding boxes for multi-line selections tracking the widest line
  * rather than the actual end; zero-width trailing rects for collapsed
- * line-wrap whitespace; rects that can land far from the visible selection
- * depending on how the passage's inline markup — highlighted `<mark>`s,
- * per-sentence `<span>`s — happens to be structured at the selection's
- * boundary) — the mouse pointer is unambiguous and exactly where the user
- * expects the button to appear. `selectionchange`/`scroll` don't carry a
- * pointer position (fired without a originating mouse event, or not at
- * all for a keyboard-made selection), so they fall back to the same
- * Range-based last-visible-rect approach, which is good enough for the
- * button's position to merely track *along* during an in-progress
- * selection — the mouseup that ends the gesture is what fixes it precisely.
+ * line-wrap whitespace) that made the button land far from the visible
+ * selection. But `mouseup` fires globally for *any* mouse release, not just
+ * ones that adjust the selection — e.g. right-clicking to open the
+ * browser's DevTools while a selection is still active also fires one, at
+ * wherever that click happened, nowhere near the passage. The pointer is
+ * only trusted when it's within (or just past the edge of) `containerRef`'s
+ * own bounding box; otherwise this falls back to the same Range-based
+ * last-visible-rect approach `selectionchange`/`scroll` already use (which
+ * don't carry a pointer position at all — fired without an originating
+ * mouse event, or not at all for a keyboard-made selection).
  */
+const POINTER_TRUST_MARGIN = 40; // px of slack past the container's own edge
+
 export function useTextSelectionSpeak<T extends HTMLElement>(
   containerRef: RefObject<T | null>
 ): TextSelectionSpeak | null {
@@ -76,8 +78,21 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       setSelection({ text, rect });
     }
 
+    function isNearContainer(container: HTMLElement, x: number, y: number): boolean {
+      const rect = container.getBoundingClientRect();
+      return (
+        x >= rect.left - POINTER_TRUST_MARGIN &&
+        x <= rect.right + POINTER_TRUST_MARGIN &&
+        y >= rect.top - POINTER_TRUST_MARGIN &&
+        y <= rect.bottom + POINTER_TRUST_MARGIN
+      );
+    }
+
     function handleMouseUp(event: MouseEvent) {
-      handleSelectionUpdate({ x: event.clientX, y: event.clientY });
+      const container = containerRef.current;
+      const pointer = { x: event.clientX, y: event.clientY };
+      const trustPointer = container !== null && isNearContainer(container, pointer.x, pointer.y);
+      handleSelectionUpdate(trustPointer ? pointer : null);
     }
 
     function handleSelectionChange() {
