@@ -35,21 +35,26 @@ export interface TextSelectionSpeak {
  *
  * That distinction matters because browsers can fire one more
  * `selectionchange` right around a `mouseup` for the same gesture (the
- * selection settling), with no guaranteed ordering — letting it freely
- * recompute would sometimes clobber a mouseup's precise pointer-based
- * position with a less precise Range-derived one for the *identical*
- * selection. So: a `selectionchange`/`scroll` whose selected text exactly
- * matches the most recent mouseup-anchored one is a no-op (the existing
- * precise position stands) — except scroll specifically dismisses in that
- * case instead, since the anchor is a fixed viewport point that scrolling
- * has now made stale, and there's no reliable way to reposition it without
- * either Range geometry's own quirks or tracking scroll deltas across
- * whichever ancestor happens to be the actual scroll container. A scroll
- * that happens *before* any mouseup for the current selection (still
- * mid-drag) still recomputes via Range geometry rather than dismissing —
- * dragging a selection near a scrollable edge makes the browser auto-scroll
- * to keep extending it, firing a real `scroll` event while the mouse is
- * still down, and dismissing then would hide the button out from under a
+ * selection settling — some browsers also silently extend a selection
+ * released mid-word out to the nearest whole word right after mouseup),
+ * with no guaranteed ordering and not always the exact same text. Letting
+ * it freely recompute would clobber a mouseup's precise pointer-based
+ * position with a less precise Range-derived one for what is functionally
+ * the same gesture. So the very next `selectionchange` after a trusted
+ * mouseup is treated as that gesture settling: it updates the *text* (in
+ * case it changed, e.g. word-extended) but keeps the mouseup's precise
+ * *rect* rather than recomputing. Beyond that one settling event, a
+ * `selectionchange`/`scroll` whose text still exactly matches the anchored
+ * one is a no-op (selectionchange) or a dismiss (scroll specifically,
+ * since the anchor is a fixed viewport point that scrolling has now made
+ * stale, with no reliable way to reposition it without either Range
+ * geometry's own quirks or tracking scroll deltas across whichever
+ * ancestor happens to be the actual scroll container). A scroll that
+ * happens *before* any mouseup for the current selection (still mid-drag)
+ * still recomputes via Range geometry rather than dismissing — dragging a
+ * selection near a scrollable edge makes the browser auto-scroll to keep
+ * extending it, firing a real `scroll` event while the mouse is still
+ * down, and dismissing then would hide the button out from under a
  * selection the user is still actively making.
  */
 const POINTER_TRUST_MARGIN = 40; // px of slack past the container's own edge
@@ -65,6 +70,11 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
     // extra renders. Cleared whenever the selection is empty/invalid, or
     // once a scroll makes it stale (see handleScroll).
     let pointerAnchor: { text: string; rect: DOMRect } | null = null;
+    // True for exactly one selectionchange right after a trusted mouseup —
+    // consumed (set back to false) the first time it's used. Handles the
+    // browser settling the selection (e.g. extending a mid-word release
+    // out to the whole word) with a *different* text than mouseup saw.
+    let pendingSettle = false;
 
     function rectFromRange(range: Range): DOMRect {
       const rawRects = Array.from(range.getClientRects());
@@ -101,6 +111,7 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       const text = currentSelectionText();
       if (!container || !sel || !text) {
         pointerAnchor = null;
+        pendingSettle = false;
         setSelection(null);
         return;
       }
@@ -108,6 +119,7 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       if (isNearContainer(container, pointer.x, pointer.y)) {
         const result = { text, rect: new DOMRect(pointer.x, pointer.y, 0, 0) };
         pointerAnchor = result;
+        pendingSettle = true;
         setSelection(result);
         return;
       }
@@ -115,6 +127,7 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       // stray click elsewhere) — recompute from Range geometry instead of
       // trusting an unrelated pointer position.
       pointerAnchor = null;
+      pendingSettle = false;
       setSelection({ text, rect: rectFromRange(sel.getRangeAt(0)) });
     }
 
@@ -123,11 +136,24 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       const text = currentSelectionText();
       if (!text || !sel) {
         pointerAnchor = null;
+        pendingSettle = false;
         setSelection(null);
         return;
       }
+      if (pendingSettle && pointerAnchor) {
+        // The browser settling this exact gesture right after mouseup
+        // (e.g. extending a mid-word release to the whole word) — the
+        // text may differ from what mouseup saw, but the precise pointer
+        // position is still the right one to keep.
+        pendingSettle = false;
+        const result = { text, rect: pointerAnchor.rect };
+        pointerAnchor = result;
+        setSelection(result);
+        return;
+      }
       // Same selection a trusted mouseup already anchored precisely — a
-      // trailing selectionchange for that same gesture must not clobber it.
+      // further trailing selectionchange for that same gesture must not
+      // clobber it.
       if (pointerAnchor && pointerAnchor.text === text) {
         setSelection(pointerAnchor);
         return;
@@ -140,6 +166,7 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
       const text = currentSelectionText();
       if (!text || !sel) {
         pointerAnchor = null;
+        pendingSettle = false;
         setSelection(null);
         return;
       }
@@ -147,6 +174,7 @@ export function useTextSelectionSpeak<T extends HTMLElement>(
         // The gesture already finished and got a precise position — that
         // fixed-viewport point is now stale relative to the scrolled page.
         pointerAnchor = null;
+        pendingSettle = false;
         setSelection(null);
         return;
       }

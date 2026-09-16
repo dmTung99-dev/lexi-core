@@ -114,6 +114,79 @@ describe("useTextSelectionSpeak", () => {
     }
   });
 
+  // Regression test: some browsers silently extend a selection released
+  // mid-word out to the nearest whole word right after mouseup — reported
+  // live as "released the mouse in the middle of 'off', the button showed
+  // up several words further along the line". The settling
+  // selectionchange's text ("Hello world", extended) differs from what
+  // mouseup saw ("Hello wor", mid-word) — the exact-text-match guard alone
+  // doesn't catch this, since the texts genuinely differ.
+  it("keeps the mouseup's precise position when the very next selectionchange reports different (e.g. word-extended) text", () => {
+    const { textNode, ref, container } = setup("Hello world");
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    const wrongRect = new DOMRect(150, 10, 10, 10);
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [wrongRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 9); // "Hello wor" — released mid-word
+      fireEvent.mouseUp(document, { clientX: 60, clientY: 20 }); // inside the container
+      expect(result.current?.text).toBe("Hello wor");
+      expect(result.current?.rect.left).toBe(60);
+
+      // The browser settles the selection out to the full word right after.
+      selectText(textNode, 0, 11); // "Hello world"
+      act(() => {
+        document.dispatchEvent(new Event("selectionchange"));
+      });
+
+      expect(result.current?.text).toBe("Hello world"); // text updates to the settled selection
+      expect(result.current?.rect.left).toBe(60); // but position stays the precise mouseup one
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
+  it("only protects the one selectionchange right after mouseup — a later, genuinely new selection recomputes normally", () => {
+    const { textNode, ref, container } = setup("Hello world");
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 200, 50);
+    const { result } = renderHook(() => useTextSelectionSpeak(ref));
+
+    const newRect = new DOMRect(30, 40, 10, 10);
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [newRect] as unknown as DOMRectList;
+    };
+
+    try {
+      selectText(textNode, 0, 5); // "Hello"
+      fireEvent.mouseUp(document, { clientX: 60, clientY: 20 });
+      expect(result.current?.rect.left).toBe(60);
+
+      // First settling event — consumes the one-shot guard.
+      act(() => {
+        document.dispatchEvent(new Event("selectionchange"));
+      });
+      expect(result.current?.rect.left).toBe(60);
+
+      // A later, genuinely different selection (e.g. keyboard-extended) —
+      // no longer protected, recomputes via Range geometry as normal.
+      selectText(textNode, 0, 11); // "Hello world"
+      act(() => {
+        document.dispatchEvent(new Event("selectionchange"));
+      });
+
+      expect(result.current?.text).toBe("Hello world");
+      expect(result.current?.rect).toBe(newRect);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
   // Dragging a selection near a scrollable edge makes the browser
   // auto-scroll to keep extending it, firing a real `scroll` event while
   // the mouse is still down (no mouseup yet for the current text) —
