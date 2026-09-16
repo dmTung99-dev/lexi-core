@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { applyKnowledgeFilter, knowledgeGroupCounts, knowledgeAllTags, type KnowledgeFilter } from "./knowledgeFilters";
+import {
+  applyKnowledgeFilter,
+  knowledgeGroupCounts,
+  knowledgeAllTags,
+  visibleKnowledgeTags,
+  type KnowledgeFilter,
+} from "./knowledgeFilters";
 import type { KnowledgeNote } from "./knowledgeNotes";
 
 const n = (over: Partial<KnowledgeNote>): KnowledgeNote => ({
@@ -32,5 +38,35 @@ describe("counts + tags", () => {
   it("group counts and sorted unique tags", () => {
     expect(knowledgeGroupCounts(notes).en_conditionals).toBe(2);
     expect(knowledgeAllTags(notes)).toEqual(["toeic"]);
+  });
+});
+
+describe("visibleKnowledgeTags", () => {
+  const tags = ["a", "b", "c", "d", "e"];
+
+  it("returns every tag with no overflow when under the cap", () => {
+    expect(visibleKnowledgeTags(tags, new Set(), 8)).toEqual({ visible: tags, hiddenCount: 0 });
+  });
+
+  it("caps at max and reports how many are hidden", () => {
+    expect(visibleKnowledgeTags(tags, new Set(), 3)).toEqual({
+      visible: ["a", "b", "c"],
+      hiddenCount: 2,
+    });
+  });
+
+  it("prioritizes selected tags so an active filter is never hidden", () => {
+    // "e" is selected but would otherwise fall outside a cap of 3 by plain order.
+    expect(visibleKnowledgeTags(tags, new Set(["e"]), 3)).toEqual({
+      visible: ["e", "a", "b"],
+      hiddenCount: 2,
+    });
+  });
+
+  it("keeps all selected tags visible even if they exceed the cap alone", () => {
+    expect(visibleKnowledgeTags(tags, new Set(["b", "d", "e"]), 2)).toEqual({
+      visible: ["b", "d", "e"],
+      hiddenCount: 2,
+    });
   });
 });

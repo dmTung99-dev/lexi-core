@@ -203,7 +203,8 @@ sidebar item, sibling of "Quét từ vựng".
 ### 4.1 KnowledgeHomeScreen — `/knowledge`
 
 - Top: **search field** + a **tag chip row** (only tags that currently have
-  notes in the active language).
+  notes in the active language) — capped at 8 visible chips with a "+N" picker
+  for the rest; see §12.
 - Body: **grid of group cards** for the active language — group label + note
   count. Empty groups still render (dimmed, count 0).
 - Actions: **"+ Nhờ AI soạn"** and **"+ Tự viết"**.
@@ -496,3 +497,31 @@ Each note is fully populated: `summary`, a `**bold**`-marked `explanation`,
 - Final stopword list and Layer 1 threshold tuning (start at ≥ 3, adjust if it
   proves noisy).
 - Final wording of all 12 English starter notes.
+
+---
+
+## 12. Addendum (2026-09-16): capping the home tag chip row
+
+§4.1's "tag chip row" was unbounded — it renders `knowledgeAllTags(notes)`, the
+union of every tag across every note in the active language, with no display
+limit. Unlike a single note's own tags (naturally small, capped only by what a
+user manually types for that one note), this union only grows as more
+notes/tags accumulate, so it could eventually wrap into many rows on the home
+screen.
+
+Fix (mirrors §6 item 3 of `2026-08-15-vocab-bank-polish-design.md` — Vocab
+Bank's own topic filter hit the same "unbounded filter chip list" problem and
+was resolved the same way): cap the inline row at 8 tags
+(`visibleKnowledgeTags` in `knowledgeFilters.ts`/`knowledge_filters.dart`),
+prioritizing already-selected tags so an active filter is never hidden by the
+cap. A trailing "+N" chip opens a picker with the full tag list — a new
+`KnowledgeTagFilterModal` on web (reusing the existing `.modal-backdrop`/
+`.modal` styling), and the pre-existing `showMultiSelectSheet` bottom sheet on
+Flutter (the same picker Vocab Bank already uses for Chủ đề/Cấp độ). Both the
+inline row and the picker got a "✕ Xoá lọc" / "Bỏ chọn hết" quick-clear action
+once any tag is selected.
+
+Scope stayed limited to this one screen — a single note's own tag chips
+(KnowledgeDetailScreen §4.3, KnowledgeEditScreen §4.4) were deliberately left
+alone, since `knowledgeAllTags` (and this cap) is only ever called from
+KnowledgeHomeScreen.
