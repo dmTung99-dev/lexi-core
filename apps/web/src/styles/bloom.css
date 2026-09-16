@@ -1959,14 +1959,22 @@ button.btn-google svg {
 }
 
 .reading-sentence-hover {
-  background: var(--surface-2);
+  /* --surface-2/--surface-3 sit too close to --surface in both themes to
+     read as a highlight (confirmed hard to see, especially in dark mode) —
+     an --accent tint has real contrast against --surface in both themes
+     and stays distinct from .reading-vocab-highlight's solid background. */
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   border-radius: 4px;
+  transition: background 120ms;
 }
 
 .selection-speak-btn {
   position: fixed;
   z-index: 20;
-  transform: translate(-50%, calc(-100% - 8px));
+  /* Anchored to the selection's end corner (bottom-right in LTR text), not
+     centered above it — matches the familiar native "selection action"
+     icon placement. */
+  transform: translate(6px, 6px);
 }
 
 .reading-result-stats {
