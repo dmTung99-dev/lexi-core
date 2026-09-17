@@ -112,4 +112,27 @@ describe("HighlightedText (interactive variant)", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("no known words")).toBeInTheDocument();
   });
+
+  function selectWithin(element: HTMLElement) {
+    const textNode = element.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, textNode.length);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fireEvent.mouseUp(document);
+  }
+
+  it("shows a speak button after selecting text when enableSpeak is passed", () => {
+    render(<HighlightedText text="no known words" variant="interactive" records={[]} enableSpeak />);
+    selectWithin(screen.getByText("no known words"));
+    expect(screen.getByRole("button", { name: /Nghe phát âm: no known words/ })).toBeInTheDocument();
+  });
+
+  it("does not show a speak button when enableSpeak is not passed", () => {
+    render(<HighlightedText text="no known words" variant="interactive" records={[]} />);
+    selectWithin(screen.getByText("no known words"));
+    expect(screen.queryByRole("button", { name: /Nghe phát âm/ })).toBeNull();
+  });
 });

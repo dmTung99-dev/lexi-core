@@ -1,3 +1,5 @@
+import { SpeakableTextBlock } from "./SpeakableTextBlock";
+
 interface McQuestionCardProps {
   label: string;
   options: string[];
@@ -9,10 +11,11 @@ interface McQuestionCardProps {
 
 export function McQuestionCard({ label, options, selected, onSelect, correctIndex, explanation }: McQuestionCardProps) {
   const resultMode = correctIndex !== undefined;
+  const questionLabel = <p className="mc-question-label">{label}</p>;
 
   return (
     <div className="mc-question-card">
-      <p className="mc-question-label">{label}</p>
+      {resultMode ? <SpeakableTextBlock>{questionLabel}</SpeakableTextBlock> : questionLabel}
       <div className="mc-options">
         {options.map((option, i) => {
           let className = "mc-option";

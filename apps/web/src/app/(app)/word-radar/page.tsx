@@ -94,6 +94,7 @@ export default function WordRadarPage() {
               variant="interactive"
               records={records}
               ttsLanguage={ttsLang}
+              enableSpeak
             />
           </div>
 

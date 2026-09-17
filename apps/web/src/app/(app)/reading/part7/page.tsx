@@ -14,6 +14,7 @@ import { parseAiJsonObject } from "@/lib/parseAiJson";
 import { recordDailyActivity } from "@/lib/dailyActivity";
 import { getRandomSavedExercise, saveReadingExercise, type ToeicFilters } from "@/lib/savedReadingExercises";
 import { McQuestionCard } from "@/components/reading/McQuestionCard";
+import { ReadingPassageBlock } from "@/components/reading/ReadingPassageBlock";
 import { VocabSuggestionsSection } from "@/components/shared/VocabSuggestionsSection";
 import { formatPassageLines } from "@/lib/formatPassageText";
 
@@ -344,13 +345,7 @@ function Part7PageContent() {
             {!collapsed && (
               <>
                 {group.documents.map((doc, d) => (
-                  <div key={d} className="reading-passage-block">
-                    {formatPassageLines(doc).map((line, li) => (
-                      <p key={li} className="reading-passage-text">
-                        {line}
-                      </p>
-                    ))}
-                  </div>
+                  <ReadingPassageBlock key={d} text={doc} />
                 ))}
                 <div className="mc-question-grid">
                   {group.questions.map((q, qi) => (
