@@ -118,4 +118,42 @@ describe("SelectionSpeakButton", () => {
 
     expect(synthesizeSpeech).not.toHaveBeenCalled();
   });
+
+  // Regression test: the "cỡ chữ" (font size) setting applies a CSS `zoom`
+  // to the whole app (.app-frame.fs-large { zoom: 1.15 }, bloom.css). This
+  // button renders inside that zoomed subtree, so the browser re-multiplies
+  // whatever raw top/left px we set by the ambient zoom when painting it —
+  // reported live as the button drifting further from the actual selection
+  // the more text was selected (a bigger raw rect.right value means a
+  // bigger absolute error once re-multiplied by zoom). Dividing by
+  // zoomFactor before setting the style must cancel that out exactly.
+  it("divides the position by zoomFactor so the final rendered position matches the true coordinate", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} zoomFactor={1.15} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    // rect.right = 90, rect.top = 100 (both well within the viewport, so
+    // clamping doesn't kick in) — dividing by 1.15 is what cancels the
+    // browser's own re-multiplication once painted inside the zoomed tree.
+    expect(parseFloat(button.style.left)).toBeCloseTo(90 / 1.15, 5);
+    expect(parseFloat(button.style.top)).toBeCloseTo(100 / 1.15, 5);
+  });
+
+  it("defaults zoomFactor to 1 (no adjustment) when not provided", () => {
+    render(<SelectionSpeakButton text="favorable" rect={rect} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    expect(button.style.left).toBe(`${rect.right}px`);
+    expect(button.style.top).toBe(`${rect.top}px`);
+  });
+
+  it("scales the viewport clamping margins by zoomFactor so the button's true on-screen footprint still fits", () => {
+    const overflowRect = new DOMRect(50, 50, window.innerWidth + 500, 10);
+    render(<SelectionSpeakButton text="favorable" rect={overflowRect} zoomFactor={1.15} />);
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+
+    const renderedLeft = parseFloat(button.style.left) * 1.15; // true on-screen px after zoom
+    // The button's true footprint (26px + 3px offset, both zoomed) + 8px
+    // true-pixel margin must still fit inside the real viewport width.
+    expect(renderedLeft).toBeLessThanOrEqual(window.innerWidth - 26 * 1.15 - 3 * 1.15 - 8 + 0.01);
+  });
 });
