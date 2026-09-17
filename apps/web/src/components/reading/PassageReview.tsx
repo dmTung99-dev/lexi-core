@@ -15,6 +15,26 @@ interface PassageReviewProps {
 // user click it into a guaranteed, unexplained ⚠️.
 const MAX_SELECTION_SPEAK_LENGTH = 500;
 
+// The "cỡ chữ" (font size) setting applies CSS `zoom` to the whole app
+// (`.app-frame.fs-small`/`.app-frame.fs-large`, bloom.css) — non-standard
+// `zoom`, unlike `transform`, re-scales the effective CSS pixel unit for
+// its entire subtree, including `position: fixed` descendants. Any raw
+// `top`/`left` px value set on an element inside a zoomed ancestor gets
+// re-multiplied by that ambient zoom when the browser actually paints it,
+// so a naive true-viewport-pixel position (from mouse coordinates / Range
+// geometry, both always reported in true, unzoomed pixels) lands
+// increasingly far from the real cursor the larger that raw value is —
+// exactly the "the more I select, the further off it drifts" symptom
+// reported live. `getBoundingClientRect().width / offsetWidth` gives the
+// cumulative ambient zoom factor directly, independent of how many nested
+// zoomed ancestors produced it, so SelectionSpeakButton can divide its
+// computed position by it to cancel the browser's own re-multiplication.
+export function ambientZoomFactor(el: HTMLElement): number {
+  const trueWidth = el.getBoundingClientRect().width;
+  const layoutWidth = el.offsetWidth;
+  return trueWidth > 0 && layoutWidth > 0 ? trueWidth / layoutWidth : 1;
+}
+
 export function PassageReview({ sentences }: PassageReviewProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const passageRef = useRef<HTMLParagraphElement>(null);
@@ -63,6 +83,7 @@ export function PassageReview({ sentences }: PassageReviewProps) {
           text={selection.text}
           rect={selection.rect}
           tooLong={selection.text.length > MAX_SELECTION_SPEAK_LENGTH}
+          zoomFactor={passageRef.current ? ambientZoomFactor(passageRef.current) : 1}
         />
       )}
     </div>

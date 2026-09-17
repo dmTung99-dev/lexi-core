@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { synthesizeSpeech } from "@/lib/synthesizeSpeechClient";
-import { PassageReview } from "./PassageReview";
+import { PassageReview, ambientZoomFactor } from "./PassageReview";
 
 vi.mock("@/lib/synthesizeSpeechClient", async () => {
   const actual = await vi.importActual<typeof import("@/lib/synthesizeSpeechClient")>(
@@ -14,6 +14,22 @@ const sentences = [
   { target: "Hello there.", vietnamese: "Xin chào.", vocabWords: [] },
   { target: "Nice to meet you.", vietnamese: "Rất vui được gặp bạn.", vocabWords: [] },
 ];
+
+describe("ambientZoomFactor", () => {
+  it("returns the ratio between the true rendered width and the unzoomed layout width", () => {
+    const el = document.createElement("div");
+    el.getBoundingClientRect = () => new DOMRect(0, 0, 115, 0);
+    Object.defineProperty(el, "offsetWidth", { value: 100, configurable: true });
+
+    expect(ambientZoomFactor(el)).toBeCloseTo(1.15, 5);
+  });
+
+  it("returns 1 when either width is zero (no real layout, e.g. jsdom's default)", () => {
+    const el = document.createElement("div");
+    // No getBoundingClientRect/offsetWidth override — both default to 0.
+    expect(ambientZoomFactor(el)).toBe(1);
+  });
+});
 
 describe("PassageReview", () => {
   it("renders nothing when there are no sentences", () => {
@@ -65,7 +81,7 @@ describe("PassageReview", () => {
   });
 });
 
-function selectWithin(element: HTMLElement) {
+function selectWithin(element: HTMLElement, coords?: { clientX: number; clientY: number }) {
   const textNode = element.firstChild as Text;
   const range = document.createRange();
   range.setStart(textNode, 0);
@@ -73,7 +89,7 @@ function selectWithin(element: HTMLElement) {
   const sel = window.getSelection()!;
   sel.removeAllRanges();
   sel.addRange(range);
-  fireEvent.mouseUp(document);
+  fireEvent.mouseUp(document, coords);
 }
 
 describe("PassageReview select-to-speak", () => {
@@ -121,5 +137,27 @@ describe("PassageReview select-to-speak", () => {
     const button = screen.getByRole("button");
     expect(button).toBeDisabled();
     expect(button).toHaveTextContent("🔇");
+  });
+
+  // Regression test: under the "cỡ chữ lớn" (large font size) setting,
+  // .app-frame.fs-large applies CSS zoom: 1.15 to the whole app (bloom.css)
+  // — PassageReview must measure that ambient zoom off the passage
+  // element and pass it to SelectionSpeakButton so the button's position
+  // isn't re-multiplied by it a second time when painted.
+  it("passes the ambient zoom factor (measured off the passage element) down to the speak button", () => {
+    render(<PassageReview sentences={sentences} />);
+    const passageEl = document.querySelector(".reading-review-passage") as HTMLElement;
+    // Simulates .app-frame.fs-large's zoom: 1.15 — true rendered width is
+    // 15% larger than the unzoomed CSS layout width. Height is only set so
+    // the mouseup pointer below reads as "near the container" — it plays
+    // no part in the zoom-factor math itself (that only reads .width).
+    passageEl.getBoundingClientRect = () => new DOMRect(0, 0, 460, 50);
+    Object.defineProperty(passageEl, "offsetWidth", { value: 400, configurable: true });
+    expect(ambientZoomFactor(passageEl)).toBeCloseTo(1.15, 5);
+
+    selectWithin(screen.getByText("Hello there."), { clientX: 230, clientY: 20 });
+
+    const button = screen.getByRole("button", { name: /Nghe phát âm: Hello there\./ });
+    expect(parseFloat(button.style.left)).toBeCloseTo(230 / 1.15, 5);
   });
 });

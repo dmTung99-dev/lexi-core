@@ -11,6 +11,16 @@ interface SelectionSpeakButtonProps {
   // selection that simply grows past the limit used to make the button
   // disappear with no indication why.
   tooLong?: boolean;
+  // The ambient CSS `zoom` factor of the element `rect` was measured in
+  // (from the "cỡ chữ"/font-size setting's `.app-frame.fs-small`/`fs-large`
+  // zoom — see PassageReview.tsx's ambientZoomFactor). `rect` is always in
+  // true, unzoomed viewport pixels (from mouse coordinates or Range
+  // geometry), but this button is itself rendered inside that same zoomed
+  // subtree, so the browser re-multiplies whatever raw `top`/`left` px we
+  // set by this same factor when painting it. Dividing by it here cancels
+  // that out so the final rendered position matches the true coordinate.
+  // Defaults to 1 (no zoom) when not provided.
+  zoomFactor?: number;
 }
 
 // Matches .pron-btn's fixed size and .selection-speak-btn's CSS
@@ -32,14 +42,31 @@ const BUTTON_OFFSET = 3;
 const ABOVE_LINE_GAP = 4;
 const VIEWPORT_MARGIN = 8;
 
-export function SelectionSpeakButton({ text, rect, tooLong = false }: SelectionSpeakButtonProps) {
+export function SelectionSpeakButton({
+  text,
+  rect,
+  tooLong = false,
+  zoomFactor = 1,
+}: SelectionSpeakButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const maxLeft = window.innerWidth - BUTTON_SIZE - BUTTON_OFFSET - VIEWPORT_MARGIN;
-  const minTop = BUTTON_SIZE + ABOVE_LINE_GAP + VIEWPORT_MARGIN;
-  const left = Math.max(0, Math.min(rect.right, maxLeft));
-  const top = Math.max(minTop, rect.top);
+  // BUTTON_SIZE/BUTTON_OFFSET/ABOVE_LINE_GAP are CSS px *inside* the zoomed
+  // subtree, so their true on-screen footprint scales with zoomFactor too
+  // — clamping must account for that or the button could still clip past
+  // the viewport edge under a zoom > 1. VIEWPORT_MARGIN is a true-pixel
+  // safety gap, not a CSS length, so it's left unscaled.
+  const trueButtonSize = BUTTON_SIZE * zoomFactor;
+  const trueButtonOffset = BUTTON_OFFSET * zoomFactor;
+  const trueAboveGap = ABOVE_LINE_GAP * zoomFactor;
+  const maxLeftTrue = window.innerWidth - trueButtonSize - trueButtonOffset - VIEWPORT_MARGIN;
+  const minTopTrue = trueButtonSize + trueAboveGap + VIEWPORT_MARGIN;
+  const leftTrue = Math.max(0, Math.min(rect.right, maxLeftTrue));
+  const topTrue = Math.max(minTopTrue, rect.top);
+  // Cancel the browser's own zoom re-multiplication (see the zoomFactor
+  // prop doc above) so the final rendered position is the true one.
+  const left = leftTrue / zoomFactor;
+  const top = topTrue / zoomFactor;
 
   // A new selection (different text) starts from a clean idle state rather
   // than carrying over a previous selection's error/loading flag.
