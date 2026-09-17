@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { VocabRecord } from "@/lib/vocabRecords";
 import type { TtsLanguage } from "@/lib/pronunciation";
 import { PronunciationButton } from "./PronunciationButton";
+import { SpeakableTextBlock } from "@/components/reading/SpeakableTextBlock";
 
 interface HighlightedTextProps {
   text: string;
@@ -11,6 +12,10 @@ interface HighlightedTextProps {
   records?: VocabRecord[];
   ttsLanguage?: TtsLanguage | null;
   highlights?: string[];
+  // Wraps the rendered text for select-to-speak. Only pass this for English
+  // source text (e.g. Word Radar's "Văn bản" block) — never for Vietnamese
+  // text (e.g. "Bản dịch"), matching the reading feature's English-only scope.
+  enableSpeak?: boolean;
 }
 
 interface Span {
@@ -52,13 +57,21 @@ function splitIntoSpans(text: string, candidates: string[]): Span[] {
   return spans;
 }
 
-export function HighlightedText({ text, variant, records, ttsLanguage, highlights }: HighlightedTextProps) {
+export function HighlightedText({
+  text,
+  variant,
+  records,
+  ttsLanguage,
+  highlights,
+  enableSpeak,
+}: HighlightedTextProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const candidates = variant === "interactive" ? (records ?? []).map((r) => r.headword) : (highlights ?? []);
 
   if (candidates.length === 0 || text.length === 0) {
-    return <p>{text}</p>;
+    const plain = <p>{text}</p>;
+    return enableSpeak ? <SpeakableTextBlock>{plain}</SpeakableTextBlock> : plain;
   }
 
   const spans = splitIntoSpans(text, candidates);
@@ -67,7 +80,7 @@ export function HighlightedText({ text, variant, records, ttsLanguage, highlight
     return (records ?? []).find((r) => r.headword.toLowerCase() === matchedWord.toLowerCase());
   }
 
-  return (
+  const rendered = (
     <p>
       {spans.map((span, i) => {
         if (span.matchedWord === null) return <span key={i}>{span.text}</span>;
@@ -107,4 +120,6 @@ export function HighlightedText({ text, variant, records, ttsLanguage, highlight
       })}
     </p>
   );
+
+  return enableSpeak ? <SpeakableTextBlock>{rendered}</SpeakableTextBlock> : rendered;
 }

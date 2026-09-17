@@ -57,4 +57,38 @@ describe("McQuestionCard (result mode)", () => {
     render(<McQuestionCard label="Q" options={["a", "b"]} selected={0} correctIndex={0} />);
     expect(screen.queryByText(/Giải thích:/)).not.toBeInTheDocument();
   });
+
+  it("shows a speak button after selecting the question label text", () => {
+    render(<McQuestionCard label="1. She ___ to work." options={["a", "b"]} selected={0} correctIndex={0} />);
+
+    const label = screen.getByText("1. She ___ to work.");
+    const textNode = label.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, textNode.length);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fireEvent.mouseUp(document);
+
+    expect(screen.getByRole("button", { name: /Nghe phát âm: 1\. She ___ to work\./ })).toBeInTheDocument();
+  });
+});
+
+describe("McQuestionCard (session mode, no select-to-speak)", () => {
+  it("does not show a speak button after selecting the question label text", () => {
+    render(<McQuestionCard label="1. She ___ to work." options={["a", "b"]} selected={null} onSelect={vi.fn()} />);
+
+    const label = screen.getByText("1. She ___ to work.");
+    const textNode = label.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, textNode.length);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fireEvent.mouseUp(document);
+
+    expect(screen.queryByRole("button", { name: /Nghe phát âm/ })).toBeNull();
+  });
 });
