@@ -125,7 +125,7 @@ Tab riêng trên thanh điều hướng ("Tiến độ", giữa "Luyện tập" 
 
 ### Đồng bộ dữ liệu (Firebase) — cả 2 nền tảng
 - **Bắt buộc đăng nhập Google** để dùng app (không có chế độ ẩn danh/dùng thử) — cả app Flutter lẫn web React đều đọc/ghi **thẳng Cloud Firestore**, không qua backend trung gian cho CRUD từ vựng/chủ đề/bài luyện/ghi chú
-- **Không còn lớp cache cục bộ (offline-first) cho dữ liệu học tập** — khác kiến trúc ban đầu (Plan 2-4): `VocabRepositoryImpl` gọi Firestore trực tiếp trên mọi thao tác đọc/ghi, không có Hive ở đường đi runtime nữa; mất mạng thì thao tác lỗi thẳng, không có bản cache để hiển thị tạm
+- **Không còn lớp cache cục bộ (offline-first) cho dữ liệu học tập** — khác kiến trúc ban đầu (Plan 2-4): `VocabRepositoryImpl` gọi Firestore trực tiếp trên mọi thao tác đọc/ghi, không có Hive ở đường đi runtime nữa; ứng dụng không tự quản lý cache, hành vi khi mất mạng phụ thuộc vào cache mặc định của Firestore SDK (chưa được kiểm chứng riêng cho app này)
 - **Hive chỉ còn tồn tại như một bước di trú một lần** (`HiveMigrationService`) — dành cho tài khoản đã dùng app **trước khi** đăng nhập trở thành bắt buộc: khi tài khoản đó đăng nhập lần đầu sau nâng cấp, dữ liệu Hive cục bộ cũ (nếu còn) được đẩy lên Firestore đúng 1 lần rồi xoá box Hive; không chạy lại lần hai, và không đụng gì nếu Firestore của tài khoản đó đã có dữ liệu (tránh ghi đè bản mới hơn bằng bản Hive cũ hơn)
 - Cấu hình AI (provider, model) + API key **đã mã hoá** đồng bộ lên `users/{uid}/settings/config` — **dùng chung với app web**. Key dạng plaintext không bao giờ ghi lên Firestore / không bao giờ log.
 
