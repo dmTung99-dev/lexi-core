@@ -43,23 +43,32 @@ export function useRecorder() {
       setError("denied");
       return false;
     }
-    setError(null);
-    const mimeType = MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m));
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    chunksRef.current = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data);
-    };
-    streamRef.current = stream;
-    recorderRef.current = recorder;
-    recorder.start();
-    startedAtRef.current = Date.now();
-    setElapsed(0);
-    timerRef.current = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
-    }, 250);
-    setRecording(true);
-    return true;
+    try {
+      setError(null);
+      const mimeType = MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      streamRef.current = stream;
+      recorderRef.current = recorder;
+      recorder.start();
+      startedAtRef.current = Date.now();
+      setElapsed(0);
+      timerRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+      }, 250);
+      setRecording(true);
+      return true;
+    } catch {
+      // Release stream if recorder setup fails
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      busyRef.current = false;
+      return false;
+    }
   }, []);
 
   const stop = useCallback((): Promise<RecordedAudio | null> => {
