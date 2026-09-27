@@ -18,6 +18,7 @@ export function useRecorder() {
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const busyRef = useRef(false);
 
   const release = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -25,14 +26,20 @@ export function useRecorder() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     recorderRef.current = null;
+    busyRef.current = false;
     setRecording(false);
   }, []);
 
   const start = useCallback(async (): Promise<boolean> => {
+    // Prevent concurrent starts
+    if (busyRef.current) return false;
+    busyRef.current = true;
+
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
+      busyRef.current = false;
       setError("denied");
       return false;
     }
