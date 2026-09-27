@@ -11,11 +11,15 @@ vi.mock("./synthesizeSpeechClient", () => ({
 
 const played: string[] = [];
 let autoEnd = true;
+const audioInstances: FakeAudio[] = [];
 
 class FakeAudio {
   src = "";
   onended: (() => void) | null = null;
   onerror: (() => void) | null = null;
+  constructor() {
+    audioInstances.push(this);
+  }
   play() {
     played.push(this.src);
     if (autoEnd) queueMicrotask(() => this.onended?.());
@@ -26,6 +30,7 @@ class FakeAudio {
 
 beforeEach(() => {
   played.length = 0;
+  audioInstances.length = 0;
   autoEnd = true;
   vi.stubGlobal("Audio", FakeAudio);
   vi.mocked(synthesizeSpeech).mockImplementation(async ({ text }) => ({ audioBase64: text }));
@@ -109,5 +114,46 @@ describe("useInterviewAudio", () => {
       await result.current.speak("Hello.");
     });
     expect(synthesizeSpeech).toHaveBeenCalledWith(expect.objectContaining({ voice: "female2" }));
+  });
+
+  it("a new play call supersedes an in-flight one", async () => {
+    autoEnd = false;
+    const { result } = renderHook(() => useInterviewAudio("male1"));
+
+    let firstPromise!: Promise<boolean>;
+    act(() => {
+      firstPromise = result.current.speak("One.");
+    });
+    // Wait until "One." is actually playing before starting "Two.".
+    await act(async () => {
+      while (played.length === 0) await Promise.resolve();
+    });
+
+    let secondPromise!: Promise<boolean>;
+    act(() => {
+      secondPromise = result.current.speak("Two.");
+    });
+
+    // Race the first promise's settlement against a real (macrotask) timer so
+    // a genuine hang (the bug: overlapping playUrl calls overwrite
+    // onended/onerror/cancelCurrentRef without ever resolving the superseded
+    // promise) fails this test quickly instead of stalling the whole suite.
+    // A microtask busy-loop would starve the setTimeout callback and hang for
+    // real, so this races the promise itself, not a poll of some flag.
+    const TIMEOUT = Symbol("timeout");
+    const raceResult = await act(async () =>
+      Promise.race([firstPromise, new Promise((resolve) => setTimeout(() => resolve(TIMEOUT), 300))])
+    );
+    expect(raceResult).toBe(false); // not TIMEOUT
+
+    // Let "Two." finish: wait until it's playing, then trigger its onended.
+    await act(async () => {
+      while (played.length < 2) await Promise.resolve();
+    });
+    expect(played).toEqual(["data:One.", "data:Two."]);
+    await act(async () => {
+      audioInstances[0]?.onended?.();
+    });
+    await expect(secondPromise).resolves.toBe(true);
   });
 });

@@ -52,7 +52,14 @@ export function useInterviewAudio(voice: InterviewVoice): InterviewAudio {
 
   const playClips = useCallback(
     async (clips: Clip[]): Promise<boolean> => {
-      const generation = ++generationRef.current;
+      // A new play call supersedes whatever is currently playing/pending:
+      // force-settle it (resolving its caller's promise with false) before
+      // starting anything new, so no in-flight play() is ever left hanging.
+      generationRef.current++;
+      audioRef.current?.pause();
+      cancelCurrentRef.current?.();
+
+      const generation = generationRef.current;
       if (clips.length === 0) return false;
       for (const clip of clips) {
         const url = await clip;
