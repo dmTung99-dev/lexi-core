@@ -196,7 +196,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
       }
       case "idle": {
         const next = state.plan[state.mainIndex + 1];
-        if (next) audio.prefetch(`main-${state.mainIndex + 1}`, next);
+        if (next) audio.prefetch(`main-${state.mainIndex + 1}`, next.en);
         return;
       }
       case "transcribing": {
@@ -247,15 +247,15 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
               settings,
               buildNextTurnPrompt({
                 setup: session.setup,
-                mainQuestion: state.plan[state.mainIndex],
+                mainQuestion: state.plan[state.mainIndex].en,
                 exchanges,
-                nextMainQuestion: state.plan[state.mainIndex + 1] ?? null,
+                nextMainQuestion: state.plan[state.mainIndex + 1]?.en ?? null,
               })
             );
             if (handledRef.current !== state) return;
             const decision = parseNextTurn(raw);
             if (decision.action === "follow_up") {
-              dispatch({ type: "FOLLOW_UP", question: decision.say });
+              dispatch({ type: "FOLLOW_UP", question: decision.say, vi: decision.vi });
               return;
             }
             if (decision.ack) await audio.speak(decision.ack);
@@ -396,8 +396,17 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   }
 
   async function handleTranslate() {
-    if (!settings) return;
     const question = state.question;
+    // The plan (and follow-up decisions) now carry a Vietnamese translation
+    // prepared up front, so this is normally instant — no AI call. Only a
+    // legacy session's plan (saved before translations were bundled in, see
+    // interviewSessions.ts's normalizePlan) has an empty questionVi, and
+    // falls back to the old on-demand call for exactly those questions.
+    if (state.questionVi) {
+      setTranslation({ question, vi: state.questionVi });
+      return;
+    }
+    if (!settings) return;
     setTranslating(true);
     try {
       setTranslation({ question, vi: parseTranslation(await callInterviewAi(settings, buildTranslatePrompt(question))) });

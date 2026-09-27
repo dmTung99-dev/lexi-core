@@ -1,4 +1,4 @@
-import type { InterviewTurn } from "./interviewTypes";
+import type { InterviewPlanItem, InterviewTurn } from "./interviewTypes";
 
 export type InterviewPhase =
   | "warming"
@@ -16,17 +16,21 @@ export type InterviewNotice = null | "plan_failed" | "empty_transcript" | "tts_f
 
 export interface InterviewState {
   phase: InterviewPhase;
-  plan: string[];
+  plan: InterviewPlanItem[];
   mainIndex: number;
   followUpUsed: boolean;
   question: string;
+  /** Vietnamese translation of `question`, prepared up front alongside it
+   * (in the plan for main questions, in the AI's follow-up decision for
+   * follow-ups) — "Dịch sang tiếng Việt" just displays this, no AI call. */
+  questionVi: string;
   kind: "main" | "follow_up";
   draft: string;
   notice: InterviewNotice;
 }
 
 export type InterviewEvent =
-  | { type: "PLAN_READY"; plan: string[]; startIndex?: number }
+  | { type: "PLAN_READY"; plan: InterviewPlanItem[]; startIndex?: number }
   | { type: "PLAN_FAILED" }
   | { type: "RETRY_PLAN" }
   | { type: "SPEECH_ENDED"; ttsFailed?: boolean }
@@ -38,7 +42,7 @@ export type InterviewEvent =
   | { type: "RETRY_TRANSCRIBE" }
   | { type: "EDIT_DRAFT"; text: string }
   | { type: "SEND" }
-  | { type: "FOLLOW_UP"; question: string }
+  | { type: "FOLLOW_UP"; question: string; vi: string }
   | { type: "NEXT_MAIN" }
   | { type: "SKIP" }
   | { type: "CLOSING_ENDED" }
@@ -50,6 +54,7 @@ export const initialInterviewState: InterviewState = {
   mainIndex: 0,
   followUpUsed: false,
   question: "",
+  questionVi: "",
   kind: "main",
   draft: "",
   notice: null,
@@ -59,12 +64,14 @@ function askMain(state: InterviewState, index: number): InterviewState {
   if (index >= state.plan.length) {
     return { ...state, phase: "closing", draft: "", notice: null };
   }
+  const item = state.plan[index];
   return {
     ...state,
     phase: "speaking",
     mainIndex: index,
     followUpUsed: false,
-    question: state.plan[index],
+    question: item.en,
+    questionVi: item.vi,
     kind: "main",
     draft: "",
     notice: null,
@@ -106,7 +113,15 @@ export function interviewReducer(state: InterviewState, event: InterviewEvent): 
       return phase === "review" && state.draft.trim() ? { ...state, phase: "processing" } : state;
     case "FOLLOW_UP":
       return phase === "processing"
-        ? { ...state, phase: "speaking", question: event.question, kind: "follow_up", followUpUsed: true, draft: "" }
+        ? {
+            ...state,
+            phase: "speaking",
+            question: event.question,
+            questionVi: event.vi,
+            kind: "follow_up",
+            followUpUsed: true,
+            draft: "",
+          }
         : state;
     case "NEXT_MAIN":
       return phase === "processing" ? askMain(state, state.mainIndex + 1) : state;

@@ -198,7 +198,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
           <QuestionReview
             key={i}
             number={i + 1}
-            question={session.plan[i] ?? ""}
+            question={session.plan[i]?.en ?? ""}
             answer={combinedAnswer(session.turns, i)}
             skipped={!answered.includes(i)}
             item={report?.questions.find((q) => q.mainIndex === i)}

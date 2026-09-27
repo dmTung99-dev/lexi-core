@@ -8,7 +8,10 @@ import {
   type InterviewState,
 } from "./interviewMachine";
 
-const PLAN = ["Q1", "Q2"];
+const PLAN = [
+  { en: "Q1", vi: "C1" },
+  { en: "Q2", vi: "C2" },
+];
 
 function run(events: InterviewEvent[], from: InterviewState = initialInterviewState): InterviewState {
   return events.reduce(interviewReducer, from);
@@ -17,7 +20,7 @@ function run(events: InterviewEvent[], from: InterviewState = initialInterviewSt
 describe("interviewMachine", () => {
   it("starts warming and speaks the first question when the plan is ready", () => {
     const s = run([{ type: "PLAN_READY", plan: PLAN }]);
-    expect(s).toMatchObject({ phase: "speaking", mainIndex: 0, question: "Q1", kind: "main" });
+    expect(s).toMatchObject({ phase: "speaking", mainIndex: 0, question: "Q1", questionVi: "C1", kind: "main" });
   });
 
   it("can resume from a later index, or go straight to closing", () => {
@@ -88,8 +91,14 @@ describe("interviewMachine", () => {
       { type: "TRANSCRIBED", text: "a", review: false },
     ]);
     expect(canFollowUp(processing)).toBe(true);
-    const followUp = run([{ type: "FOLLOW_UP", question: "Why?" }], processing);
-    expect(followUp).toMatchObject({ phase: "speaking", question: "Why?", kind: "follow_up", mainIndex: 0 });
+    const followUp = run([{ type: "FOLLOW_UP", question: "Why?", vi: "Tại sao?" }], processing);
+    expect(followUp).toMatchObject({
+      phase: "speaking",
+      question: "Why?",
+      questionVi: "Tại sao?",
+      kind: "follow_up",
+      mainIndex: 0,
+    });
     const secondProcessing = run(
       [{ type: "SPEECH_ENDED" }, { type: "START_RECORDING" }, { type: "STOP_RECORDING" }, { type: "TRANSCRIBED", text: "b", review: false }],
       followUp

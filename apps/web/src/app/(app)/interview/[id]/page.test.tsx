@@ -55,7 +55,13 @@ const SETTINGS: UserSettings = {
   ...DEFAULT_SETTINGS,
   providers: { ...DEFAULT_SETTINGS.providers, gemini: { ...DEFAULT_SETTINGS.providers.gemini, apiKeyCiphertext: "c" } },
 };
-const PLAN = ["Q1?", "Q2?", "Q3?", "Q4?", "Q5?"];
+const PLAN = [
+  { en: "Q1?", vi: "C1?" },
+  { en: "Q2?", vi: "C2?" },
+  { en: "Q3?", vi: "C3?" },
+  { en: "Q4?", vi: "C4?" },
+  { en: "Q5?", vi: "C5?" },
+];
 
 function makeSession(patch: Partial<InterviewSession> = {}): InterviewSession {
   return {
@@ -156,6 +162,26 @@ describe("InterviewSessionPage", () => {
     await answerCurrentQuestion();
     expect(await screen.findByText("Why did you choose that?")).toBeInTheDocument();
     expect(screen.getByText("Câu hỏi thêm")).toBeInTheDocument();
+  });
+
+  it("shows a main question's pre-fetched translation instantly, with no extra AI call", async () => {
+    renderPage(makeSession());
+    await screen.findByText("Q1?");
+    const callsBefore = vi.mocked(callInterviewAi).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Dịch sang tiếng Việt" }));
+    expect(await screen.findByText("C1?")).toBeInTheDocument();
+    expect(vi.mocked(callInterviewAi).mock.calls.length).toBe(callsBefore);
+  });
+
+  it("shows a follow-up question's own pre-fetched translation instantly, with no extra AI call", async () => {
+    nextTurnReply = '{"action":"follow_up","say":"Why did you choose that?","vi":"Vì sao bạn chọn cái đó?"}';
+    renderPage(makeSession({ plan: PLAN }));
+    await answerCurrentQuestion();
+    await screen.findByText("Why did you choose that?");
+    const callsBefore = vi.mocked(callInterviewAi).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Dịch sang tiếng Việt" }));
+    expect(await screen.findByText("Vì sao bạn chọn cái đó?")).toBeInTheDocument();
+    expect(vi.mocked(callInterviewAi).mock.calls.length).toBe(callsBefore);
   });
 
   it("moves on when nextTurn fails", async () => {

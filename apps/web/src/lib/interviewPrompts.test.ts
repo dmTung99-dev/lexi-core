@@ -67,13 +67,30 @@ describe("question plan", () => {
     expect(p).not.toContain("Job description");
   });
 
-  it("returns exactly count questions, trimming extras", () => {
-    const raw = JSON.stringify({ questions: ["Q1", " Q2 ", "Q3", "Q4", "Q5", "Q6"] });
-    expect(parseQuestionPlan(raw, 5)).toEqual(["Q1", "Q2", "Q3", "Q4", "Q5"]);
+  it("returns exactly count questions with their translations, trimming extras", () => {
+    const raw = JSON.stringify({
+      questions: [
+        { en: "Q1", vi: "C1" },
+        { en: " Q2 ", vi: " C2 " },
+        { en: "Q3", vi: "C3" },
+        { en: "Q4", vi: "C4" },
+        { en: "Q5", vi: "C5" },
+        { en: "Q6", vi: "C6" },
+      ],
+    });
+    expect(parseQuestionPlan(raw, 5)).toEqual([
+      { en: "Q1", vi: "C1" },
+      { en: "Q2", vi: "C2" },
+      { en: "Q3", vi: "C3" },
+      { en: "Q4", vi: "C4" },
+      { en: "Q5", vi: "C5" },
+    ]);
   });
 
   it("throws when fewer than count valid questions", () => {
-    expect(() => parseQuestionPlan(JSON.stringify({ questions: ["Q1", ""] }), 5)).toThrow(InterviewAiError);
+    expect(() => parseQuestionPlan(JSON.stringify({ questions: [{ en: "Q1", vi: "C1" }, { en: "" }] }), 5)).toThrow(
+      InterviewAiError
+    );
   });
 });
 
@@ -95,10 +112,19 @@ describe("next turn", () => {
     expect(buildNextTurnPrompt({ ...input, nextMainQuestion: null })).toContain("This is the last main question");
   });
 
-  it("parses follow_up", () => {
+  it("parses follow_up, including its translation", () => {
+    expect(parseNextTurn('{"action":"follow_up","say":"Why Redux?","vi":"Vì sao Redux?"}')).toEqual({
+      action: "follow_up",
+      say: "Why Redux?",
+      vi: "Vì sao Redux?",
+    });
+  });
+
+  it("defaults vi to empty when the AI omits it", () => {
     expect(parseNextTurn('{"action":"follow_up","say":"Why Redux?"}')).toEqual({
       action: "follow_up",
       say: "Why Redux?",
+      vi: "",
     });
   });
 
