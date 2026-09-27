@@ -2817,14 +2817,20 @@ button.btn-google svg {
   .iv-type-grid, .iv-voice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .iv-docs { grid-template-columns: minmax(0, 1fr); }
 }
-.iv-session { display: flex; flex-direction: column; gap: 18px; min-height: calc(100vh - 64px); }
+.iv-session { display: flex; flex-direction: column; gap: 14px; }
 .iv-session-head { display: flex; align-items: center; gap: 20px; }
 .iv-session-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .iv-progress { display: flex; gap: 6px; }
 .iv-progress span { width: 8px; height: 8px; border-radius: 999px; background: var(--border); }
 .iv-progress span.done { background: var(--sage); }
 .iv-progress span.current { width: 22px; background: var(--accent); }
-.iv-session-body { flex: 1; display: flex; gap: 22px; align-items: flex-start; }
+/* No forced min-height/flex:1 stretch here on purpose — that combo used to
+   leave the short side column's leftover space as dead air below it while
+   pushing the sticky dock past the fold on shorter viewports (needed a
+   scroll to reach it). Sizing to natural content keeps the dock right below
+   the question/side cards; .iv-dock's `position: sticky; bottom: 0` still
+   keeps it pinned to view once the thread grows long enough to scroll. */
+.iv-session-body { display: flex; gap: 22px; align-items: flex-start; }
 .iv-session-side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
 .iv-note { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--amber-bg); font-size: 14.5px; }
 .iv-thread { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }

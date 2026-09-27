@@ -1,5 +1,5 @@
 import { parseAiJsonObject } from "./parseAiJson";
-import type { InterviewSetup } from "./interviewTypes";
+import type { InterviewPlanItem, InterviewSetup } from "./interviewTypes";
 
 export class InterviewAiError extends Error {
   constructor(message: string) {
@@ -77,17 +77,23 @@ export function buildQuestionPlanPrompt(setup: InterviewSetup): string {
 
 ${describeCandidate(setup)}
 ${context ? `\n${context}\n` : ""}
-Write exactly ${setup.questionCount} main interview questions, in the order you will ask them.
+Write exactly ${setup.questionCount} main interview questions, in the order you will ask them, each with a natural Vietnamese translation (for a candidate who wants to check meaning, not a word-for-word gloss).
 - Start with a short warm-up question (e.g. a brief self-introduction), end with a natural closing question.
 - Fit the seniority and interview type. If a CV summary is given, at least half the questions must reference specific experience from it. If a job description is given, cover its key requirements.
 - One question per item, spoken style, max 35 words each, no numbering.
 
 Return ONLY a JSON object, no prose:
-{"questions": ["...", "..."]}`;
+{"questions": [{"en": "...", "vi": "..."}, ...]}`;
 }
 
-export function parseQuestionPlan(raw: string, count: number): string[] {
-  const questions = strList(parseJson(raw).questions);
+export function parseQuestionPlan(raw: string, count: number): InterviewPlanItem[] {
+  const items = parseJson(raw).questions;
+  const questions = (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const o = (item ?? {}) as Record<string, unknown>;
+      return { en: str(o.en), vi: str(o.vi) };
+    })
+    .filter((q) => q.en.length > 0);
   if (questions.length < count) throw new InterviewAiError("AI không tạo đủ câu hỏi.");
   return questions.slice(0, count);
 }
@@ -99,7 +105,9 @@ export interface NextTurnInput {
   nextMainQuestion: string | null;
 }
 
-export type NextTurnDecision = { action: "follow_up"; say: string } | { action: "next"; ack: string };
+export type NextTurnDecision =
+  | { action: "follow_up"; say: string; vi: string }
+  | { action: "next"; ack: string };
 
 export function buildNextTurnPrompt(input: NextTurnInput): string {
   const exchange = input.exchanges
@@ -118,11 +126,11 @@ ${exchange}
 ${next}
 
 Decide ONE of:
-1. Ask ONE follow-up question if the answer is vague, lacks the candidate's own concrete actions or results, or makes a claim worth probing. Max 30 words, spoken style, directly about what they said.
+1. Ask ONE follow-up question if the answer is vague, lacks the candidate's own concrete actions or results, or makes a claim worth probing. Max 30 words, spoken style, directly about what they said. Also give "vi": a natural Vietnamese translation of "say".
 2. Move on, with a brief neutral acknowledgement (max 12 words, e.g. "Thanks, that's helpful."). Do not give feedback or scores.
 
 Return ONLY a JSON object, no prose — either
-{"action": "follow_up", "say": "..."}
+{"action": "follow_up", "say": "...", "vi": "..."}
 or
 {"action": "next", "ack": "..."}`;
 }
@@ -132,7 +140,7 @@ export function parseNextTurn(raw: string): NextTurnDecision {
   if (json.action === "follow_up") {
     const say = str(json.say);
     if (!say) throw new InterviewAiError("AI thiếu câu hỏi xoáy.");
-    return { action: "follow_up", say };
+    return { action: "follow_up", say, vi: str(json.vi) };
   }
   if (json.action === "next") {
     return { action: "next", ack: str(json.ack) };

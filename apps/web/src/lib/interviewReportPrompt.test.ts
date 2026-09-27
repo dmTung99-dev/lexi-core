@@ -46,7 +46,15 @@ describe("answeredMainIndexes", () => {
 
 describe("buildReportPrompt", () => {
   it("includes every answered main question with its combined answer and skips skipped ones", () => {
-    const p = buildReportPrompt(SETUP, ["Intro?", "Conflict?", "Project?"], TURNS);
+    const p = buildReportPrompt(
+      SETUP,
+      [
+        { en: "Intro?", vi: "" },
+        { en: "Conflict?", vi: "" },
+        { en: "Project?", vi: "" },
+      ],
+      TURNS
+    );
     expect(p).toContain("mainIndex 0");
     expect(p).toContain("We disagree.");
     expect(p).toContain("Because Redux.");

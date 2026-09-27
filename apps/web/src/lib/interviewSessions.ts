@@ -1,6 +1,16 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
-import type { InterviewReport, InterviewSession, InterviewSetup, InterviewTurn } from "./interviewTypes";
+import type { InterviewPlanItem, InterviewReport, InterviewSession, InterviewSetup, InterviewTurn } from "./interviewTypes";
+
+// Sessions created before translations were bundled into the plan have
+// `plan: string[]` (English only) on Firestore. Normalize those to
+// `{en, vi: ""}` on read so old in-progress sessions keep working — the
+// empty `vi` makes the UI fall back to an on-demand translate call for
+// exactly those legacy questions, new ones always come pre-translated.
+function normalizePlan(raw: unknown): InterviewPlanItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => (typeof item === "string" ? { en: item, vi: "" } : (item as InterviewPlanItem)));
+}
 
 function sessionsCol(uid: string) {
   return collection(getFirebaseDb(), "users", uid, "interview_sessions");
@@ -29,10 +39,11 @@ export async function createInterviewSession(uid: string, setup: InterviewSetup)
 export async function getInterviewSession(uid: string, id: string): Promise<InterviewSession | null> {
   const snap = await getDoc(sessionRef(uid, id));
   if (!snap.exists()) return null;
-  return { ...(snap.data() as InterviewSession), id: snap.id };
+  const data = snap.data() as InterviewSession;
+  return { ...data, plan: normalizePlan(data.plan), id: snap.id };
 }
 
-export async function saveInterviewPlan(uid: string, id: string, plan: string[]): Promise<void> {
+export async function saveInterviewPlan(uid: string, id: string, plan: InterviewPlanItem[]): Promise<void> {
   await updateDoc(sessionRef(uid, id), { plan });
 }
 

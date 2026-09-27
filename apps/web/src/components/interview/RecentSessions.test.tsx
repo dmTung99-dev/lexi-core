@@ -8,7 +8,13 @@ const SESSION: InterviewSession = {
   createdAt: "2026-09-25T10:00:00.000Z",
   status: "completed",
   setup: { role: "Software Engineer", level: "junior", type: "behavioral", questionCount: 5, voice: "male2", jd: "", cvSummary: null, reviewTranscript: true },
-  plan: ["a", "b", "c", "d", "e"],
+  plan: [
+    { en: "a", vi: "" },
+    { en: "b", vi: "" },
+    { en: "c", vi: "" },
+    { en: "d", vi: "" },
+    { en: "e", vi: "" },
+  ],
   turns: [],
   report: {
     overall: 7.2,

@@ -64,13 +64,22 @@ describe("interviewSessions", () => {
   });
 
   it("returns the session with its id", async () => {
+    vi.mocked(getDoc).mockResolvedValue({
+      exists: () => true,
+      id: "s1",
+      data: () => ({ plan: [{ en: "Q", vi: "C" }] }),
+    } as never);
+    await expect(getInterviewSession("u1", "s1")).resolves.toEqual({ plan: [{ en: "Q", vi: "C" }], id: "s1" });
+  });
+
+  it("normalizes a legacy string[] plan (saved before translations were bundled in) to {en, vi: \"\"}", async () => {
     vi.mocked(getDoc).mockResolvedValue({ exists: () => true, id: "s1", data: () => ({ plan: ["Q"] }) } as never);
-    await expect(getInterviewSession("u1", "s1")).resolves.toEqual({ plan: ["Q"], id: "s1" });
+    await expect(getInterviewSession("u1", "s1")).resolves.toEqual({ plan: [{ en: "Q", vi: "" }], id: "s1" });
   });
 
   it("updates plan, turns, and completion", async () => {
-    await saveInterviewPlan("u1", "s1", ["Q1"]);
-    expect(updateDoc).toHaveBeenLastCalledWith(expect.anything(), { plan: ["Q1"] });
+    await saveInterviewPlan("u1", "s1", [{ en: "Q1", vi: "C1" }]);
+    expect(updateDoc).toHaveBeenLastCalledWith(expect.anything(), { plan: [{ en: "Q1", vi: "C1" }] });
     await saveInterviewTurns("u1", "s1", []);
     expect(updateDoc).toHaveBeenLastCalledWith(expect.anything(), { turns: [] });
     await completeInterviewSession("u1", "s1", null);

@@ -1166,6 +1166,17 @@ Comment tại chỗ kiểm tra `CV_MIN_TEXT_CHARS`: *"A scanned/image-only PDF h
 
 **Đối chiếu với "khoảng trống" đã ghi ở note của tính năng** (SDD progress log): *"PDFs >10 pages silently truncated to first 10 (no user signal)"* — một điểm yếu **có thật, đã biết, chưa sửa**: người dùng không được báo khi CV của họ bị cắt bớt trang. Đáng nêu khi bị hỏi "bạn thấy điểm nào của tính năng này chưa hoàn hảo".
 
+### Follow-up sau khi merge: gộp bản dịch vào cùng lệnh gọi sinh câu hỏi (tránh N+1 lệnh gọi AI)
+
+Bản đầu của tính năng gọi AI **riêng một lần nữa** mỗi khi người dùng bấm "Dịch sang tiếng Việt" (`buildTranslatePrompt`/`parseTranslation`, không cache) — đúng dạng vấn đề **N+1 round-trip**: 1 lệnh gọi sinh ra N câu hỏi, rồi tối đa N lệnh gọi rời rạc nữa nếu người dùng dịch hết. Sửa bằng cách **gộp bản dịch vào ngay JSON trả về của lệnh gọi sinh câu hỏi**:
+- Kế hoạch câu hỏi: `{"questions": ["..."]}` → `{"questions": [{"en": "...", "vi": "..."}]}` — AI viết câu hỏi và dịch nó **trong cùng 1 lượt suy luận**, không tốn thêm lệnh gọi nào.
+- Câu hỏi xoáy (sinh **giữa buổi**, không nằm trong plan): nhánh `follow_up` của `buildNextTurnPrompt` cũng được yêu cầu trả kèm `"vi"` luôn — vẫn là **1 lệnh gọi**, chỉ thêm một trường trong response, không thêm round-trip.
+- Bản dịch được gắn **vào state machine** (`questionVi`, đi theo `question` bất kể là câu chính hay câu xoáy) — tầng UI (`handleTranslate`) không còn "quyết định gọi AI hay không" nữa, chỉ đơn giản là hiển thị giá trị đã có sẵn.
+
+**Bài học chung (áp dụng lại đúng khái niệm ở Phần 1.5/1.12):** khi một tính năng cần AI sinh ra **nhiều thứ liên quan tới nhau** (câu hỏi + bản dịch, văn bản + tóm tắt...), hỏi "có thể gộp vào cùng 1 response JSON không" trước khi thiết kế thêm một lệnh gọi/endpoint riêng — rẻ hơn hẳn về cả độ trễ (không có round-trip thứ hai) và chi phí (không tính thêm 1 lượt gọi provider), miễn AI đủ khả năng làm cả hai việc cùng lúc trong 1 lượt suy luận.
+
+**Tương thích ngược — chi tiết đáng nhớ nếu bị hỏi "đổi contract AI mà không làm vỡ dữ liệu cũ thế nào":** phiên đã lưu Firestore từ trước khi đổi có `plan` là `string[]` thuần. `getInterviewSession` (`interviewSessions.ts`) chuẩn hoá tại chỗ đọc — gặp `string` thì bọc thành `{en: chuỗi, vi: ""}` — nên phiên cũ **không vỡ**, chỉ những câu hỏi của phiên đó (vi rỗng) rơi về nhánh gọi AI cũ khi bấm dịch, còn phiên mới tạo sau luôn có `vi` sẵn.
+
 ---
 
 ## Khoảng trống/khác biệt thật cần biết (đối chiếu tài liệu dự án vs code)
@@ -1202,3 +1213,4 @@ Comment tại chỗ kiểm tra `CV_MIN_TEXT_CHARS`: *"A scanned/image-only PDF h
 - [ ] **Bẫy thuật ngữ:** KMS direct ≠ envelope encryption.
 - [ ] **5 đơn vị deploy** (không phải 4): STT giờ có service Cloud Run riêng (`stt`, tách từ `tts-stt`) vì lý do concurrency/CPU, và giải thích được `warmUpSpeech` chống cold start bằng `Promise.allSettled` best-effort.
 - [ ] **Parse CV client-side:** giải thích được vì sao dynamic import, vì sao giới hạn kích thước/số trang/độ dài text, và biết nói thật điểm yếu (>10 trang bị cắt không báo người dùng).
+- [ ] **Tránh N+1 lệnh gọi AI:** kể được ví dụ thật (gộp bản dịch vào cùng response sinh câu hỏi/câu hỏi xoáy) và nguyên tắc chung — hỏi "gộp vào cùng 1 JSON được không" trước khi thêm 1 lệnh gọi/endpoint riêng.

@@ -38,6 +38,14 @@ export interface InterviewSetup {
   reviewTranscript: boolean;
 }
 
+/** A planned main question with its Vietnamese translation prepared up front
+ * (in the same AI call that writes the question), so "Dịch sang tiếng Việt"
+ * shows instantly instead of triggering a fresh AI call per click. */
+export interface InterviewPlanItem {
+  en: string;
+  vi: string;
+}
+
 export interface InterviewTurn {
   mainIndex: number;
   kind: "main" | "follow_up";
@@ -85,7 +93,7 @@ export interface InterviewSession {
   createdAt: string;
   status: "in_progress" | "completed";
   setup: InterviewSetup;
-  plan: string[];
+  plan: InterviewPlanItem[];
   turns: InterviewTurn[];
   report: InterviewReport | null;
   reportError: boolean;

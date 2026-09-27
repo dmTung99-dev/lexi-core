@@ -2394,3 +2394,12 @@ Task 14: complete (commits 6f255e3..e4e425d incl. fix: phrase-save errors surfac
 - minor T14: redundant capitalizeHeadword before lookup; second @media(max-width:980px) block could merge.
 Task 15: complete (commit e4e425d..d42955a, docs + .env.example; functions 80/80, web build ok)
 - flaky: interview/[id]/page.test.tsx "generates and saves the plan" asserts AUDIO.playPrefetched immediately after findByText — passive-effect race under full-suite load (failed once, passed 3/3 isolated + full 1094/1094 rerun). Needs waitFor.
+
+Post-merge follow-up (2026-09-28, user-reported): "Dịch sang tiếng Việt" was a fresh `callInterviewAi` round-trip on every click (`buildTranslatePrompt`/`parseTranslation`), never cached. User asked to prepare the translation alongside question generation instead. Implemented:
+- `buildQuestionPlanPrompt`/`parseQuestionPlan`: AI now returns `{"questions": [{"en", "vi"}]}` instead of `["..."]` — `InterviewSession.plan`/`InterviewState.plan` retyped `InterviewPlanItem[]` (new type in interviewTypes.ts).
+- `buildNextTurnPrompt`/`parseNextTurn`: `follow_up` branch also returns `"vi"` (lenient — defaults to `""` if the AI omits it, doesn't throw).
+- `InterviewState` gained `questionVi`, threaded through by `askMain` (from `plan[i].vi`) and the `FOLLOW_UP` event (`event.vi`) — travels with `question` regardless of whether it's a main or follow-up question.
+- `handleTranslate` (page.tsx) now just displays `state.questionVi` — instant, no AI call — falling back to the old on-demand call only when it's empty.
+- Backward compat: `interviewSessions.ts`'s `getInterviewSession` normalizes a legacy `plan: string[]` (sessions saved before this change) to `{en, vi: ""}[]`, so an in-progress session isn't broken by this change; its remaining questions just fall back to on-demand translate.
+- Also fixed the same day: `.iv-session`'s forced `min-height: calc(100vh - 64px)` + `.iv-session-body`'s `flex: 1` left the short side-column's leftover space as dead air while pushing the sticky dock past the fold on shorter viewports (needed a scroll to reach it, per user screenshot). Removed both — layout now sizes to natural content height.
+- web 1103 → 1107 tests (4 new: 2 in page.test.tsx for instant main/follow-up translate with no extra AI call, 1 legacy-plan-normalization case in interviewSessions.test.ts, 1 vi-defaults-to-empty case in interviewPrompts.test.ts), typecheck clean.

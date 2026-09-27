@@ -3,6 +3,7 @@ import {
   combinedAnswer,
   type CriterionKey,
   type InterviewPhrase,
+  type InterviewPlanItem,
   type InterviewReport,
   type InterviewReportQuestion,
   type InterviewSetup,
@@ -18,13 +19,13 @@ export function answeredMainIndexes(turns: InterviewTurn[]): number[] {
   return [...set].sort((a, b) => a - b);
 }
 
-export function buildReportPrompt(setup: InterviewSetup, plan: string[], turns: InterviewTurn[]): string {
+export function buildReportPrompt(setup: InterviewSetup, plan: InterviewPlanItem[], turns: InterviewTurn[]): string {
   const blocks = answeredMainIndexes(turns).map((i) => {
     const lines = turns
       .filter((t) => t.mainIndex === i && !t.skipped)
       .map((t) => `${t.kind === "main" ? "Interviewer" : "Interviewer (follow-up)"}: ${t.question}\nCandidate: ${t.answer}`)
       .join("\n");
-    return `### mainIndex ${i}\nPlanned question: ${plan[i] ?? ""}\n${lines}\nCombined candidate answer: ${combinedAnswer(turns, i)}`;
+    return `### mainIndex ${i}\nPlanned question: ${plan[i]?.en ?? ""}\n${lines}\nCombined candidate answer: ${combinedAnswer(turns, i)}`;
   });
   return `You are an expert English interview coach for Vietnamese learners. Evaluate this spoken mock interview. Candidate answers are speech-to-text transcripts: judge grammar and word choice, but ignore punctuation/capitalization and do NOT judge pronunciation.
 
