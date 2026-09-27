@@ -117,6 +117,15 @@ describe("InterviewReportPage", () => {
     expect(saveVocabRecord).not.toHaveBeenCalled();
   });
 
+  it("shows an error when saving a phrase fails, without marking it saved", async () => {
+    vi.mocked(saveVocabRecord).mockRejectedValue(new Error("network"));
+    renderPage(makeSession());
+    fireEvent.click(await screen.findByRole("button", { name: /rather than debate it/ }));
+    expect(await screen.findByText("Không lưu được cụm từ — thử lại.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /rather than debate it/ })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: /đã lưu/ })).not.toBeInTheDocument();
+  });
+
   it("re-grades a session whose grading failed", async () => {
     vi.mocked(callInterviewAi).mockResolvedValue(JSON.stringify(REPORT));
     renderPage(makeSession({ report: null, reportError: true }));

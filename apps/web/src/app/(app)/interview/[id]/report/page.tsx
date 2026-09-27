@@ -42,6 +42,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [regrading, setRegrading] = useState(false);
   const [regradeError, setRegradeError] = useState<string | null>(null);
+  const [phraseSaveError, setPhraseSaveError] = useState<string | null>(null);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
 
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
   async function handleSavePhrase(phrase: InterviewPhrase, example: string) {
     if (!user) return;
     const headword = capitalizeHeadword(phrase.text.trim());
+    setPhraseSaveError(null);
     try {
       const existing = await getVocabRecordByHeadword(user.uid, headword, "english");
       if (!existing) {
@@ -147,6 +149,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
       setSaved((prev) => new Set(prev).add(phrase.text));
     } catch {
       // Leave it unsaved; the user can click again.
+      setPhraseSaveError("Không lưu được cụm từ — thử lại.");
     }
   }
 
@@ -183,6 +186,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
 
       <section className="iv-qr-list" aria-label="Từng câu hỏi">
         <h3 className="iv-card-title">Từng câu hỏi</h3>
+        {phraseSaveError && <p className="iv-error" role="alert">{phraseSaveError}</p>}
         {touched.map((i) => (
           <QuestionReview
             key={i}
