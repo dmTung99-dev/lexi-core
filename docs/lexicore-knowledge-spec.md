@@ -5,7 +5,7 @@
 - **Phần 1 — Kiến thức nền tảng:** khái niệm chung, trả lời được kể cả không mở code.
 - **Phần 2 — Áp dụng trong LexiCore:** đúng file, đúng dòng, đúng luồng thật trong dự án — để chỉ thẳng vào code khi bị hỏi "cho ví dụ cụ thể".
 
-LexiCore lớn hơn Pocket Split nhiều (Flutter mobile + React web + Cloud Functions + Cloud Run, hàng trăm commit qua nhiều "Plan"), nên tài liệu này **không** cố phủ hết mọi tính năng — nó chọn **13 mảng kiến thức** có giá trị nhất khi bị phỏng vấn kỹ thuật, đều đã đối chiếu trực tiếp với code hiện tại (không chỉ dựa vào README/CLAUDE.md).
+LexiCore lớn hơn Pocket Split nhiều (Flutter mobile + React web + Cloud Functions + Cloud Run, hàng trăm commit qua nhiều "Plan"), nên tài liệu này **không** cố phủ hết mọi tính năng — nó chọn **14 mảng kiến thức** có giá trị nhất khi bị phỏng vấn kỹ thuật, đều đã đối chiếu trực tiếp với code hiện tại (không chỉ dựa vào README/CLAUDE.md). Cập nhật gần nhất (2026-09-27) thêm mục 1.14/2.14 và vài chi tiết ở §2.7/§2.10/§2.12 sau khi tính năng "Luyện phỏng vấn tiếng Anh" merge vào `master`.
 
 **Cấu trúc:** Phần 1 và Phần 2 **đánh số tương ứng 1–1** (mục 1.7 ↔ 2.7...). Mỗi mục ở Phần 1 theo cùng một khuôn — *Vấn đề nó giải quyết → Khái niệm cốt lõi → Cách hoạt động → Khi nào dùng/không dùng → Bẫy thường gặp → Câu hỏi phỏng vấn hay gặp* — để đọc xong Phần 1 là nắm được bản chất **không cần mở code**, rồi sang Phần 2 xem nó nằm ở đâu trong code thật (kèm chỗ khác biệt với Pocket Split và các thoả hiệp/điểm yếu có thật).
 
@@ -619,6 +619,43 @@ Ta yêu cầu mô hình ngôn ngữ (LLM) "chỉ trả JSON", nhưng nó **khôn
 
 ---
 
+## 1.14 Đọc file (PDF/DOCX) ngay trên trình duyệt, không upload lên server
+
+### Vấn đề nó giải quyết
+
+Một tính năng cần đọc nội dung văn bản từ file người dùng tải lên (CV, tài liệu...). Cách "mặc định" là upload file lên server rồi server parse — nhưng cách đó (1) tốn băng thông/thời gian round-trip, (2) bắt server phải giữ tạm nội dung có thể nhạy cảm, (3) cần thêm hạ tầng lưu file tạm. Các định dạng PDF/DOCX đều có **thư viện JavaScript chạy được trong trình duyệt** (không cần server) — nên có thể parse ngay tại client, dữ liệu gốc **không bao giờ rời khỏi máy người dùng** trừ khi chính người dùng gửi văn bản đã trích đi.
+
+### Khái niệm cốt lõi
+
+- **Parse phía client:** dùng thư viện đọc định dạng file *(pdf.js cho PDF, mammoth cho DOCX là 2 lựa chọn phổ biến)* để giải mã cấu trúc file và lấy ra text, toàn bộ chạy trong tab trình duyệt.
+- **Dynamic import (code splitting):** các thư viện này thường nặng (hàng trăm KB đến vài MB) và **chỉ một số người dùng** cần đến (chỉ khi họ thực sự tải file lên). `import('pdfjs-dist')` động (thay vì `import` tĩnh ở đầu file) khiến bundler tách nó thành một *chunk* riêng, chỉ tải xuống **khi hàm được gọi**, không cộng vào kích thước tải ban đầu của mọi trang khác trong app.
+- **PDF không phải luôn có "lớp text":** PDF scan từ ảnh (không có text layer) không trích được chữ nào — cần **OCR** (nhận dạng ký tự quang học) mới đọc được, đây là bài toán khác hẳn (và tốn hơn nhiều) so với trích text có sẵn.
+- **Giới hạn đầu vào phải đặt tường minh:** kích thước file, số trang, độ dài text đầu ra — nếu không, một file cố ý rất lớn/rất nhiều trang có thể làm tab trình duyệt treo hoặc tốn quá nhiều token khi đưa vào prompt AI sau đó.
+
+### Cách hoạt động
+
+`file` (từ input hoặc kéo-thả) → đọc thành `ArrayBuffer` → theo đuôi file chọn thư viện tương ứng → thư viện trả về text thô → chuẩn hoá (bỏ khoảng trắng thừa, cắt độ dài tối đa) → kiểm tra "có đủ chữ không" (loại các file scan/rỗng) → text sẵn sàng dùng (ví dụ đưa vào prompt AI).
+
+### Khi nào dùng / không dùng
+
+- **Hợp:** định dạng có thư viện JS đủ tốt, nội dung không cần OCR, muốn giảm tải server và giữ dữ liệu ở phía người dùng lâu nhất có thể.
+- **Không hợp:** cần OCR (ảnh/scan), định dạng không có thư viện JS đáng tin cậy, hoặc cần xử lý hàng loạt phía server.
+
+### Bẫy thường gặp
+
+1. **Không giới hạn kích thước/số trang** → tab treo với file bất thường.
+2. **Không phát hiện "không có text"** (PDF scan) → trả về chuỗi rỗng mà tưởng là thành công.
+3. **Import tĩnh thư viện nặng** → mọi trang trong app đều tải thêm vài trăm KB dù không dùng đến.
+4. **Web Worker của thư viện parse PDF cấu hình sai đường dẫn** → lỗi khó hiểu chỉ xảy ra khi build production (khác dev).
+
+### Câu hỏi phỏng vấn hay gặp
+
+- **Vì sao parse client thay vì server?** — giảm round-trip, không cần giữ file tạm ở server, dữ liệu nhạy cảm ở lại máy người dùng.
+- **Dynamic import giải quyết gì?** — tách thư viện nặng thành chunk riêng, chỉ tải khi thực sự cần, không làm chậm mọi trang khác.
+- **Làm sao biết một PDF "đọc được" hay không?** — kiểm tra độ dài text trích ra sau khi bỏ khoảng trắng; quá ngắn nghĩa là không có text layer (cần OCR, ngoài phạm vi).
+
+---
+
 # PHẦN 2 — KIẾN THỨC ĐÃ ÁP DỤNG TRONG LEXICORE
 
 > Tham chiếu dưới đây là đường dẫn trong repo `lexi-core` hiện tại (`D:\Flutter\lexi-core`), bám code thật — không phải mô tả lý tưởng từ tài liệu spec.
@@ -896,6 +933,25 @@ export async function getOrCreatePronunciation(bucket, serviceUrl, key) {
 
 Chi tiết dễ bỏ sót: `normalize(text)` = `text.trim().normalize("NFC")` (`pronunciationCache.ts:23-25`) — chuẩn hoá Unicode **trước khi băm**. Với tiếng Việt điều này quan trọng: chữ có dấu có thể được biểu diễn dựng sẵn (NFC) hoặc tách dấu (NFD), nhìn giống hệt nhưng khác byte → nếu không chuẩn hoá sẽ sinh **hai file audio** cho cùng một từ. `voiceId` cũng nằm trong khoá và trong đường dẫn, nên đổi giọng = tự động ra file mới, không phục vụ audio cũ.
 
+### Chống cold start — `warmUpSpeech`, một ví dụ thật cho "bẫy thường gặp" ở Phần 1.7
+
+`functions/src/warmUpSpeech.ts` (toàn bộ):
+```ts
+export async function warmUpSpeechHandler(request: CallableRequest<unknown>): Promise<{ ok: true }> {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in required.");
+  const urls = new Set(
+    [process.env.TTS_STT_SERVICE_URL, process.env.STT_SERVICE_URL].filter(
+      (u): u is string => typeof u === "string" && u.length > 0
+    ),
+  );
+  await Promise.allSettled([...urls].map((u) => pingCloudRun(u)));   // GET /health, không quan tâm kết quả
+  return { ok: true };
+}
+```
+Comment trong file: *"Best-effort: wakes the TTS and STT Cloud Run services while the user is still on the interview Setup screen, so the first real call skips most of the cold start. Never fails the caller."* — client gọi `warmUpSpeech` **ngay khi vào màn thiết lập** phiên phỏng vấn (trước khi người dùng bắt đầu), tranh thủ vài giây người dùng đọc màn hình để "đánh thức" cả hai service Cloud Run đang scale-về-0. `Promise.allSettled` (không phải `Promise.all`) là điểm mấu chốt: nếu một service `.reject`, hàm **vẫn** trả `{ ok: true }` — vì đây chỉ là tối ưu, không phải bước bắt buộc; ping thất bại thì lần gọi thật vẫn chạy, chỉ chậm hơn do cold start như bình thường.
+
+Đây là minh chứng sống cho "bẫy cold start" nêu ở Phần 1.7 §Bẫy thường gặp — dự án không né được cold start (đặc điểm cố hữu của scale-to-zero), nhưng có một chỗ chủ động **giảm khả năng người dùng cảm nhận** nó, đổi lại là một lệnh gọi Cloud Function phụ mỗi lần vào màn thiết lập.
+
 **`storage.rules` xác nhận đúng mô hình "public read, chỉ server ghi được":**
 ```
 match /tts-cache/{allPaths=**} {
@@ -949,7 +1005,7 @@ Future<List<VocabRecord>> getAll({required Language language, ...}) async {
 - Theo CLAUDE.md, project dùng skill `tdd` (`superpowers:test-driven-development`) làm quy trình mặc định khi thêm feature/sửa bug — viết test trước, thấy đỏ, rồi mới viết code cho xanh.
 - Kiểm đếm test hiện tại (theo memory gần nhất, cần chạy lại `flutter test`/`npm test` để lấy số chính xác nếu bị hỏi số cụ thể) — đừng đọc thuộc một con số cũ như thể nó luôn đúng; nếu bị hỏi, nói "khoảng X, để tôi chạy lại cho chính xác" an toàn hơn là chốt một số có thể đã lệch.
 
-## 2.10 Kiến trúc triển khai — region pinning thật, 4 đơn vị deploy độc lập
+## 2.10 Kiến trúc triển khai — region pinning thật, 5 đơn vị deploy độc lập
 
 Từ `CLAUDE.md` (ground truth do chính dự án ghi, đã đối chiếu khớp `firebase.json` đọc được ở trên):
 
@@ -958,7 +1014,10 @@ Từ `CLAUDE.md` (ground truth do chính dự án ghi, đã đối chiếu khớ
 | Flutter mobile | Android/iOS thật | `flutter build apk/appbundle/ipa --release` — không qua CI |
 | React web (`apps/web/`) | Firebase App Hosting, backend id `lexicore-web` | Push nhánh đã kết nối → tự build (thấy trong `firebase.json`: `"apphosting": {"backendId": "lexicore-web", "rootDir": "apps/web"}`) |
 | Cloud Functions (`functions/`) | Serverless, region `asia-southeast1` | `firebase deploy --only functions` — CLI thủ công, **không** tự động theo git push |
-| Cloud Run TTS/STT (`services/tts-stt/`) | Container riêng, region `asia-southeast1` | `gcloud run deploy` — **khác lệnh** với Cloud Functions dù cùng phục vụ "AI backend" |
+| Cloud Run TTS (`services/tts-stt/`, service `tts-stt`) | Container riêng, region `asia-southeast1` | `gcloud run deploy` — **khác lệnh** với Cloud Functions dù cùng phục vụ "AI backend" |
+| Cloud Run STT (**cùng image**, service riêng `stt`) | Container riêng, `--concurrency=1 --cpu=2 --memory=2Gi --max-instances=5` | `gcloud run deploy` riêng cho service `stt` — build lại image thì phải deploy **cả hai** service |
+
+**5 đơn vị deploy, không phải 4** (sửa lại con số cũ): sau tính năng "Luyện phỏng vấn tiếng Anh" (nhánh `feat/english-interview`, merge vào `master` 2026-09-27), STT được tách khỏi service `tts-stt` dùng chung, chạy trên **service Cloud Run riêng tên `stt`** — cùng image Docker, chỉ khác lệnh `gcloud run deploy` (tên service, cấu hình tài nguyên). Lý do tách (đọc từ comment thật trong `transcribeAudio.ts`): *"Whisper runs on its own Cloud Run service (`stt`, concurrency=1) so it never time-slices a vCPU with Piper TTS."* — STT (nhận dạng giọng nói) tốn CPU nặng hơn TTS nhiều; nếu chạy chung một service, một request STT dài có thể làm nghẽn request TTS đang chờ trên cùng vCPU (`concurrency=1` = mỗi instance chỉ xử lý 1 request cùng lúc, không time-slice). `transcribeAudio.ts` đọc `STT_SERVICE_URL`, **rơi về** `TTS_STT_SERVICE_URL` nếu chưa cấu hình (dev cục bộ chạy chung 1 `uvicorn` cho cả hai) — một ví dụ tốt về "graceful fallback khi thiếu cấu hình" thay vì crash cứng.
 
 **Region pinning thật trong code:** `generateContent.ts:120-123`:
 ```ts
@@ -1031,6 +1090,8 @@ export const xxx = onCall({ region: "asia-southeast1", maxInstances: 10, timeout
 
 **Đánh đổi có thể bị hỏi:** `ApiKeyEncryptor.encrypt` (`encrypt_api_key.dart:26-39`) **bắt mọi lỗi** rồi ném một thông báo chung "Không thể mã hoá API key. Vui lòng thử lại." — người dùng thấy câu thân thiện, nhưng client **không phân biệt được** `unauthenticated` với `internal`, nên không thể hướng dẫn hành động khác nhau (ví dụ "đăng nhập lại"). Đây là chỗ có thể cải thiện bằng cách đọc `FirebaseFunctionsException.code`.
 
+**Một biến thể thứ ba, ngược hẳn về triết lý lỗi — `warmUpSpeech`** (xem code đầy đủ ở §2.7): cùng khuôn `request.auth` → làm việc → `onCall(...)`, nhưng **không** có type guard cho `request.data` (hàm không nhận tham số nào có ý nghĩa) và **không** để lỗi nội bộ lọt ra `HttpsError` — `Promise.allSettled` chủ động nuốt hết lỗi ping, luôn trả `{ ok: true }`. So với `encryptApiKey`/`generateContent` (lỗi phải được báo đúng vì việc thất bại thì luồng chính hỏng), `warmUpSpeech` là một "hint tối ưu" — thất bại của nó vô hại nên **không đáng** được model hoá như một lỗi. Bài học chung: cách xử lý lỗi của một `onCall` nên theo đúng **mức độ quan trọng thật** của việc nó làm, không phải một khuôn cố định áp cho mọi function.
+
 ## 2.13 Đọc JSON từ AI "chịu lỗi" — `parseAiJsonObject` (khớp Phần 1.13)
 
 `lib/core/utils/ai_json_parser.dart` — **một hàm dùng chung cho 10 nguồn AI** (`gemini_dictionary_source`, `exercise_generator_source`, `reading_passage_source`, `part5/6/7_source`, `dictation_source`, `listening_passage_source`, `word_radar_source`, `knowledge_note_source`):
@@ -1062,6 +1123,48 @@ Ví dụ thứ hai chính là lý do phải **nhận biết chuỗi**: nếu ch�
 **Bằng chứng kiểm thử** (`test/core/utils/ai_json_parser_test.dart`, mở rộng trong đợt cập nhật gần đây): có ca cho hàng rào có/không nhãn `json`, chữ theo sau JSON, **ngoặc trong giá trị chuỗi**, không có JSON nào (`throwsFormatException`), dấu phẩy thừa trước `}` và `]`, dấu phẩy thừa **lồng trong mảng object**, và ca "**không được đụng** dấu phẩy nằm *trong* giá trị chuỗi" (`"literally a trailing comma, right here"`). Comment trong code giải thích vì sao bỏ dấu phẩy thừa **vô điều kiện** thay vì chỉ khi lỗi: AI phát ra chúng khá thường trên đầu ra dài, lồng nhiều tầng (bản dịch + nhiều gợi ý).
 
 **Giới hạn cần biết:** hàm này chỉ đảm bảo ra **một `Map` hợp lệ**, **không** kiểm tra hình dạng (thiếu trường, mảng rỗng...) — việc đó do từng source tự làm sau khi parse (Phần 1.13, "kiểm tra hình dạng").
+
+## 2.14 Parse CV (PDF/DOCX) trên trình duyệt — `cvExtract.ts`/`cvParsers.ts` (khớp Phần 1.14, tính năng mới nhất)
+
+Tính năng "Luyện phỏng vấn tiếng Anh" (merge vào `master` 2026-09-27) cho người dùng tải CV lên để AI hỏi đúng vào kinh nghiệm của họ — và làm điều đó **hoàn toàn ở trình duyệt**, không có endpoint nào nhận file CV.
+
+**Dynamic import — đúng khái niệm ở Phần 1.14** (`cvParsers.ts:1-25`):
+```ts
+// Dynamic imports keep pdfjs (~1 MB) and mammoth out of every other page's
+// bundle; they load only when a user actually uploads a CV.
+export async function extractPdfText(data: ArrayBuffer): Promise<string> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc =
+      new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  const doc = await pdfjs.getDocument({ data }).promise;
+  const pages: string[] = [];
+  for (let p = 1; p <= Math.min(doc.numPages, MAX_PDF_PAGES); p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
+  }
+  return pages.join("\n");
+}
+
+export async function extractDocxText(data: ArrayBuffer): Promise<string> {
+  const mammoth = await import("mammoth");
+  return (await mammoth.extractRawText({ arrayBuffer: data })).value;
+}
+```
+`pdfjs-dist` cần một **Web Worker riêng** để giải mã PDF không làm treo tab chính — `new URL(..., import.meta.url)` là cách chuẩn (không hard-code path) để trỏ đúng file worker đã được bundler đóng gói, comment trong SDD progress log xác nhận cách này *"bundles fine under Turbopack"* (bundler của Next.js) — tức đây là chỗ đã từng có rủi ro thật (bẫy số 4 ở Phần 1.14) và được kiểm tra kỹ trước khi merge.
+
+**Các giới hạn tường minh** (`cvExtract.ts:3-5, 38-39`, đúng "Bẫy thường gặp" #1 và #2 ở Phần 1.14):
+```ts
+export const CV_MAX_BYTES = 5 * 1024 * 1024;      // 5 MB
+export const CV_MAX_CHARS = 20_000;                // cắt text sau khi trích
+export const CV_MIN_TEXT_CHARS = 200;              // < 200 ký tự chữ ⇒ coi như "không đọc được"
+const MAX_PDF_PAGES = 10;                          // (trong cvParsers.ts) chỉ đọc 10 trang đầu
+```
+Comment tại chỗ kiểm tra `CV_MIN_TEXT_CHARS`: *"A scanned/image-only PDF has no text layer — no OCR in MVP."* — đúng khái niệm ở Phần 1.14: dự án **biết rõ** giới hạn OCR và cố tình không làm ở bản đầu, phát hiện trường hợp đó để báo `reason: "no_text"` thay vì âm thầm trả văn bản rỗng cho AI.
+
+`normalizeCvText` (`cvExtract.ts:11-18`) gộp khoảng trắng thừa trong mỗi dòng rồi `slice(0, CV_MAX_CHARS)` — cắt cứng ở **ký tự**, không phải ở ranh giới câu/đoạn, nên với CV rất dài phần cuối có thể bị cắt giữa câu; đủ dùng cho mục đích tóm tắt kinh nghiệm chứ không phải trích chính xác toàn văn.
+
+**Đối chiếu với "khoảng trống" đã ghi ở note của tính năng** (SDD progress log): *"PDFs >10 pages silently truncated to first 10 (no user signal)"* — một điểm yếu **có thật, đã biết, chưa sửa**: người dùng không được báo khi CV của họ bị cắt bớt trang. Đáng nêu khi bị hỏi "bạn thấy điểm nào của tính năng này chưa hoàn hảo".
 
 ---
 
@@ -1097,3 +1200,5 @@ Ví dụ thứ hai chính là lý do phải **nhận biết chuỗi**: nếu ch�
 - [ ] **Parse JSON của AI:** kể được 4 lớp phòng thủ và vì sao phải nhận biết chuỗi khi đếm ngoặc.
 - [ ] **Trung thực về giới hạn:** nói được (không né) 4 điểm — quét cả collection khi kiểm tra trùng, hành vi offline chưa kiểm chứng, EF gần như cố định, Firestore rules không nằm trong repo.
 - [ ] **Bẫy thuật ngữ:** KMS direct ≠ envelope encryption.
+- [ ] **5 đơn vị deploy** (không phải 4): STT giờ có service Cloud Run riêng (`stt`, tách từ `tts-stt`) vì lý do concurrency/CPU, và giải thích được `warmUpSpeech` chống cold start bằng `Promise.allSettled` best-effort.
+- [ ] **Parse CV client-side:** giải thích được vì sao dynamic import, vì sao giới hạn kích thước/số trang/độ dài text, và biết nói thật điểm yếu (>10 trang bị cắt không báo người dùng).
