@@ -48,11 +48,40 @@ describe("transcribeAudioHandler", () => {
     ).rejects.toMatchObject({ code: "invalid-argument" });
   });
 
-  it("throws failed-precondition when TTS_STT_SERVICE_URL is unset", async () => {
+  it("throws failed-precondition when neither STT_SERVICE_URL nor TTS_STT_SERVICE_URL is set", async () => {
+    vi.stubEnv("STT_SERVICE_URL", "");
     vi.stubEnv("TTS_STT_SERVICE_URL", "");
     await expect(
       transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=" }))
     ).rejects.toMatchObject({ code: "failed-precondition" });
+  });
+
+  it("prefers STT_SERVICE_URL over TTS_STT_SERVICE_URL when both are set", async () => {
+    vi.stubEnv("STT_SERVICE_URL", "https://stt.a.run.app");
+    vi.stubEnv("TTS_STT_SERVICE_URL", "https://tts-stt.a.run.app");
+    vi.mocked(transcribeViaCloudRun).mockResolvedValue({ text: "hi", language: "en" });
+
+    await transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=", language: "en" }));
+
+    expect(transcribeViaCloudRun).toHaveBeenCalledWith(
+      "https://stt.a.run.app",
+      expect.any(Buffer),
+      "en"
+    );
+  });
+
+  it("falls back to TTS_STT_SERVICE_URL when STT_SERVICE_URL is unset", async () => {
+    vi.stubEnv("STT_SERVICE_URL", "");
+    vi.stubEnv("TTS_STT_SERVICE_URL", "https://tts-stt.a.run.app");
+    vi.mocked(transcribeViaCloudRun).mockResolvedValue({ text: "hi", language: "en" });
+
+    await transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=", language: "en" }));
+
+    expect(transcribeViaCloudRun).toHaveBeenCalledWith(
+      "https://tts-stt.a.run.app",
+      expect.any(Buffer),
+      "en"
+    );
   });
 
   it("decodes base64 audio and returns the transcript for a valid request", async () => {

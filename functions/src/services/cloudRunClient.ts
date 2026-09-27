@@ -101,3 +101,15 @@ export function toHttpsError(err: unknown, fallbackMessage: string): HttpsError 
   }
   return new HttpsError("internal", fallbackMessage);
 }
+
+// GET /health — used only to wake a scaled-to-zero service. Same IAM
+// ID-token path as callCloudRun (which only POSTs).
+export async function pingCloudRun(serviceUrl: string): Promise<void> {
+  const url = `${serviceUrl}/health`;
+  if (serviceUrl.startsWith("http://")) {
+    await fetch(url);
+    return;
+  }
+  const client = await getAuth().getIdTokenClient(serviceUrl);
+  await client.request({ url, method: "GET" });
+}
