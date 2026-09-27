@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import InterviewSessionPage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
@@ -125,7 +125,11 @@ describe("InterviewSessionPage", () => {
   it("prefetches the next main question while waiting for an answer", async () => {
     renderPage(makeSession({ plan: PLAN }));
     await screen.findByRole("button", { name: "Bắt đầu trả lời" });
-    expect(AUDIO.prefetch).toHaveBeenCalledWith("main-1", "Q2?");
+    // The prefetch call is fired from the "idle" phase's passive effect, a
+    // separate tick from the DOM commit findByRole observes — wait for it
+    // instead of asserting immediately, so this isn't racy against effect
+    // flushing.
+    await waitFor(() => expect(AUDIO.prefetch).toHaveBeenCalledWith("main-1", "Q2?"));
   });
 
   it("runs a full turn: record, review, send, acknowledge, next question", async () => {
@@ -198,5 +202,91 @@ describe("InterviewSessionPage", () => {
   it("redirects a completed session to its report", async () => {
     renderPage(makeSession({ status: "completed", plan: PLAN }));
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/interview/s1/report"));
+  });
+
+  it("ignores a stale SPEECH_ENDED from a superseded speak call (skip then replay)", async () => {
+    let resolveStale: (ok: boolean) => void = () => {};
+    const stalePromise = new Promise<boolean>((resolve) => {
+      resolveStale = resolve;
+    });
+    AUDIO.playPrefetched.mockImplementationOnce(() => stalePromise);
+    AUDIO.playPrefetched.mockImplementation(() => new Promise<boolean>(() => {}));
+
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bỏ qua, trả lời luôn" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Nghe lại câu hỏi" }));
+
+    await act(async () => {
+      resolveStale(false);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText(/Không phát được âm thanh/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bỏ qua, trả lời luôn" })).toBeInTheDocument();
+  });
+
+  it("never speaks a stale nextTurn ack after ending mid-decision", async () => {
+    let resolveNextTurn: (raw: string) => void = () => {};
+    const pendingNextTurn = new Promise<string>((resolve) => {
+      resolveNextTurn = resolve;
+    });
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
+      if (prompt.includes("Write exactly")) return JSON.stringify({ questions: PLAN });
+      if (prompt.includes("Decide ONE of")) return pendingNextTurn;
+      if (prompt.includes("expert English interview coach")) return REPORT_JSON;
+      throw new Error("unexpected prompt");
+    });
+
+    renderPage(makeSession({ plan: PLAN }));
+    await answerCurrentQuestion();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+
+    await act(async () => {
+      resolveNextTurn('{"action":"next","ack":"Late ack."}');
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/s1/report"));
+    expect(AUDIO.speak).not.toHaveBeenCalledWith("Late ack.");
+  });
+
+  it("disables Kết thúc buổi while transcribing so an in-flight answer can't be dropped", async () => {
+    let resolveTranscribe: (text: string) => void = () => {};
+    vi.mocked(transcribeAudio).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTranscribe = resolve;
+        })
+    );
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+
+    expect(await screen.findByRole("button", { name: "Kết thúc buổi" })).toBeDisabled();
+
+    await act(async () => {
+      resolveTranscribe("My answer");
+      await Promise.resolve();
+    });
+  });
+
+  it("ending from review saves the current draft as a turn before grading", async () => {
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+    expect(await screen.findByLabelText(/Bản chép lời/)).toHaveValue("My answer");
+
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+
+    await waitFor(() =>
+      expect(saveInterviewTurns).toHaveBeenCalledWith("u1", "s1", [
+        expect.objectContaining({ mainIndex: 0, kind: "main", question: "Q1?", answer: "My answer" }),
+      ])
+    );
+    await waitFor(() => expect(completeInterviewSession).toHaveBeenCalled());
   });
 });

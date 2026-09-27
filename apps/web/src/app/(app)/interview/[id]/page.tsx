@@ -84,8 +84,17 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   const turnsRef = useRef<InterviewTurn[]>([]);
   const recordingRef = useRef<RecordedAudio | null>(null);
   const handledRef = useRef<InterviewState | null>(null);
+  const stoppingRef = useRef(false);
+  const unmountedRef = useRef(false);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
   const { start: startRecorder, stop: stopRecorder, cancel: cancelRecorder, elapsed, error: micError } = useRecorder();
+
+  useEffect(
+    () => () => {
+      unmountedRef.current = true;
+    },
+    []
+  );
 
   useEffect(() => {
     if (!user || !id) return;
@@ -143,21 +152,28 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             const raw = await callInterviewAi(settings, buildQuestionPlanPrompt(session.setup));
             const plan = parseQuestionPlan(raw, session.setup.questionCount);
             await saveInterviewPlan(uid, id, plan);
+            if (handledRef.current !== state) return;
             setSession((s) => (s ? { ...s, plan } : s));
             await greeting;
+            if (handledRef.current !== state) return;
             dispatch({ type: "PLAN_READY", plan });
           } catch {
+            if (handledRef.current !== state) return;
             dispatch({ type: "PLAN_FAILED" });
           }
         })();
         return;
       }
       case "speaking": {
+        // Captures `state` (this effect run's frozen closure) so a play call
+        // superseded by a later Skip-speech + Replay (or an End) never
+        // dispatches SPEECH_ENDED into whatever phase is current by then.
         void (async () => {
           const ok =
             state.kind === "main"
               ? await audio.playPrefetched(`main-${state.mainIndex}`, state.question)
               : await audio.speak(state.question);
+          if (handledRef.current !== state) return;
           dispatch({ type: "SPEECH_ENDED", ttsFailed: !ok });
         })();
         return;
@@ -172,12 +188,16 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         void (async () => {
           const rec = recordingRef.current;
           if (!rec) {
+            if (handledRef.current !== state) return;
             dispatch({ type: "TRANSCRIBED", text: "", review });
             return;
           }
           try {
-            dispatch({ type: "TRANSCRIBED", text: await transcribeAudio(rec.blob), review });
+            const text = await transcribeAudio(rec.blob);
+            if (handledRef.current !== state) return;
+            dispatch({ type: "TRANSCRIBED", text, review });
           } catch {
+            if (handledRef.current !== state) return;
             dispatch({ type: "TRANSCRIBE_FAILED" });
           }
         })();
@@ -197,6 +217,11 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
           dispatch({ type: "NEXT_MAIN" });
           return;
         }
+        // The turn above is already appended+persisted synchronously, so
+        // ending the interview while this decision is in flight can never
+        // lose an answer — but the decision itself (a follow-up question, or
+        // spoken ack) must never land after the interview has moved on
+        // (e.g. the user clicked "Kết thúc buổi" mid-call).
         void (async () => {
           try {
             const exchanges = turnsRef.current
@@ -211,6 +236,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
                 nextMainQuestion: state.plan[state.mainIndex + 1] ?? null,
               })
             );
+            if (handledRef.current !== state) return;
             const decision = parseNextTurn(raw);
             if (decision.action === "follow_up") {
               dispatch({ type: "FOLLOW_UP", question: decision.say });
@@ -220,12 +246,16 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
           } catch {
             // Spec §8: a failed next-turn decision never blocks the interview.
           }
+          if (handledRef.current !== state) return;
           dispatch({ type: "NEXT_MAIN" });
         })();
         return;
       }
       case "closing": {
-        void audio.speak(INTERVIEW_CLOSING).then(() => dispatch({ type: "CLOSING_ENDED" }));
+        void audio.speak(INTERVIEW_CLOSING).then(() => {
+          if (handledRef.current !== state) return;
+          dispatch({ type: "CLOSING_ENDED" });
+        });
         return;
       }
       case "grading": {
@@ -234,6 +264,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
           const answered = answeredMainIndexes(finalTurns);
           if (answered.length === 0) {
             await deleteInterviewSession(uid, id).catch(() => {});
+            if (unmountedRef.current) return;
             router.push("/interview");
             return;
           }
@@ -248,6 +279,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
           }
           await saveInterviewTurns(uid, id, finalTurns).catch(() => {});
           await completeInterviewSession(uid, id, report).catch(() => {});
+          if (unmountedRef.current) return;
           router.push(`/interview/${id}/report`);
         })();
         return;
@@ -258,10 +290,16 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   }, [state, session, settings, user, id, audio, appendTurn, router]);
 
   const handleStop = useCallback(async () => {
+    if (stoppingRef.current) return;
+    stoppingRef.current = true;
     const rec = await stopRecorder();
-    if (!rec) return;
+    if (!rec) {
+      stoppingRef.current = false;
+      return;
+    }
     recordingRef.current = rec;
     dispatch({ type: "STOP_RECORDING" });
+    stoppingRef.current = false;
   }, [stopRecorder]);
 
   useEffect(() => {
@@ -350,7 +388,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   return (
     <div className="iv-session">
       <header className="iv-session-head">
-        <button type="button" className="btn-secondary" onClick={handleEnd}>Kết thúc buổi</button>
+        <button type="button" className="btn-secondary" onClick={handleEnd} disabled={state.phase === "transcribing"}>Kết thúc buổi</button>
         <div className="iv-session-title">
           <strong>{`${session.setup.role} · ${typeLabel} · ${levelLabel}`}</strong>
           <span className="iv-muted">{`Câu ${Math.min(state.mainIndex + 1, total)} / ${total}`}</span>
