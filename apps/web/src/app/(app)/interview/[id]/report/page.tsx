@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
@@ -43,6 +43,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
   const [regrading, setRegrading] = useState(false);
   const [regradeError, setRegradeError] = useState<string | null>(null);
   const [phraseSaveError, setPhraseSaveError] = useState<string | null>(null);
+  const savingRef = useRef<Set<string>>(new Set());
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
 
   useEffect(() => {
@@ -119,6 +120,10 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
 
   async function handleSavePhrase(phrase: InterviewPhrase, example: string) {
     if (!user) return;
+    // Guards a double-click (or two fast taps) from firing two saves for the
+    // same phrase while the first is still in flight.
+    if (savingRef.current.has(phrase.text)) return;
+    savingRef.current.add(phrase.text);
     const headword = capitalizeHeadword(phrase.text.trim());
     setPhraseSaveError(null);
     try {
@@ -150,6 +155,8 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
     } catch {
       // Leave it unsaved; the user can click again.
       setPhraseSaveError("Không lưu được cụm từ — thử lại.");
+    } finally {
+      savingRef.current.delete(phrase.text);
     }
   }
 

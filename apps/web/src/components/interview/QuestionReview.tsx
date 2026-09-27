@@ -55,11 +55,11 @@ export function QuestionReview(props: QuestionReviewProps) {
               {item.phrases.length > 0 && (
                 <div className="iv-row">
                   <span className="iv-label">Từ nên dùng:</span>
-                  {item.phrases.map((p) => {
+                  {item.phrases.map((p, i) => {
                     const saved = props.savedPhrases.has(p.text);
                     return (
                       <button
-                        key={p.text}
+                        key={i}
                         type="button"
                         className={saved ? "iv-phrase iv-phrase-saved" : "iv-phrase"}
                         disabled={saved}
