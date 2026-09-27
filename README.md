@@ -88,6 +88,13 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
   - Lọc theo Ngôn ngữ / Chủ đề (**AppContext** — Business/Travel/...) / Cấp độ — không cần Vocab Bank, không có ngưỡng số từ tối thiểu
   - **Không ảnh hưởng SM-2** — không có từ vựng cụ thể nào để gắn điểm vào
 
+### Phỏng vấn tiếng Anh (English Interview Practice — web only)
+- **Luyện phỏng vấn bằng giọng nói** — AI hỏi theo kế hoạch (dựa trên vị trí, cấp độ, CV PDF/DOCX và JD)
+- Hỏi xoáy tối đa 1 lần mỗi câu hỏi
+- Chấm cuối buổi (5 tiêu chí, sửa lỗi theo từ, câu trả lời gợi ý, lưu cụm từ vào Ngân hàng từ vựng)
+- STT dùng service Cloud Run riêng `stt` (Whisper)
+- Chỉ trên web (React) không có trên app Flutter
+
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).
 
