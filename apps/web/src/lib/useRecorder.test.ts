@@ -7,6 +7,7 @@ class FakeRecorder {
   mimeType = "audio/webm";
   ondataavailable: ((e: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
+  constructor(stream?: MediaStream, options?: MediaRecorderOptions) {}
   start() {}
   stop() {
     this.ondataavailable?.({ data: new Blob(["abc"], { type: "audio/webm" }) });
@@ -122,5 +123,43 @@ describe("useRecorder", () => {
       stopped = await result.current.stop();
     });
     expect(stopped).toBeNull();
+  });
+
+  it("resets busyRef when MediaRecorder setup throws, releases stream, and allows retry", async () => {
+    const { result } = renderHook(() => useRecorder());
+    const OriginalRecorder = FakeRecorder;
+    let throwOnce = true;
+
+    // Make constructor throw once
+    const ThrowingRecorder = class extends OriginalRecorder {
+      constructor(stream: MediaStream, options?: MediaRecorderOptions) {
+        super(stream, options);
+        if (throwOnce) {
+          throwOnce = false;
+          throw new Error("MediaRecorder init failed");
+        }
+      }
+    } as any;
+
+    vi.stubGlobal("MediaRecorder", ThrowingRecorder);
+
+    // First start should fail and release the stream
+    let firstStart = false;
+    await act(async () => {
+      firstStart = await result.current.start();
+    });
+    expect(firstStart).toBe(false);
+    expect(result.current.recording).toBe(false);
+    expect(trackStop).toHaveBeenCalled();
+
+    trackStop.mockClear();
+
+    // Second start should succeed (busyRef was reset, stream was released)
+    let secondStart = false;
+    await act(async () => {
+      secondStart = await result.current.start();
+    });
+    expect(secondStart).toBe(true);
+    expect(result.current.recording).toBe(true);
   });
 });
