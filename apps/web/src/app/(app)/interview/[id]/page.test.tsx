@@ -12,6 +12,7 @@ import {
   saveInterviewTurns,
 } from "@/lib/interviewSessions";
 import { callInterviewAi } from "@/lib/interviewAi";
+import { InterviewAiError } from "@/lib/interviewPrompts";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { DEFAULT_SETTINGS, type UserSettings } from "@/lib/settings";
 import type { InterviewSession } from "@/lib/interviewTypes";
@@ -83,7 +84,7 @@ let nextTurnReply = '{"action":"next","ack":"Thanks."}';
 function renderPage(session: InterviewSession, options: { strict?: boolean } = {}) {
   vi.mocked(getInterviewSession).mockResolvedValue(session);
   const ui = <InterviewSessionPage params={Promise.resolve({ id: "s1" })} />;
-  render(options.strict ? <StrictMode>{ui}</StrictMode> : ui);
+  return render(options.strict ? <StrictMode>{ui}</StrictMode> : ui);
 }
 
 beforeEach(() => {
@@ -121,7 +122,12 @@ describe("InterviewSessionPage", () => {
     expect(await screen.findByText("Q1?")).toBeInTheDocument();
     expect(saveInterviewPlan).toHaveBeenCalledWith("u1", "s1", PLAN);
     expect(AUDIO.speak).toHaveBeenCalledWith(expect.stringContaining("Let's get started"));
-    expect(AUDIO.playPrefetched).toHaveBeenCalledWith("main-0", "Q1?");
+    // Q1? commits as soon as the "speaking" phase renders, but the
+    // playPrefetched call itself fires from that phase's passive effect — a
+    // separate tick from the DOM commit findByText observes. Under full-suite
+    // load that tick can lag behind, so wait for it instead of asserting
+    // immediately.
+    await waitFor(() => expect(AUDIO.playPrefetched).toHaveBeenCalledWith("main-0", "Q1?"));
   });
 
   it("prefetches the next main question while waiting for an answer", async () => {
@@ -322,5 +328,118 @@ describe("InterviewSessionPage", () => {
     });
 
     expect(RECORDER.cancel).toHaveBeenCalled();
+  });
+
+  it("cancels an orphaned recorder start when Skip is clicked while the mic permission prompt is pending", async () => {
+    let resolveStart: (ok: boolean) => void = () => {};
+    RECORDER.start.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        })
+    );
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ qua câu này" }));
+    RECORDER.cancel.mockClear();
+
+    await act(async () => {
+      resolveStart(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(RECORDER.cancel).toHaveBeenCalled();
+    expect(await screen.findByText("Q2?")).toBeInTheDocument();
+  });
+
+  it("cancels an orphaned recorder start when Replay is clicked while the mic permission prompt is pending, and Start works again once back in idle", async () => {
+    let resolveStart: (ok: boolean) => void = () => {};
+    RECORDER.start.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        })
+    );
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(screen.getByRole("button", { name: "Nghe lại câu hỏi" }));
+    RECORDER.cancel.mockClear();
+
+    await act(async () => {
+      resolveStart(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(RECORDER.cancel).toHaveBeenCalled();
+
+    // Back in idle once the replay finishes speaking — Start works again.
+    RECORDER.start.mockResolvedValue(true);
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    expect(await screen.findByRole("button", { name: "Dừng ghi âm" })).toBeInTheDocument();
+    expect(RECORDER.start).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips the review step when reviewTranscript is false: the turn saves immediately and the next question appears", async () => {
+    const session = makeSession({ plan: PLAN });
+    session.setup.reviewTranscript = false;
+    renderPage(session);
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+    expect(await screen.findByText("Q2?")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Bản chép lời/)).not.toBeInTheDocument();
+    expect(saveInterviewTurns).toHaveBeenCalledWith("u1", "s1", [
+      expect.objectContaining({ mainIndex: 0, kind: "main", question: "Q1?", answer: "My answer", answerSeconds: 5 }),
+    ]);
+  });
+
+  it("auto-stops recording at 180 seconds without a click", async () => {
+    const session = makeSession({ plan: PLAN });
+    vi.mocked(getInterviewSession).mockResolvedValue(session);
+    const paramsPromise = Promise.resolve({ id: "s1" });
+    const { rerender } = render(<InterviewSessionPage params={paramsPromise} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    await screen.findByRole("button", { name: "Dừng ghi âm" });
+
+    RECORDER.elapsed = 180;
+    rerender(<InterviewSessionPage params={paramsPromise} />);
+
+    await waitFor(() => expect(RECORDER.stop).toHaveBeenCalled());
+  });
+
+  it("shows Thử lại on plan-generation failure, and retrying (with the AI now succeeding) asks Q1", async () => {
+    let planCalls = 0;
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
+      if (prompt.includes("Write exactly")) {
+        planCalls++;
+        if (planCalls === 1) throw new Error("quota exceeded");
+        return JSON.stringify({ questions: PLAN });
+      }
+      if (prompt.includes("Decide ONE of")) return nextTurnReply;
+      if (prompt.includes("expert English interview coach")) return REPORT_JSON;
+      throw new Error("unexpected prompt");
+    });
+    renderPage(makeSession());
+    const retryBtn = await screen.findByRole("button", { name: "Thử lại" });
+    expect(screen.getByText("Không tạo được câu hỏi phỏng vấn.")).toBeInTheDocument();
+    fireEvent.click(retryBtn);
+    expect(await screen.findByText("Q1?")).toBeInTheDocument();
+  });
+
+  it("surfaces the AI error's own message when plan generation fails (e.g. missing API key)", async () => {
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
+      if (prompt.includes("Write exactly")) {
+        throw new InterviewAiError("Chưa có API key cho nhà cung cấp AI đang chọn — vào Cài đặt để thêm.");
+      }
+      if (prompt.includes("Decide ONE of")) return nextTurnReply;
+      if (prompt.includes("expert English interview coach")) return REPORT_JSON;
+      throw new Error("unexpected prompt");
+    });
+    renderPage(makeSession());
+    expect(
+      await screen.findByText("Chưa có API key cho nhà cung cấp AI đang chọn — vào Cài đặt để thêm.")
+    ).toBeInTheDocument();
   });
 });

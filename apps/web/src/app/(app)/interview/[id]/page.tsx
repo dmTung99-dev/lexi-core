@@ -8,6 +8,7 @@ import { useRouteParams } from "@/lib/useRouteParams";
 import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi } from "@/lib/interviewAi";
 import {
+  InterviewAiError,
   buildNextTurnPrompt,
   buildQuestionPlanPrompt,
   buildTranslatePrompt,
@@ -50,6 +51,7 @@ import { InterviewerCard, type InterviewerTone } from "@/components/interview/In
 import { StarTips } from "@/components/interview/StarTips";
 
 const QUESTION_VISIBLE = new Set<InterviewState["phase"]>(["speaking", "idle", "recording", "transcribing", "sttError", "review"]);
+const RECORDING_START_PHASES = new Set<InterviewState["phase"]>(["idle", "sttError", "review"]);
 
 function interviewerStatus(state: InterviewState): { text: string; tone: InterviewerTone } {
   switch (state.phase) {
@@ -80,15 +82,22 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [translation, setTranslation] = useState<{ question: string; vi: string } | null>(null);
   const [translating, setTranslating] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [state, dispatch] = useReducer(interviewReducer, initialInterviewState);
   const turnsRef = useRef<InterviewTurn[]>([]);
   const recordingRef = useRef<RecordedAudio | null>(null);
   const handledRef = useRef<InterviewState | null>(null);
   const stoppingRef = useRef(false);
   const unmountedRef = useRef(false);
-  const endedRef = useRef(false);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
   const { start: startRecorder, stop: stopRecorder, cancel: cancelRecorder, elapsed, error: micError } = useRecorder();
+
+  // Mirrors `state.phase` for handleStart's post-await check below — reading
+  // `state.phase` there would close over the phase at click time, not the
+  // current one after Skip/Replay/End may have moved the session on while
+  // startRecorder() (i.e. the getUserMedia permission prompt) was pending.
+  const phaseRef = useRef(state.phase);
+  phaseRef.current = state.phase;
 
   // Reset on every (re)mount, not just set on unmount: under StrictMode's
   // simulated mount -> cleanup -> mount, the cleanup runs once against the
@@ -163,8 +172,9 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             await greeting;
             if (handledRef.current !== state) return;
             dispatch({ type: "PLAN_READY", plan });
-          } catch {
+          } catch (err) {
             if (handledRef.current !== state) return;
+            setPlanError(err instanceof InterviewAiError ? err.message : null);
             dispatch({ type: "PLAN_FAILED" });
           }
         })();
@@ -344,11 +354,12 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
     audio.stop();
     const ok = await startRecorder();
     if (!ok) return;
-    if (endedRef.current) {
-      // "Kết thúc buổi" was clicked while the mic permission prompt / start
-      // was still pending — the recorder only just now actually started;
-      // release it immediately instead of leaving the mic live through
-      // grading.
+    if (!RECORDING_START_PHASES.has(phaseRef.current)) {
+      // Skip/Replay/"Kết thúc buổi" moved the session on while the mic
+      // permission prompt / start was still pending — the recorder only
+      // just now actually started; release it immediately instead of
+      // dispatching into whatever phase is current now (e.g. leaving the
+      // mic live through grading, or double-starting after a replay).
       cancelRecorder();
       return;
     }
@@ -369,7 +380,6 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   }
 
   function handleEnd() {
-    endedRef.current = true;
     audio.stop();
     cancelRecorder();
     if (state.phase === "review" && state.draft.trim()) {
@@ -449,6 +459,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         onSkipSpeech={handleSkipSpeech}
         onReplay={() => dispatch({ type: "REPLAY" })}
         onRetryPlan={() => dispatch({ type: "RETRY_PLAN" })}
+        planError={planError ?? undefined}
       />
     </div>
   );
