@@ -29,7 +29,10 @@ export async function transcribeAudioHandler(
       "Expected { audioBase64: string, language?: 'vi'|'en' }."
     );
   }
-  const serviceUrl = process.env.TTS_STT_SERVICE_URL ?? "";
+  // Whisper runs on its own Cloud Run service (`stt`, concurrency=1) so it
+  // never time-slices a vCPU with Piper TTS. Local dev runs one uvicorn for
+  // both, so fall back to the shared URL when STT_SERVICE_URL is unset.
+  const serviceUrl = process.env.STT_SERVICE_URL || process.env.TTS_STT_SERVICE_URL || "";
   if (!serviceUrl) {
     throw new HttpsError("failed-precondition", "TTS/STT service URL is not configured.");
   }
