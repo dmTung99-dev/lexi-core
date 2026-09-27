@@ -2364,3 +2364,33 @@ FOLLOW-UPS (not gating merge):
 - m14 test-quality nits: KnowledgeNoteView.test.tsx asserted the literal (broken) href string instead of route behavior; a couple of test titles/comments slightly mismatch what they assert.
 - m15 stale eslint-disable react-hooks/exhaustive-deps on a complete dep list (knowledge/page.tsx).
 - (carried from Task 12) .btn-secondary on an anchor missing background fill; knowledge/new/page.tsx loads an unused existingNotes list.
+
+## English Interview Practice (plan docs/superpowers/plans/2026-09-27-english-interview-practice.md, branch feat/english-interview, base 4104717)
+Task 1: complete (commits 4104717..77cf8ea, review clean)
+- minor T1: functions/.env.example lacks STT_SERVICE_URL; pingCloudRun http branch doesn't check res.ok; no test for all-URLs-unset warmUp.
+Task 2: complete (commits 77cf8ea..0cf7b28, review clean)
+- minor T2: splitSentences can emit >maxLen chunk for a single token longer than maxLen; two near-identical packing loops; combinedAnswer (interviewTypes.ts) has no direct test.
+Task 3: complete (commits 0cf7b28..00a6e37, review clean)
+- minor T3: parseJson swallows the underlying parse error/raw text (no log); str/strList/parseJson generic utils live in interviewPrompts.ts.
+Task 4: complete (commits 00a6e37..d5a8594, review clean)
+- note T4: parseReport silently yields empty questions[] if AI garbles every mainIndex (by design; final review may decide).
+Task 5: complete (commits d5a8594..dd7ee90, review clean)
+- minor T5: listRecent over-fetch 20 then filter may return < max if many in_progress drafts; Firestore rules check deferred to Task 15 manual step.
+Task 6: complete (commits dd7ee90..e385ce4, review clean) — pdfjs worker via new URL() bundles fine under Turbopack; no mammoth shim/postinstall needed
+- minor T6: PDFs >10 pages silently truncated to first 10 (no user signal).
+Task 7: complete (commits e385ce4..ae27d3c incl. 2 fixes: reentrant start busyRef + latch reset on MediaRecorder setup failure; review clean)
+- minor T7: seconds (round) vs elapsed (floor) differ ≤1s; setup-failure catch doesn't clear timerRef (unreachable); cancel() during pending getUserMedia still starts recording afterwards.
+Task 8: complete (commits ae27d3c..e9f4f3f, review clean)
+Task 9: complete (commits e9f4f3f..3389f89 incl. fix: new playback supersedes in-flight one; review clean)
+- minor T9: prefetched clips keep voice at prefetch time; unplayed prefetch entries never swept.
+Task 10: complete (commits 3389f89..3adb976 incl. fix: stray `}` in bloom.css; build + postcss parse verified)
+Task 11: complete (commits 3adb976..26d7ba0, review clean)
+- minor T11: .iv-page class has no CSS rule (dead class). Full suite shows jsdom "HTMLMediaElement play/pause not implemented" noise traced to useInterviewAudio.test.ts (T9) — test output not pristine; final review to triage.
+Task 12: complete (commits 26d7ba0..0113364, review clean)
+- minor T12: SessionThread uses array index as key.
+Task 13: complete (commits 0113364..6f255e3 incl. 2 fixes: stale-continuation guards, End disabled in transcribing, StrictMode-safe unmount flag, mic release after End; review clean)
+- minor T13: pending-start race also exists for Skip/Replay (mic prompt open → orphan recorder, next start blocked until reload) — generalize guard via phase snapshot; End during recording drops the in-progress answer; tests cover happy path mostly (no reviewTranscript:false, 180s auto-stop, PLAN_FAILED retry tests); page.tsx ~450 lines.
+Task 14: complete (commits 6f255e3..e4e425d incl. fix: phrase-save errors surfaced; review clean)
+- minor T14: redundant capitalizeHeadword before lookup; second @media(max-width:980px) block could merge.
+Task 15: complete (commit e4e425d..d42955a, docs + .env.example; functions 80/80, web build ok)
+- flaky: interview/[id]/page.test.tsx "generates and saves the plan" asserts AUDIO.playPrefetched immediately after findByText — passive-effect race under full-suite load (failed once, passed 3/3 isolated + full 1094/1094 rerun). Needs waitFor.
