@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import InterviewSessionPage from "./page";
@@ -79,9 +80,10 @@ const REPORT_JSON = JSON.stringify({
 
 let nextTurnReply = '{"action":"next","ack":"Thanks."}';
 
-function renderPage(session: InterviewSession) {
+function renderPage(session: InterviewSession, options: { strict?: boolean } = {}) {
   vi.mocked(getInterviewSession).mockResolvedValue(session);
-  render(<InterviewSessionPage params={Promise.resolve({ id: "s1" })} />);
+  const ui = <InterviewSessionPage params={Promise.resolve({ id: "s1" })} />;
+  render(options.strict ? <StrictMode>{ui}</StrictMode> : ui);
 }
 
 beforeEach(() => {
@@ -288,5 +290,37 @@ describe("InterviewSessionPage", () => {
       ])
     );
     await waitFor(() => expect(completeInterviewSession).toHaveBeenCalled());
+  });
+
+  it("still navigates to the report after StrictMode's simulated mount→unmount→remount", async () => {
+    renderPage(
+      makeSession({ plan: PLAN, turns: [{ mainIndex: 0, kind: "main", question: "Q1?", answer: "a", skipped: false, answerSeconds: 3 }] }),
+      { strict: true }
+    );
+    await screen.findByText("Q2?");
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/s1/report"));
+  });
+
+  it("releases the mic if startRecorder() resolves after Kết thúc buổi was clicked", async () => {
+    let resolveStart: (ok: boolean) => void = () => {};
+    RECORDER.start.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        })
+    );
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    RECORDER.cancel.mockClear();
+
+    await act(async () => {
+      resolveStart(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(RECORDER.cancel).toHaveBeenCalled();
   });
 });
