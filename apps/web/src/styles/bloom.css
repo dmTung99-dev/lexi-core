@@ -2793,3 +2793,27 @@ button.btn-google svg {
 .iv-recent-main { display: flex; flex-direction: column; }
 .iv-recent-title { font-weight: 600; }
 .iv-recent-score { font-weight: 800; font-size: 16px; }
+.iv-setup-layout { display: flex; gap: 22px; align-items: flex-start; }
+.iv-setup-main { flex: 1; min-width: 0; }
+.iv-setup-side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+.iv-form { display: flex; flex-direction: column; gap: 20px; }
+.iv-form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.iv-field { display: flex; flex-direction: column; gap: 8px; }
+.iv-grow { flex: 1; min-width: 220px; }
+.iv-input { font: inherit; font-size: 16px; border: 1.5px solid var(--border); border-radius: 14px; padding: 11px 14px; background: var(--surface); color: var(--ink); }
+.iv-jd { min-height: 150px; resize: vertical; }
+.iv-type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.iv-type-card { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 16px; border: 1.5px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+.iv-type-card.active, .iv-voice.active { border-color: var(--accent); background: var(--surface-2); }
+.iv-voice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.iv-voice { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 16px; border: 1.5px solid var(--border); }
+.iv-voice-pick { font: inherit; flex: 1; border: 0; background: transparent; color: inherit; text-align: left; display: flex; flex-direction: column; cursor: pointer; padding: 0; }
+.iv-docs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.iv-checkbox { font-size: 15.5px; }
+.iv-start-row { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px; }
+@media (max-width: 980px) {
+  .iv-setup-layout { flex-direction: column; }
+  .iv-setup-side { width: 100%; }
+  .iv-type-grid, .iv-voice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .iv-docs { grid-template-columns: minmax(0, 1fr); }
+}

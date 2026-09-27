@@ -27,6 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
   { label: "Quét từ", items: [{ href: "/word-radar", label: "🛰️ Quét từ vựng" }] },
   { label: "Kiến thức", items: [{ href: "/knowledge", label: "📖 Kiến thức" }] },
   { label: "Nghe", items: [{ href: "/listening", label: "🎧 Nghe — tổng quan" }] },
+  { label: "Phỏng vấn", items: [{ href: "/interview", label: "🎤 Phỏng vấn tiếng Anh" }] },
   { label: "Khác", items: [{ href: "/settings", label: "⚙️ Cài đặt" }] },
 ];
 
