@@ -18,6 +18,7 @@ export interface SessionDockProps {
   onSkipSpeech(): void;
   onReplay(): void;
   onRetryPlan(): void;
+  planError?: string;
 }
 
 const NOTICE_TEXT = {
@@ -32,7 +33,7 @@ export function SessionDock(props: SessionDockProps) {
       {state.phase === "warming" &&
         (state.notice === "plan_failed" ? (
           <div className="iv-dock-row">
-            <p className="iv-error" role="alert">Không tạo được câu hỏi phỏng vấn.</p>
+            <p className="iv-error" role="alert">{props.planError ?? "Không tạo được câu hỏi phỏng vấn."}</p>
             <button type="button" className="btn-primary" onClick={props.onRetryPlan}>Thử lại</button>
           </div>
         ) : (

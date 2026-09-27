@@ -125,6 +125,42 @@ describe("useRecorder", () => {
     expect(stopped).toBeNull();
   });
 
+  it("orphans the stream when cancelled while getUserMedia is pending, and a fresh start then succeeds", async () => {
+    let resolveGum: (stream: MediaStream) => void = () => {};
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveGum = resolve;
+        })
+    );
+    const { result } = renderHook(() => useRecorder());
+
+    let startPromise!: Promise<boolean>;
+    act(() => {
+      startPromise = result.current.start();
+    });
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    const orphanStop = vi.fn();
+    let resolved = false;
+    await act(async () => {
+      resolveGum({ getTracks: () => [{ stop: orphanStop }] } as unknown as MediaStream);
+      resolved = await startPromise;
+    });
+    expect(resolved).toBe(false);
+    expect(orphanStop).toHaveBeenCalled();
+
+    let secondStart = false;
+    await act(async () => {
+      secondStart = await result.current.start();
+    });
+    expect(secondStart).toBe(true);
+    expect(result.current.recording).toBe(true);
+  });
+
   it("resets busyRef when MediaRecorder setup throws, releases stream, and allows retry", async () => {
     const { result } = renderHook(() => useRecorder());
     const OriginalRecorder = FakeRecorder;

@@ -19,6 +19,11 @@ export function useRecorder() {
   const startedAtRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const busyRef = useRef(false);
+  // Bumped by cancel() so a start() whose getUserMedia() was still pending
+  // when Skip/Replay/End cancelled it can tell, once the prompt resolves,
+  // that it is orphaned — it must release the stream it just got instead of
+  // handing it to whatever start() (if any) runs next.
+  const startGenRef = useRef(0);
 
   const release = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -34,6 +39,7 @@ export function useRecorder() {
     // Prevent concurrent starts
     if (busyRef.current) return false;
     busyRef.current = true;
+    const gen = startGenRef.current;
 
     let stream: MediaStream;
     try {
@@ -41,6 +47,14 @@ export function useRecorder() {
     } catch {
       busyRef.current = false;
       setError("denied");
+      return false;
+    }
+    if (gen !== startGenRef.current) {
+      // cancel() ran while getUserMedia() was pending — this stream is
+      // orphaned (the caller moved on without us); release it and leave
+      // busyRef/streamRef alone in case a newer start() is already running.
+      stream.getTracks().forEach((t) => t.stop());
+      busyRef.current = false;
       return false;
     }
     try {
@@ -86,6 +100,7 @@ export function useRecorder() {
   }, [release]);
 
   const cancel = useCallback(() => {
+    startGenRef.current++;
     const recorder = recorderRef.current;
     if (recorder) {
       recorder.onstop = null;
