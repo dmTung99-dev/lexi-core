@@ -86,15 +86,21 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   const handledRef = useRef<InterviewState | null>(null);
   const stoppingRef = useRef(false);
   const unmountedRef = useRef(false);
+  const endedRef = useRef(false);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
   const { start: startRecorder, stop: stopRecorder, cancel: cancelRecorder, elapsed, error: micError } = useRecorder();
 
-  useEffect(
-    () => () => {
+  // Reset on every (re)mount, not just set on unmount: under StrictMode's
+  // simulated mount -> cleanup -> mount, the cleanup runs once against the
+  // throwaway first mount, and without resetting here that leftover `true`
+  // would survive into the real, kept-alive mount — making every later
+  // grading `router.push` a permanent no-op.
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
       unmountedRef.current = true;
-    },
-    []
-  );
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -336,7 +342,17 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
 
   async function handleStart() {
     audio.stop();
-    if (await startRecorder()) dispatch({ type: "START_RECORDING" });
+    const ok = await startRecorder();
+    if (!ok) return;
+    if (endedRef.current) {
+      // "Kết thúc buổi" was clicked while the mic permission prompt / start
+      // was still pending — the recorder only just now actually started;
+      // release it immediately instead of leaving the mic live through
+      // grading.
+      cancelRecorder();
+      return;
+    }
+    dispatch({ type: "START_RECORDING" });
   }
 
   function handleSkipSpeech() {
@@ -353,6 +369,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   }
 
   function handleEnd() {
+    endedRef.current = true;
     audio.stop();
     cancelRecorder();
     if (state.phase === "review" && state.draft.trim()) {
