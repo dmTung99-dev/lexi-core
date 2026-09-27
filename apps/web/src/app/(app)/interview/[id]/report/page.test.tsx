@@ -109,6 +109,25 @@ describe("InterviewReportPage", () => {
     expect(await screen.findByRole("button", { name: /đã lưu/ })).toBeDisabled();
   });
 
+  it("ignores a second click on the same phrase while the first save is still in flight", async () => {
+    // The SAME pending promise is returned on every call — if the in-flight
+    // guard fails, both clicks await it and both proceed once it resolves.
+    let resolveGet: (v: unknown) => void = () => {};
+    const pending = new Promise((resolve) => {
+      resolveGet = resolve;
+    });
+    vi.mocked(getVocabRecordByHeadword).mockReturnValue(pending as never);
+    renderPage(makeSession());
+    const phraseBtn = await screen.findByRole("button", { name: /rather than debate it/ });
+    fireEvent.click(phraseBtn);
+    fireEvent.click(phraseBtn);
+
+    resolveGet(null);
+    await waitFor(() => expect(saveVocabRecord).toHaveBeenCalled());
+    expect(getVocabRecordByHeadword).toHaveBeenCalledTimes(1);
+    expect(saveVocabRecord).toHaveBeenCalledTimes(1);
+  });
+
   it("does not duplicate an existing phrase", async () => {
     vi.mocked(getVocabRecordByHeadword).mockResolvedValue({ id: "x" } as never);
     renderPage(makeSession());
