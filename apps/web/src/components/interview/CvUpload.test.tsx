@@ -83,4 +83,14 @@ describe("CvUpload", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(null));
     expect(deleteCvProfile).toHaveBeenCalledWith("u1");
   });
+
+  it("shows an error and keeps the profile when removing the CV fails", async () => {
+    vi.mocked(deleteCvProfile).mockRejectedValue(new Error("network"));
+    const onChange = vi.fn();
+    render(<CvUpload uid="u1" settings={DEFAULT_SETTINGS} profile={PROFILE} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Gỡ CV" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Không gỡ được CV — thử lại.");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText("cv.pdf")).toBeInTheDocument();
+  });
 });

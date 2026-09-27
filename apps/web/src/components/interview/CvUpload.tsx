@@ -81,8 +81,12 @@ export function CvUpload({ uid, settings, profile, onChange }: CvUploadProps) {
   }
 
   async function handleRemove() {
-    await deleteCvProfile(uid);
-    onChange(null);
+    try {
+      await deleteCvProfile(uid);
+      onChange(null);
+    } catch {
+      setError("Không gỡ được CV — thử lại.");
+    }
   }
 
   const pickFile = () => inputRef.current?.click();
