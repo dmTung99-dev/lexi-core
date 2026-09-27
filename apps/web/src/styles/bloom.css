@@ -2734,3 +2734,63 @@ button.btn-google svg {
   text-transform: none;
   letter-spacing: normal;
 }
+}
+
+/* ── Interview (Phỏng vấn) ─────────────────────────────── */
+.iv-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.iv-card-title { margin: 0; font-size: 17px; }
+.iv-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.iv-label { font-size: 15px; font-weight: 700; }
+.iv-muted { color: var(--ink-soft); font-size: 14.5px; }
+.iv-ok { color: var(--success); font-size: 14.5px; font-weight: 600; }
+.iv-error { color: var(--danger); font-size: 15px; margin: 6px 0 0; }
+.iv-check { margin: 0; font-size: 15.5px; padding-left: 26px; position: relative; }
+.iv-check::before { position: absolute; left: 0; font-weight: 800; }
+.iv-check-ok::before { content: "✓"; color: var(--success); }
+.iv-check-warn::before { content: "!"; color: var(--amber); }
+.iv-check-bad::before { content: "×"; color: var(--danger); }
+.iv-cv { display: flex; flex-direction: column; gap: 8px; }
+.iv-cv-drop {
+  min-height: 150px;
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  cursor: pointer;
+}
+.iv-cv-box {
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.iv-cv-box textarea { font: inherit; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--surface); color: var(--ink); }
+.iv-cv-warn { border-color: var(--amber); background: var(--amber-bg); }
+.iv-cv-warn p { margin: 0; }
+.iv-cv-done { border-color: var(--sage); }
+.iv-cv-head { flex-wrap: nowrap; }
+.iv-cv-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.iv-icon-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 18px; cursor: pointer; }
+.iv-topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.iv-topic { font-size: 13.5px; padding: 4px 10px; border-radius: 999px; background: var(--surface-3); color: var(--ink); }
+.iv-recent-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--surface-3); color: var(--ink); text-decoration: none; }
+.iv-recent-main { display: flex; flex-direction: column; }
+.iv-recent-title { font-weight: 600; }
+.iv-recent-score { font-weight: 800; font-size: 16px; }
