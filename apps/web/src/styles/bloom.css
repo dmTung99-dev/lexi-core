@@ -2961,3 +2961,4 @@ button.btn-google svg {
 .cv-bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 .cv-persona-title { margin: 8px 0 0; font-size: 14px; }
 .cv-wrapup { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
+.cv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
