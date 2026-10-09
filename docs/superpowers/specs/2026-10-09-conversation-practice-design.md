@@ -125,9 +125,9 @@ warming → aiSpeaking → idle → recording → review → sending → aiThink
 
 After the user sends message *k*:
 1. Append the user message; persist.
-2. `reply` call with: setup (mode, topic, level, persona, goals), `summary`, and the last **8** messages. Returns `{say, goalsDone?, suggestEnd?}`.
+2. `reply` call with: setup (mode, topic, level, persona, goals), `summary`, and every message not yet folded into the summary (`messages.slice(summarizedCount)`, 8–15 messages in steady state). Returns `{say, goalsDone?, suggestEnd?}`.
 3. Append the AI message (merge `goalsDone` into the session set; persist); TTS and play it if `speakAloud`.
-4. **Condense:** when `messages.length - summarizedCount >= 16`, fire a background `condense` call that folds the messages older than the last 8 into `summary` (updating `summarizedCount`). It does not block the next turn; if it fails, nothing changes and the next turn sends more history instead.
+4. **Condense:** when `messages.length - summarizedCount >= 16`, fire a background `condense` call that folds `messages[summarizedCount .. length-8)` into `summary` and sets `summarizedCount = length - 8` (an absolute index, safe if messages arrive meanwhile). It does not block the next turn; if it fails, nothing changes and the next turn sends more history instead.
 
 ### 4.4 On-demand helpers (no effect on the turn order)
 
@@ -144,7 +144,7 @@ All in `lib/conversationPrompts.ts`, each a `build*Prompt(input): string` + `par
 |---|---|---|
 | `scenario` | custom role-play description, level | `{ "persona": string, "goals": string[] }` (3–4 goals) |
 | `opening` | setup | `{ "say": string }` |
-| `reply` | setup, `summary`, last 8 messages, user-turn count, flags (`offerEnd`, `mustClose`) | `{ "say": string, "goalsDone"?: number[], "suggestEnd"?: boolean }` |
+| `reply` | setup, `summary`, unsummarized messages, user-turn count, flags (`offerEnd`, `mustClose`) | `{ "say": string, "goalsDone"?: number[], "suggestEnd"?: boolean }` |
 | `hint` | one user message, setup, previous AI message | `{ "corrected": string, "note": string, "alternatives": string[] }` |
 | `suggest` | setup, current goal, `summary`, last 4 messages | `{ "options": string[] }` (2–3) |
 | `condense` | previous `summary`, messages to fold | `{ "summary": string }` |
@@ -212,7 +212,7 @@ Rule: a message the user has said or typed is never discarded by a failure.
 
 ## 9. Testing
 
-- **Vitest (pure):** `conversationMachine` (all transitions; typing skips STT; "+ Nói thêm" merge; strict alternation; topic wrap-up offer at turn 12; hard cap at 30; role-play closes when all goals done; early end with zero messages; error branches); `conversationPrompts` parsers (valid, malformed JSON, missing fields, out-of-range `goalsDone`, wrong counts); `conversationHistory` (window of last 8, condense trigger at ≥ 16 unsummarized, failure leaves state unchanged); `conversationScenarios` (every preset has persona and 3–4 goals).
+- **Vitest (pure):** `conversationMachine` (all transitions; typing skips STT; "+ Nói thêm" merge; strict alternation; topic wrap-up offer at turn 12; hard cap at 30; role-play closes when all goals done; early end with zero messages; error branches); `conversationPrompts` parsers (valid, malformed JSON, missing fields, out-of-range `goalsDone`, wrong counts); `conversationHistory` (unsummarized window, condense trigger at ≥ 16 unsummarized, folds all but the last 8, failure leaves state unchanged); `conversationScenarios` (every preset has persona and 3–4 goals).
 - **Component tests (Testing Library, mocked clients):** `Composer` (type / record / review / merge segments / send); `HintBubble` (second tap uses cache, no AI call); `SuggestPanel` (option fills composer, nothing persisted); `GoalChecklist` (progress from `goalsDone`); `CorrectionList` (diff + phrase save / already saved).
 - **Manual, after deploying web:** one free-topic and one role-play session by voice end-to-end; per-turn wait warm and cold; role-play ending naturally on goal completion; reopening an old report with no AI key.
 
