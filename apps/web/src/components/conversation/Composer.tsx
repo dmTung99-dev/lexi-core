@@ -54,7 +54,7 @@ export function Composer(props: ComposerProps) {
       {state.phase === "aiSpeaking" && (
         <div className="iv-dock-row">
           <div className="iv-dock-status" role="status"><strong>AI đang nói…</strong></div>
-          <button type="button" className="btn-secondary" onClick={props.onSkipSpeech}>Bỏ qua, trả lời luôn</button>
+          <button type="button" className="btn-secondary" onClick={props.onSkipSpeech}>{state.final ? "Bỏ qua" : "Bỏ qua, trả lời luôn"}</button>
         </div>
       )}
 

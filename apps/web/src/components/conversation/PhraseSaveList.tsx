@@ -12,11 +12,11 @@ export function PhraseSaveList({ phrases, saved, onSave }: PhraseSaveListProps) 
     <section className="iv-card" aria-label="Cụm nên học">
       <h3 className="iv-card-title">Cụm nên học</h3>
       <div className="iv-row">
-        {phrases.map((p) => {
+        {phrases.map((p, i) => {
           const isSaved = saved.has(p.text);
           return (
             <button
-              key={p.text}
+              key={`${p.text}-${i}`}
               type="button"
               className={isSaved ? "iv-phrase iv-phrase-saved" : "iv-phrase"}
               disabled={isSaved}
