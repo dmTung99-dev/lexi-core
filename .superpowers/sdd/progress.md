@@ -2403,3 +2403,23 @@ Post-merge follow-up (2026-09-28, user-reported): "Dịch sang tiếng Việt" w
 - Backward compat: `interviewSessions.ts`'s `getInterviewSession` normalizes a legacy `plan: string[]` (sessions saved before this change) to `{en, vi: ""}[]`, so an in-progress session isn't broken by this change; its remaining questions just fall back to on-demand translate.
 - Also fixed the same day: `.iv-session`'s forced `min-height: calc(100vh - 64px)` + `.iv-session-body`'s `flex: 1` left the short side-column's leftover space as dead air while pushing the sticky dock past the fold on shorter viewports (needed a scroll to reach it, per user screenshot). Removed both — layout now sizes to natural content height.
 - web 1103 → 1107 tests (4 new: 2 in page.test.tsx for instant main/follow-up translate with no extra AI call, 1 legacy-plan-normalization case in interviewSessions.test.ts, 1 vi-defaults-to-empty case in interviewPrompts.test.ts), typecheck clean.
+
+## Conversation Practice (2026-10-09, branch feat/conversation-practice)
+Plan: docs/superpowers/plans/2026-10-09-conversation-practice.md (12 tasks, SDD). Base: 7ca5b4c
+Task 1: complete (commits 7ca5b4c..580041a, review clean)
+Task 2: complete (commits 580041a..c5858de, review clean). Minors: reply prompt JSON template omits suggestEnd in roleplay (page ignores it there); prompt text interpolation unescaped (BYOK low risk).
+Task 12 note: spec §7 file-structure bullet for conversationHistory.ts ('returns the window to send (last 8)') is stale; fix to 'unsummarized window'.
+Task 3: complete (commits c5858de..c9697aa, review clean)
+Task 4: complete (commits c9697aa..2a4245b, review clean). Minor: session tests use expect.anything() for refs; never undefined hint.
+Task 6: complete (commits 6ed5235..04321b3, review clean). Minors: score() coerces null/''→0; numeric-string messageIndex dropped; hasGoals must equal goals.length>0 in caller.
+Task 5: implemented 6ed5235, review found stranded recording/sttError → fix 6474418 (CANCEL_RECORDING, DISMISS_STT_ERROR, canSend) — re-review pending
+Task 5: complete after fix (6ed5235 + 6474418, re-review clean)
+Task 7: complete (commit c32aad4, review clean)
+Plan amended (uncommitted): Tasks 9/10 use CANCEL_RECORDING, DISMISS_STT_ERROR, canSend.
+Task 8: complete (commits 6474418..1d63137, review clean). Minors: handleBuildScenario in-flight result can overwrite newer selection (disable tabs/cards while building); mode-switch test doesn't assert persona/goals reset.
+Task 9: complete (commits 1d63137..dffa63c, review clean). Minors for polish: AI bubble surface-2 on surface may be low contrast; 'Bỏ qua, trả lời luôn' label wrong when state.final; double thinking indicator (thread + dock); .cv-link ~26px target; aria-labels per message; .cv-col min-width:0/overflow-wrap; tts_failed untested.
+Task 10: implemented 320ac8d; opus review: Needs fixes (handleEnd drops segments while recording/sttError) + minors → fix dispatched (flush, resume-final→END, final closing delay when speakAloud off, stale suggestions). Deferred minors: handleStop/cancel race in useRecorder (stoppingRef stuck), no in-flight guard on translate/hint, state-closure reads in handleSend/End.
+Task 11: complete (commit bd8ec5e, review clean). Minors: duplicate keys if AI repeats messageIndex/phrase text; delta 0 label; saved set not prepopulated.
+Task 10: complete after fix (320ac8d + 557516e, re-review clean).
+Polish pass: e9c8fc6 (Tasks 8/9/11 minors) done.
+Task 12: complete (commit ee2dd12; manual verification step 4 pending with user).
