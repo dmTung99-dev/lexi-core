@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("renders all 10 nav items with the 6 group labels, and marks the current route active", () => {
+  it("renders all 11 nav items with the 7 group labels, and marks the current route active", () => {
     vi.mocked(usePathname).mockReturnValue("/vocab-bank");
     render(<Sidebar />);
 
@@ -34,10 +34,10 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Kiến thức/ })).toHaveAttribute("href", "/knowledge");
   });
 
-  it("renders exactly 10 nav links (not the mockup's 12 demo entries)", () => {
+  it("renders exactly 11 nav links (not the mockup's 12 demo entries)", () => {
     vi.mocked(usePathname).mockReturnValue("/vocab-bank");
     render(<Sidebar />);
-    expect(screen.getAllByRole("link")).toHaveLength(10);
+    expect(screen.getAllByRole("link")).toHaveLength(11);
   });
 
   it("renders the Phỏng vấn tiếng Anh link with the correct href", () => {
@@ -63,5 +63,13 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(screen.getByRole("link", { name: /Ôn tập/ })).toHaveAttribute("href", "/practice");
     expect(screen.queryByText(/Luyện tập/)).not.toBeInTheDocument();
+  });
+
+  it("renders the Hội thoại tiếng Anh link and marks it active on /conversation/abc", () => {
+    vi.mocked(usePathname).mockReturnValue("/conversation/abc");
+    render(<Sidebar />);
+    const link = screen.getByRole("link", { name: /Hội thoại tiếng Anh/ });
+    expect(link).toHaveAttribute("href", "/conversation");
+    expect(link).toHaveClass("active");
   });
 });

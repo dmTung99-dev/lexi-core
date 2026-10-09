@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
   { label: "Kiến thức", items: [{ href: "/knowledge", label: "📖 Kiến thức" }] },
   { label: "Nghe", items: [{ href: "/listening", label: "🎧 Nghe — tổng quan" }] },
   { label: "Phỏng vấn", items: [{ href: "/interview", label: "🎤 Phỏng vấn tiếng Anh" }] },
+  { label: "Hội thoại", items: [{ href: "/conversation", label: "💬 Hội thoại tiếng Anh" }] },
   { label: "Khác", items: [{ href: "/settings", label: "⚙️ Cài đặt" }] },
 ];
 
