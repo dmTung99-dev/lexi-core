@@ -2283,7 +2283,7 @@ git commit -m "feat(web/conversation): setup screen" -m "Co-Authored-By: Claude 
   - `ChatThread` props: `{ messages: ConversationMessage[]; thinking: boolean; hintLoadingIndex: number | null; translations: Record<number, string>; translatingIndex: number | null; canReplay: boolean; onReplay(i: number): void; onTranslate(i: number): void; onHint(i: number): void }`
   - `SuggestPanel` props: `{ options: string[]; onPick(text: string): void; onClose(): void }`
   - `GoalChecklist` props: `{ persona: string | null; goals: string[]; goalsDone: number[] }`
-  - `Composer` props (all callbacks required): `{ state: ConversationState; elapsed: number; micError: boolean; suggestions: string[] | null; suggesting: boolean; openingError?: string; onEditDraft(text: string): void; onSend(): void; onAddSegment(): void; onStart(): void; onStop(): void; onRetryTranscribe(): void; onSuggest(): void; onPickSuggestion(text: string): void; onCloseSuggestions(): void; onRetryReply(): void; onRetryOpening(): void; onSkipSpeech(): void }`
+  - `Composer` props (all callbacks required): `{ state: ConversationState; elapsed: number; micError: boolean; suggestions: string[] | null; suggesting: boolean; openingError?: string; onEditDraft(text: string): void; onSend(): void; onAddSegment(): void; onStart(): void; onStop(): void; onRetryTranscribe(): void; onSuggest(): void; onPickSuggestion(text: string): void; onCloseSuggestions(): void; onRetryReply(): void; onRetryOpening(): void; onSkipSpeech(): void; onCancelRecording(): void; onDismissSttError(): void }`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2385,6 +2385,7 @@ function renderComposer(patch: Partial<ConversationState>, extra: Partial<Parame
     onEditDraft: vi.fn(), onSend: vi.fn(), onAddSegment: vi.fn(), onStart: vi.fn(), onStop: vi.fn(),
     onRetryTranscribe: vi.fn(), onSuggest: vi.fn(), onPickSuggestion: vi.fn(), onCloseSuggestions: vi.fn(),
     onRetryReply: vi.fn(), onRetryOpening: vi.fn(), onSkipSpeech: vi.fn(),
+    onCancelRecording: vi.fn(), onDismissSttError: vi.fn(),
   };
   render(
     <Composer state={{ ...initialConversationState, ...patch }} elapsed={0} micError={false} suggestions={null} suggesting={false} {...h} {...extra} />
@@ -2440,13 +2441,17 @@ describe("Composer", () => {
     expect(screen.getByText("0:42")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dừng ghi âm" }));
     expect(h.onStop).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Hủy ghi âm" }));
+    expect(h.onCancelRecording).toHaveBeenCalled();
   });
-  it("sttError: retry or re-record", () => {
+  it("sttError: retry, re-record, or give up on voice and type instead", () => {
     const h = renderComposer({ phase: "sttError" });
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     fireEvent.click(screen.getByRole("button", { name: "Thu lại" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gõ thay vì nói" }));
     expect(h.onRetryTranscribe).toHaveBeenCalled();
     expect(h.onStart).toHaveBeenCalled();
+    expect(h.onDismissSttError).toHaveBeenCalled();
   });
   it("replyError: retry keeps the user's message", () => {
     const h = renderComposer({ phase: "replyError" });
@@ -2644,6 +2649,8 @@ export interface ComposerProps {
   onRetryReply(): void;
   onRetryOpening(): void;
   onSkipSpeech(): void;
+  onCancelRecording(): void;
+  onDismissSttError(): void;
 }
 
 const NOTICE_TEXT = {
@@ -2729,7 +2736,7 @@ export function Composer(props: ComposerProps) {
             <button type="button" className="iv-mic iv-mic-rec" aria-label="Dừng ghi âm" onClick={props.onStop}>■</button>
             <span className="iv-rec-text">Đang nghe bạn nói… bấm để dừng</span>
           </div>
-          <span className="iv-clock" aria-hidden="true" />
+          <button type="button" className="btn-secondary" onClick={props.onCancelRecording}>Hủy ghi âm</button>
         </div>
       )}
 
@@ -2741,6 +2748,7 @@ export function Composer(props: ComposerProps) {
           <div className="iv-dock-row">
             <button type="button" className="btn-primary" onClick={props.onRetryTranscribe}>Thử lại</button>
             <button type="button" className="btn-secondary" onClick={props.onStart}>Thu lại</button>
+            <button type="button" className="btn-secondary" onClick={props.onDismissSttError}>Gõ thay vì nói</button>
           </div>
         </div>
       )}
@@ -2862,6 +2870,7 @@ import {
   type ConversationProgress,
 } from "@/lib/conversationSessions";
 import {
+  canSend,
   conversationReducer,
   initialConversationState,
   isScenarioComplete,
@@ -3188,9 +3197,18 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     dispatch({ type: "START_RECORDING" });
   }
 
+  function handleCancelRecording() {
+    cancelRecorder();
+    recordingRef.current = null;
+    dispatch({ type: "CANCEL_RECORDING" });
+  }
+
   function handleSend() {
+    // Same rule the reducer uses for SEND, so a double-click can never append
+    // a user message that the reducer then ignores (which would break the
+    // one-user-message-one-AI-reply alternation).
+    if (!canSend(state)) return;
     const text = joinSegments(state.segments, state.draft);
-    if (!text) return;
     audio.stop();
     appendMessage({ role: "user", text });
     recordingRef.current = null;
@@ -3323,6 +3341,11 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
         onStart={() => void handleStart()}
         onStop={() => void handleStop()}
         onRetryTranscribe={() => dispatch({ type: "RETRY_TRANSCRIBE" })}
+        onCancelRecording={handleCancelRecording}
+        onDismissSttError={() => {
+          recordingRef.current = null;
+          dispatch({ type: "DISMISS_STT_ERROR" });
+        }}
         onSuggest={() => void handleSuggest()}
         onPickSuggestion={(text) => {
           dispatch({ type: "EDIT_DRAFT", text });
