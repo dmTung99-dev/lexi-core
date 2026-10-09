@@ -178,7 +178,14 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
         if (state.notice) return;
         const existing = messagesRef.current;
         if (existing.length > 0) {
-          dispatch({ type: "RESUME", userTurns: userTurnCount(existing), needsReply: existing[existing.length - 1].role === "user" });
+          const lastIsUser = existing[existing.length - 1].role === "user";
+          const turns = userTurnCount(existing);
+          dispatch({ type: "RESUME", userTurns: turns, needsReply: lastIsUser });
+          // The conversation already ended on the AI's closing line: go straight
+          // to grading instead of letting the learner continue a finished chat.
+          if (!lastIsUser && (turns >= MAX_USER_TURNS || isScenarioComplete(session.setup.goals, goalsDoneRef.current))) {
+            dispatch({ type: "END" });
+          }
           return;
         }
         void (async () => {
@@ -198,6 +205,15 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
       case "aiSpeaking": {
         const last = messagesRef.current[messagesRef.current.length - 1];
         if (!session.setup.speakAloud || !last || last.role !== "ai") {
+          if (state.final) {
+            // Give the learner a moment to read the closing line before grading
+            // replaces the screen.
+            setTimeout(() => {
+              if (handledRef.current !== state) return;
+              dispatch({ type: "SPEECH_ENDED" });
+            }, 2500);
+            return;
+          }
           dispatch({ type: "SPEECH_ENDED" });
           return;
         }
@@ -225,6 +241,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
               // can never lose what they said.
               appendMessage({ role: "user", text: joinSegments(state.segments, text) });
               recordingRef.current = null;
+              setSuggestions(null);
             }
             dispatch({ type: "TRANSCRIBED", text, review });
           } catch {
@@ -381,10 +398,16 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   function handleEnd() {
     audio.stop();
     cancelRecorder();
-    if (state.phase === "idle" || state.phase === "review") {
-      const text = joinSegments(state.segments, state.draft);
+    const flushPhases: ConversationState["phase"][] = ["idle", "review", "recording", "sttError", "transcribing"];
+    if (flushPhases.includes(state.phase)) {
+      // Only idle/review hold a live draft; in the other phases the typed draft
+      // has already been moved into `segments`.
+      const draft = state.phase === "idle" || state.phase === "review" ? state.draft : "";
+      const text = joinSegments(state.segments, draft);
       if (text) appendMessage({ role: "user", text });
     }
+    recordingRef.current = null;
+    setSuggestions(null);
     dispatch({ type: "END" });
   }
 
@@ -431,6 +454,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     if (!settings) return;
     setSuggesting(true);
     setHelperError(null);
+    const countBefore = messagesRef.current.length;
     try {
       const currentGoal = setup.goals.find((_, i) => !goalsDoneRef.current.includes(i)) ?? null;
       const options = parseSuggest(
@@ -439,7 +463,8 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
           buildSuggestPrompt({ setup, currentGoal, summary: summaryRef.current, window: messagesRef.current.slice(-4) })
         )
       );
-      setSuggestions(options);
+      // A message was sent while this was in flight: the options are stale.
+      if (messagesRef.current.length === countBefore) setSuggestions(options);
     } catch {
       setHelperError("Không gợi ý được — bấm lại để thử.");
     }
