@@ -92,7 +92,15 @@ export function Composer(props: ComposerProps) {
               value={state.draft}
               onChange={(e) => props.onEditDraft(e.target.value)}
             />
-            <button type="button" className="iv-mic" aria-label="Bắt đầu ghi âm" onClick={props.onStart}>🎤</button>
+            <button
+              type="button"
+              className="iv-mic"
+              aria-label={state.phase === "review" ? "Thu lại" : "Bắt đầu ghi âm"}
+              title={state.phase === "review" ? "Thu lại (bản chép lời hiện tại sẽ bị bỏ)" : "Bắt đầu ghi âm"}
+              onClick={props.onStart}
+            >
+              🎤
+            </button>
             <button type="button" className="btn-secondary" disabled={!state.draft.trim()} onClick={props.onAddSegment}>+ Nói thêm</button>
             <button type="button" className="btn-primary" disabled={!sendable} onClick={props.onSend}>Gửi</button>
           </div>

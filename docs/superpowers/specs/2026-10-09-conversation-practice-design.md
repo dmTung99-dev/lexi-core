@@ -91,9 +91,10 @@ interface ConversationHint {
 }
 ```
 
-- The session doc is created after the opening message is generated. Every message is persisted (`updateDoc` of the full `messages` array, plus `goalsDone` / `summary` when changed) as soon as it completes, so a closed tab still leaves a gradable session.
+- The session doc is created when the learner taps Start on Setup, before the opening is generated; the chat page then generates the opening and appends it as the first message. If the opening fails, an empty `in_progress` doc remains (hidden from lists, since it has no messages and is not `completed`). Every message is persisted (`updateDoc` of the full `messages` array, plus `goalsDone` / `summary` when changed) as soon as it completes, so a closed tab still leaves a gradable session.
 - No audio is stored. At most 30 user turns plus 31 AI messages stay far under Firestore's 1 MB doc limit.
-- "Recent sessions": `orderBy("createdAt","desc"), limit(5)` — single-field index.
+- "Recent sessions": fetch 20 ordered by `createdAt` desc (single-field index), filter `completed` sessions client-side, show at most 5 (same as English Interview).
+- Interrupted `in_progress` sessions are not listed on Setup (same as English Interview) — a deliberate parity decision; they can be reopened by URL and resume.
 - **Security rules:** there is no `firestore.rules` in the repo. Before shipping, confirm in the Console that `users/{uid}/{document=**}` restricts read/write to `request.auth.uid == uid` (already required for English Interview; covers this new subcollection).
 
 ## 4. Session Flow
@@ -103,7 +104,7 @@ interface ConversationHint {
 1. User picks a card or types a topic, sets level/voice/toggles, taps "Bắt đầu".
 2. Navigate to `/conversation/[id]` in state `warming`.
 3. Role-play with a **preset** scenario: persona and goals come from `conversationScenarios.ts` (editable on Setup before starting). Role-play with a **custom description**, or a free-text topic: no extra call for topic mode; for custom role-play a `scenario` call returns `{persona, goals}` and the result is shown on Setup for the user to confirm/edit before Start.
-4. An `opening` call produces the AI's first message (topic mode: an open question at the learner's level; role-play: an in-character line). Create the session doc, show the message, read it aloud if `speakAloud` → `idle`.
+4. An `opening` call produces the AI's first message (topic mode: an open question at the learner's level; role-play: an in-character line). The session doc already exists (created at Start, before this call); the chat page appends the opening as the first message, shows it, and reads it aloud if `speakAloud` → `idle`.
 
 ### 4.2 Turn state machine
 
@@ -141,7 +142,7 @@ After the user sends message *k*:
 
 ## 5. Prompts
 
-All in `lib/conversationPrompts.ts`, each a `build*Prompt(input): string` + `parse*(raw): T` pair using `parseAiJsonObject`. Parsers validate shape and throw one typed error on anything missing or malformed, so callers have a single failure path.
+All in `lib/conversationPrompts.ts` except `report`, which lives in `lib/conversationReportPrompt.ts`; each a `build*Prompt(input): string` + `parse*(raw): T` pair using `parseAiJsonObject`. Parsers validate shape and throw one typed error on anything missing or malformed, so callers have a single failure path.
 
 | Prompt | Input | Output JSON |
 |---|---|---|
@@ -181,14 +182,16 @@ interface ConversationReport {
 
 `apps/web/src/lib/`:
 - `conversationMachine.ts` — reducer + state types; also exports `joinSegments`, `canSend`, `replyFlags`, `isScenarioComplete`.
-- `conversationPrompts.ts` — §5.
+- `conversationTypes.ts` — shared session/message/report types.
+- `conversationPrompts.ts` — §5 (all prompts except `report`).
+- `conversationReportPrompt.ts` — the `report` prompt + parser.
 - `conversationSessions.ts` — create, append message, save hint / summary / goalsDone / report / error, get by id, list recent, delete.
 - `conversationScenarios.ts` — static topic cards and role-play presets (persona + goals), Vietnamese titles with English persona text.
 - `conversationHistory.ts` — pure helper: given `summary`, `summarizedCount`, `messages`, returns the unsummarized window (messages not yet folded into the summary, per §4.3) and whether to condense.
 
 `apps/web/src/components/conversation/`:
 - Setup: `ModeTabs`, `ScenarioCards`, `ScenarioPreview` (persona/goals, editable), `ConversationSetupForm`, `RecentConversations`.
-- Chat: `ChatThread`, `Composer` (text, mic, transcript review, "+ Nói thêm", "Gợi ý cách nói"), `HintBubble`, `SuggestPanel`, `GoalChecklist` (role-play side panel), `WrapUpChip`.
+- Chat: `ChatThread`, `Composer` (text, mic, transcript review, "+ Nói thêm", "Gợi ý cách nói"), `HintBubble`, `SuggestPanel`, `GoalChecklist` (role-play side panel). The wrap-up chip is inline JSX in the chat page.
 - Report: `ConversationReportSummary`, `CorrectionList`, `RecurringMistakes`, `PhraseSaveList`.
 
 Reused unchanged: `useRecorder`, `transcribeAudioClient`, `warmUpSpeechClient`, `splitSentences`, `wordDiff`, `WordDiff`, the readiness card pattern (AI key + mic), Bloom styles.
@@ -206,17 +209,17 @@ Rule: a message the user has said or typed is never discarded by a failure.
 | STT error/timeout | Keep the blob in memory; "Chép lời thất bại" with **Thử lại** (resend same blob) and **Thu lại**. |
 | Empty transcript | "Không nghe thấy gì — thử nói gần micro hơn." → `idle`. |
 | `reply` error / bad JSON | Keep the user message (already persisted); show "AI chưa trả lời được" with **Thử lại**; session never blocks. |
-| `opening` / `scenario` error | Stay in `warming` / on Setup with a message and **Thử lại**; no session doc yet. |
+| `opening` / `scenario` error | Stay in `warming` / on Setup with a message and **Thử lại**; for `opening` the session doc already exists, so a failure leaves an empty `in_progress` doc (hidden from lists). |
 | `condense` error | Ignored; retried on a later turn, older messages are sent meanwhile. |
 | TTS error | Text is always shown; "Nghe lại" retries; user can still answer. |
-| `hint` / `suggest` / `translate` error | Small inline error at that spot; tap again to retry; no state change. |
+| `hint` / `suggest` / `translate` error | One shared inline error message under the thread (cleared by the next helper call); tap again to retry; no state change. |
 | `report` error / bad JSON | Session saved `completed` with `reportError: true`; report page shows **Chấm lại**. |
 | Cold start | `warming` copy: "lần đầu có thể mất 10–20 giây". |
 
 ## 9. Testing
 
 - **Vitest (pure):** `conversationMachine` (all transitions; typing skips STT; "+ Nói thêm" merge; strict alternation; topic wrap-up offer at turn 12; hard cap at 30; role-play closes when all goals done; early end with zero messages; error branches); `conversationPrompts` parsers (valid, malformed JSON, missing fields, out-of-range `goalsDone`, wrong counts); `conversationHistory` (unsummarized window, condense trigger at ≥ 16 unsummarized, folds all but the last 8, failure leaves state unchanged); `conversationScenarios` (every preset has persona and 3–4 goals).
-- **Component tests (Testing Library, mocked clients):** `Composer` (type / record / review / merge segments / send); `HintBubble` (second tap uses cache, no AI call); `SuggestPanel` (option fills composer, nothing persisted); `GoalChecklist` (progress from `goalsDone`); `CorrectionList` (diff + phrase save / already saved).
+- **Component tests (Testing Library, mocked clients):** `Composer` (type / record / review / merge segments / send); `ChatThread` (a cached hint replaces the hint button, no AI call); `Composer` also covers the suggestions list / pick / close; `GoalChecklist` (progress from `goalsDone`); `CorrectionList` (diff + phrase save / already saved).
 - **Manual, after deploying web:** one free-topic and one role-play session by voice end-to-end; per-turn wait warm and cold; role-play ending naturally on goal completion; reopening an old report with no AI key.
 
 ## 10. Deviations from the UI design artifact
