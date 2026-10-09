@@ -2962,3 +2962,16 @@ button.btn-google svg {
 .cv-persona-title { margin: 8px 0 0; font-size: 14px; }
 .cv-wrapup { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
 .cv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.cv-summary { gap: 16px; }
+.cv-overall { display: flex; flex-direction: column; gap: 2px; }
+.cv-overall-score { font-size: 48px; line-height: 1.1; color: var(--accent); }
+.cv-criteria { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 28px; }
+.cv-criterion { display: flex; flex-direction: column; gap: 6px; }
+.cv-criterion-head { justify-content: space-between; flex-wrap: nowrap; font-weight: 600; }
+.cv-goal-result { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); border-radius: 14px; padding: 12px 14px; }
+.cv-goal-result p { margin: 0; }
+.cv-mistake { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid var(--surface-3); }
+.cv-example { margin: 0; font-size: 15.5px; }
+.cv-example del { color: var(--danger); background: var(--danger-bg); text-decoration: none; border-radius: 4px; padding: 0 3px; }
+.cv-example ins { color: var(--success); background: var(--success-bg); text-decoration: none; font-weight: 600; border-radius: 4px; padding: 0 3px; }
