@@ -36,6 +36,8 @@ export type ConversationEvent =
   | { type: "SPEECH_ENDED"; ttsFailed?: boolean }
   | { type: "START_RECORDING" }
   | { type: "STOP_RECORDING" }
+  | { type: "CANCEL_RECORDING" }
+  | { type: "DISMISS_STT_ERROR" }
   | { type: "TRANSCRIBED"; text: string; review: boolean }
   | { type: "TRANSCRIBE_FAILED" }
   | { type: "RETRY_TRANSCRIBE" }
@@ -63,6 +65,11 @@ export function joinSegments(segments: string[], draft: string): string {
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
     .join(" ");
+}
+
+/** Single send rule shared by the reducer and the page. */
+export function canSend(state: ConversationState): boolean {
+  return (state.phase === "idle" || state.phase === "review") && joinSegments(state.segments, state.draft).length > 0;
 }
 
 export function replyFlags(mode: ConversationMode, userTurns: number): { offerEnd: boolean; mustClose: boolean } {
@@ -104,6 +111,10 @@ export function conversationReducer(state: ConversationState, event: Conversatio
     }
     case "STOP_RECORDING":
       return phase === "recording" ? { ...state, phase: "transcribing" } : state;
+    case "CANCEL_RECORDING":
+      return phase === "recording" ? { ...state, phase: "idle", draft: "", notice: null } : state;
+    case "DISMISS_STT_ERROR":
+      return phase === "sttError" ? { ...state, phase: "idle", draft: "", notice: null } : state;
     case "TRANSCRIBED": {
       if (phase !== "transcribing") return state;
       const text = event.text.trim();
@@ -122,7 +133,7 @@ export function conversationReducer(state: ConversationState, event: Conversatio
       return { ...state, phase: "idle", segments: [...state.segments, text], draft: "", notice: null };
     }
     case "SEND":
-      return (phase === "idle" || phase === "review") && joinSegments(state.segments, state.draft) ? sent(state) : state;
+      return canSend(state) ? sent(state) : state;
     case "REPLY_RECEIVED":
       return phase === "aiThinking"
         ? { ...state, phase: "aiSpeaking", final: event.final, wrapUpOffered: state.wrapUpOffered || event.suggestEnd }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canSend,
   conversationReducer as reduce,
   initialConversationState as init,
   isScenarioComplete,
@@ -130,6 +131,70 @@ describe("AI reply", () => {
     expect(failed.phase).toBe("replyError");
     expect(reduce(failed, { type: "RETRY_REPLY" }).phase).toBe("aiThinking");
     expect(reduce(at({ wrapUpOffered: true }), { type: "DISMISS_WRAP_UP" }).wrapUpOffered).toBe(false);
+  });
+});
+
+describe("CANCEL_RECORDING", () => {
+  it("recording -> idle, keeping segments and clearing draft and notice", () => {
+    const next = reduce(at({ phase: "recording", segments: ["typed"], draft: "x", notice: "tts_failed" }), { type: "CANCEL_RECORDING" });
+    expect(next).toMatchObject({ phase: "idle", segments: ["typed"], draft: "", notice: null });
+  });
+  it("is a no-op outside recording", () => {
+    const idle = at({ phase: "idle", draft: "keep" });
+    expect(reduce(idle, { type: "CANCEL_RECORDING" })).toBe(idle);
+  });
+});
+
+describe("DISMISS_STT_ERROR", () => {
+  it("sttError -> idle, leaving segments untouched", () => {
+    const next = reduce(at({ phase: "sttError", segments: ["a"], draft: "x", notice: "empty_transcript" }), { type: "DISMISS_STT_ERROR" });
+    expect(next).toMatchObject({ phase: "idle", segments: ["a"], draft: "", notice: null });
+  });
+  it("is a no-op elsewhere", () => {
+    for (const phase of ["idle", "recording", "transcribing", "review", "aiThinking"] as const) {
+      const s = at({ phase, draft: "d" });
+      expect(reduce(s, { type: "DISMISS_STT_ERROR" })).toBe(s);
+    }
+  });
+});
+
+describe("canSend", () => {
+  it("is true for idle/review with a draft, or segments only", () => {
+    expect(canSend(at({ phase: "idle", draft: "hi" }))).toBe(true);
+    expect(canSend(at({ phase: "review", draft: "hi" }))).toBe(true);
+    expect(canSend(at({ phase: "idle", segments: ["a"], draft: "" }))).toBe(true);
+  });
+  it("is false when empty or in other phases", () => {
+    expect(canSend(at({ phase: "idle", draft: "  " }))).toBe(false);
+    expect(canSend(at({ phase: "aiThinking", draft: "x" }))).toBe(false);
+    expect(canSend(at({ phase: "recording", segments: ["a"], draft: "x" }))).toBe(false);
+  });
+  it("SEND with segments only and an empty draft succeeds", () => {
+    expect(reduce(at({ phase: "idle", segments: ["a"], userTurns: 1 }), { type: "SEND" })).toMatchObject({
+      phase: "aiThinking", userTurns: 2, segments: [], draft: "",
+    });
+  });
+});
+
+describe("late or wrong-phase events are no-ops", () => {
+  it("returns the same state object", () => {
+    const idle = at({ phase: "idle" });
+    expect(reduce(idle, { type: "REPLY_RECEIVED", final: true, suggestEnd: true })).toBe(idle);
+    expect(reduce(idle, { type: "SPEECH_ENDED" })).toBe(idle);
+    expect(reduce(idle, { type: "TRANSCRIBED", text: "hi", review: false })).toBe(idle);
+    expect(reduce(idle, { type: "RESUME", userTurns: 5, needsReply: true })).toBe(idle);
+  });
+});
+
+describe("END and final speech edge cases", () => {
+  it("END from transcribing and sttError reaches grading", () => {
+    expect(reduce(at({ phase: "transcribing" }), { type: "END" }).phase).toBe("grading");
+    expect(reduce(at({ phase: "sttError" }), { type: "END" }).phase).toBe("grading");
+  });
+  it("SPEECH_ENDED on the final line with a TTS failure still grades", () => {
+    expect(reduce(at({ phase: "aiSpeaking", final: true }), { type: "SPEECH_ENDED", ttsFailed: true })).toMatchObject({
+      phase: "grading", notice: null,
+    });
   });
 });
 
