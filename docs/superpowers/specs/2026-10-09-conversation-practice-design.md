@@ -110,15 +110,18 @@ interface ConversationHint {
 Pure reducer in `lib/conversationMachine.ts` (no I/O; the page drives side effects from transitions), same pattern as `interviewMachine`:
 
 ```
-warming → aiSpeaking → idle → recording → review → sending → aiThinking → aiSpeaking → … → closing → grading → done
+warming → aiSpeaking → idle → recording → transcribing → review → aiThinking → aiSpeaking → … → grading
 ```
-- Typing skips `recording` and STT: typed text goes `idle → sending` on Send. `review` applies only to voice transcripts (the transcript lands in the composer for editing); it is skipped, going `recording → sending`, when `setup.reviewTranscript` is false.
+- There is no separate sending/closing phase: Send persists the user message and enters `aiThinking`; the AI's final line (all role-play goals done, or the 30-turn cap) is spoken, then the machine goes to `grading`. Failures add `sttError` and `replyError`.
+- Extra events: `CANCEL_RECORDING` (recording → idle, keeps earlier segments) and `DISMISS_STT_ERROR` (sttError → idle, so the learner can type instead); the Composer exposes them as "Hủy ghi âm" and "Gõ thay vì nói".
+- Ending while composing (idle/review/recording/sttError/transcribing): the pending text and earlier segments are saved as a final user message before grading. A resumed session whose last AI line was already final goes straight to grading. With "AI đọc to" off, the final closing line stays visible ~2.5 s before grading.
+- Typing skips `recording` and STT: typed text goes `idle → aiThinking` on Send. `review` applies only to voice transcripts (the transcript lands in the composer for editing); it is skipped, going `recording → transcribing → aiThinking`, when `setup.reviewTranscript` is false.
 - **"+ Nói thêm"** at `review`/`idle` with a pending segment: keeps the pending text, returns to `idle`/`recording` for another segment; segments are concatenated into one user message on Send. One user message always gets exactly one AI reply (strict alternation).
 - Recording auto-stops at 3:00. The user can stop AI audio at any time and answer.
 - Turn counter counts user messages.
   - **Topic mode:** at user turn 12 the `reply` call is told to offer to wrap up (`suggestEnd: true`); the UI shows a dismissible "Kết thúc nhé?" chip; the user may keep going.
-  - **Role-play:** when all goals are in `goalsDone`, the AI's reply is the closing line of the scene and the machine goes to `closing → grading`.
-  - **Hard cap, both modes:** after user turn 30 the next AI reply is a closing line and the session goes to `closing → grading`.
+  - **Role-play:** when all goals are in `goalsDone`, the AI's reply is the closing line of the scene and the AI's closing line is spoken and the machine goes to `grading`.
+  - **Hard cap, both modes:** after user turn 30 the next AI reply is a closing line and the session goes to `grading`.
 - "Kết thúc & xem báo cáo" is always available: grade what exists; if there are zero user messages, delete the session doc and return to Setup.
 
 ### 4.3 Per-turn processing
@@ -164,12 +167,12 @@ interface ConversationReport {
   criteriaNotes: Record<keyof ConversationReport["criteria"], string>;   // one Vietnamese line each
   recurringMistakes: { pattern: string; examples: { said: string; better: string }[] }[];  // ≤ 3
   corrections: { messageIndex: number; said: string; corrected: string; note: string }[];  // ≤ ~8, most worthwhile
-  phrases: string[];                     // 4–8 English phrases for the vocab bank
+  phrases: { text: string; meaning: string; example: string }[];  // 4–8 English phrases; meaning is Vietnamese
   goalResult?: { achieved: boolean; comment: string };                    // role-play only
 }
 ```
 
-- Feedback text (notes, pattern descriptions, comments) is Vietnamese; `said`, `corrected`, `better`, `phrases` are English. `corrected` changes as little as possible; rendered with `WordDiff`.
+- Feedback text (notes, pattern descriptions, comments) is Vietnamese; `said`, `corrected`, `better`, `phrases[].text` and `example` are English, `meaning` is Vietnamese. `corrected` changes as little as possible; rendered with `WordDiff`.
 - Where a message already has a cached `hint`, the report prompt receives it so the report does not contradict it.
 - "+x so với buổi trước" compares against the most recent previous `completed` conversation session with a report; hidden when none exists.
 - The report states that pronunciation is not scored.
@@ -177,11 +180,11 @@ interface ConversationReport {
 ## 7. Web Components & Modules
 
 `apps/web/src/lib/`:
-- `conversationMachine.ts` — reducer + state types.
+- `conversationMachine.ts` — reducer + state types; also exports `joinSegments`, `canSend`, `replyFlags`, `isScenarioComplete`.
 - `conversationPrompts.ts` — §5.
 - `conversationSessions.ts` — create, append message, save hint / summary / goalsDone / report / error, get by id, list recent, delete.
 - `conversationScenarios.ts` — static topic cards and role-play presets (persona + goals), Vietnamese titles with English persona text.
-- `conversationHistory.ts` — pure helper: given `summary`, `summarizedCount`, `messages`, returns the window to send (last 8) and whether to condense.
+- `conversationHistory.ts` — pure helper: given `summary`, `summarizedCount`, `messages`, returns the unsummarized window (messages not yet folded into the summary, per §4.3) and whether to condense.
 
 `apps/web/src/components/conversation/`:
 - Setup: `ModeTabs`, `ScenarioCards`, `ScenarioPreview` (persona/goals, editable), `ConversationSetupForm`, `RecentConversations`.
@@ -224,6 +227,8 @@ Rule: a message the user has said or typed is never discarded by a failure.
 - No role-play Report artboard was drawn: it is the same layout as the free-topic report plus a "Kết quả mục tiêu" block.
 - Custom role-play descriptions get a confirm/edit step for the AI-generated persona and goals on Setup (not drawn).
 - The mic-denied state allows text-only start (not drawn).
+- Persona is stored in English (it steers the AI); role-play goals are in Vietnamese (shown to the learner). No character names or avatar letters: the AI avatar is "AI".
+- The mockup's mic-denied and "+ Nói thêm" states follow §8/§4.2.
 
 ## 11. Deploy Steps
 

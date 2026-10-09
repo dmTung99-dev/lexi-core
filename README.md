@@ -94,6 +94,7 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
 - Chấm cuối buổi (5 tiêu chí, sửa lỗi theo từ, câu trả lời gợi ý, lưu cụm từ vào Ngân hàng từ vựng)
 - STT dùng service Cloud Run riêng `stt` (Whisper)
 - Chỉ trên web (React) không có trên app Flutter
+- **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu, báo cáo cuối buổi với lỗi lặp lại, câu đáng sửa và cụm từ lưu vào Ngân hàng từ vựng.
 
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).
