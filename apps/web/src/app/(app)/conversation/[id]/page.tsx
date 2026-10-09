@@ -378,6 +378,8 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
 
   function handleCancelRecording() {
     cancelRecorder();
+    // cancel() nulls recorder.onstop, so a pending stop would never clear this.
+    stoppingRef.current = false;
     recordingRef.current = null;
     dispatch({ type: "CANCEL_RECORDING" });
   }
@@ -398,6 +400,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   function handleEnd() {
     audio.stop();
     cancelRecorder();
+    stoppingRef.current = false;
     const flushPhases: ConversationState["phase"][] = ["idle", "review", "recording", "sttError", "transcribing"];
     if (flushPhases.includes(state.phase)) {
       // Only idle/review hold a live draft; in the other phases the typed draft

@@ -65,6 +65,14 @@ describe("Composer", () => {
     renderComposer({ phase: "review", draft: "hi" });
     expect(screen.getByText(/đừng sửa lỗi ngữ pháp/)).toBeInTheDocument();
   });
+  it("review: the mic button is labelled as a re-record and calls onStart", () => {
+    const h = renderComposer({ phase: "review", draft: "hi" });
+    expect(screen.queryByRole("button", { name: "Bắt đầu ghi âm" })).not.toBeInTheDocument();
+    const mic = screen.getByRole("button", { name: "Thu lại" });
+    expect(mic).toHaveAttribute("title", "Thu lại (bản chép lời hiện tại sẽ bị bỏ)");
+    fireEvent.click(mic);
+    expect(h.onStart).toHaveBeenCalled();
+  });
   it("recording: shows the clock and stops", () => {
     const h = renderComposer({ phase: "recording" }, { elapsed: 42 });
     expect(screen.getByText("0:42")).toBeInTheDocument();
@@ -90,6 +98,10 @@ describe("Composer", () => {
   it("notices: empty transcript and TTS failure", () => {
     renderComposer({ phase: "idle", notice: "empty_transcript" });
     expect(screen.getByText(/Không nghe thấy gì/)).toBeInTheDocument();
+  });
+  it("notice: tts_failed shows the audio-failure hint", () => {
+    renderComposer({ phase: "idle", notice: "tts_failed" });
+    expect(screen.getByText(/Không phát được âm thanh/)).toBeInTheDocument();
   });
   it("suggestions: listing, picking and closing", () => {
     const h = renderComposer({ phase: "idle" }, { suggestions: ["Option one", "Option two"] });
