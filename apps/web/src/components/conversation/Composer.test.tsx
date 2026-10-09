@@ -32,6 +32,12 @@ describe("Composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bỏ qua, trả lời luôn" }));
     expect(h.onSkipSpeech).toHaveBeenCalled();
   });
+  it("aiSpeaking on the closing line: the skip button just says Bỏ qua", () => {
+    const h = renderComposer({ phase: "aiSpeaking", final: true });
+    expect(screen.queryByRole("button", { name: "Bỏ qua, trả lời luôn" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" }));
+    expect(h.onSkipSpeech).toHaveBeenCalled();
+  });
   it("idle: typing, send, mic, add-segment and suggest", () => {
     const h = renderComposer({ phase: "idle", draft: "hello" });
     fireEvent.change(screen.getByLabelText("Câu trả lời của bạn"), { target: { value: "hello!" } });

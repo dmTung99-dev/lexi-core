@@ -20,6 +20,7 @@ import {
   isDraftReady,
   type ConversationDraft,
 } from "@/components/conversation/ConversationSetupForm";
+import { CUSTOM_PRESET_ID } from "@/components/conversation/ScenarioCards";
 import { RecentConversations } from "@/components/conversation/RecentConversations";
 import { ReadinessCard } from "@/components/interview/ReadinessCard";
 
@@ -82,7 +83,7 @@ export default function ConversationSetupPage() {
     setBuildError(null);
     try {
       const { persona, goals } = parseScenario(await callInterviewAi(settings, buildScenarioPrompt(draft.topic, draft.level)));
-      setDraft((d) => ({ ...d, persona, goals }));
+      setDraft((d) => (d.mode === "roleplay" && d.presetId === CUSTOM_PRESET_ID ? { ...d, persona, goals } : d));
     } catch (err) {
       setBuildError(err instanceof Error ? err.message : "Không dựng được tình huống.");
     }

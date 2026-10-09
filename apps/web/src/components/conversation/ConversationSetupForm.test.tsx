@@ -42,9 +42,12 @@ describe("draft helpers", () => {
 
 describe("ConversationSetupForm", () => {
   it("switches mode", () => {
-    const { onChange } = setup();
+    const { onChange } = setup({
+      ...DEFAULT_CONVERSATION_DRAFT, mode: "topic", topic: "Travel and memorable trips", presetId: "travel",
+      persona: "A guide", goals: ["Hỏi đường"],
+    });
     fireEvent.click(screen.getByRole("button", { name: "Tình huống nhập vai" }));
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ mode: "roleplay", topic: "", presetId: null }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ mode: "roleplay", topic: "", presetId: null, persona: "", goals: [] }));
   });
 
   it("picking a topic card fills the topic", () => {
@@ -59,7 +62,7 @@ describe("ConversationSetupForm", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ presetId: null, topic: "Football" }));
   });
 
-  it("picking a role-play preset fills persona and goals, and shows the editable preview", () => {
+  it("picking a role-play preset fills persona and goals", () => {
     const { onChange } = setup({ ...DEFAULT_CONVERSATION_DRAFT, mode: "roleplay" });
     fireEvent.click(screen.getByRole("button", { name: /Gọi món ở nhà hàng/ }));
     expect(onChange).toHaveBeenCalledWith(
