@@ -97,6 +97,54 @@ describe("transcribeViaCloudRun", () => {
   });
 });
 
+describe("transcribeViaCloudRun prompt", () => {
+  it("appends a URL-encoded prompt query param after language", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun(
+      "https://tts-stt-abc.a.run.app",
+      Buffer.from("wav-bytes"),
+      "en",
+      "Topic: travel & food."
+    );
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://tts-stt-abc.a.run.app/transcribe?language=en&prompt=Topic%3A%20travel%20%26%20food.",
+      })
+    );
+  });
+
+  it("sends only the prompt param when there is no language", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "auto" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), undefined, "hello");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe?prompt=hello" })
+    );
+  });
+
+  it("keeps the old URL exactly when the prompt is omitted or empty", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), "en");
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), "en", "");
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe?language=en" })
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe?language=en" })
+    );
+  });
+});
+
 describe("toHttpsError", () => {
   it("passes an existing HttpsError through unchanged", () => {
     const original = new HttpsError("invalid-argument", "bad input");

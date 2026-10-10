@@ -78,9 +78,13 @@ export async function synthesizeViaCloudRun(
 export async function transcribeViaCloudRun(
   serviceUrl: string,
   audio: Buffer,
-  language?: string
+  language?: string,
+  prompt?: string
 ): Promise<{ text: string; language: string }> {
-  const query = language ? `?language=${encodeURIComponent(language)}` : "";
+  const params: string[] = [];
+  if (language) params.push(`language=${encodeURIComponent(language)}`);
+  if (prompt) params.push(`prompt=${encodeURIComponent(prompt)}`);
+  const query = params.length > 0 ? `?${params.join("&")}` : "";
   return callCloudRun<{ text: string; language: string }>(serviceUrl, {
     path: `/transcribe${query}`,
     body: audio,
