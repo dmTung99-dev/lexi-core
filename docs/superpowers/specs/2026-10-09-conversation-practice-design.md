@@ -39,6 +39,8 @@ Success criteria:
 
 No infrastructure changes. All AI work is prompt-level over the existing `generateContent` callable; speech uses the existing `transcribeAudio` and `synthesizeSpeech` callables. On opening `/conversation` the page calls `warmUpSpeech` once (best-effort), as English Interview does.
 
+STT (updated 2026-10-10): Whisper `small` with per-chunk language detection restricted to en/vi (biased to English); the client sends no `language` (see the Interview spec §3.1).
+
 New code is a parallel feature module (`conversation*`) that **reuses** the existing building blocks without modifying their behaviour: `useRecorder`, `transcribeAudioClient`, `warmUpSpeechClient`, TTS playback (`useInterviewAudio`, wrapped or generalised only if its naming/interface blocks reuse; no behaviour change to Interview), `splitSentences`, `wordDiff` / `WordDiff`, and the "save phrase to vocab" flow (`getVocabRecordByHeadword` → `saveVocabRecord`, language `english`). English Interview code is not refactored in this work; a shared "voice turn engine" is deliberately not extracted yet.
 
 ### 3.1 Routes

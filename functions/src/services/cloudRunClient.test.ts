@@ -180,6 +180,17 @@ describe("transcribeViaCloudRun prompt", () => {
       expect.objectContaining({ url: "https://x.a.run.app/transcribe?language=en" })
     );
   });
+
+  it("sends no query at all when neither language nor prompt is given", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "auto" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"));
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe" })
+    );
+  });
 });
 
 describe("toHttpsError", () => {
