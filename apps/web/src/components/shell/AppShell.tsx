@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { MobileTabBar } from "./MobileTabBar";
 import { useSettingsContext } from "@/lib/SettingsContext";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className={`app-frame${fontSizeClass}`}>
       <Sidebar />
       <main className="main">{children}</main>
+      <MobileTabBar />
     </div>
   );
 }
