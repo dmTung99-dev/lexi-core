@@ -2,35 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-interface NavItem {
-  href: string;
-  label: string;
-}
-
-interface NavGroup {
-  label: string | null;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: null,
-    items: [
-      { href: "/dashboard", label: "🏠 Tổng quan" },
-      { href: "/lookup", label: "🔍 Tra từ" },
-      { href: "/vocab-bank", label: "📚 Ngân hàng từ vựng" },
-      { href: "/practice", label: "🎯 Ôn tập" },
-    ],
-  },
-  { label: "Đọc", items: [{ href: "/reading", label: "📖 Đọc — tổng quan" }] },
-  { label: "Quét từ", items: [{ href: "/word-radar", label: "🛰️ Quét từ vựng" }] },
-  { label: "Kiến thức", items: [{ href: "/knowledge", label: "📖 Kiến thức" }] },
-  { label: "Nghe", items: [{ href: "/listening", label: "🎧 Nghe — tổng quan" }] },
-  { label: "Phỏng vấn", items: [{ href: "/interview", label: "🎤 Phỏng vấn tiếng Anh" }] },
-  { label: "Hội thoại", items: [{ href: "/conversation", label: "💬 Hội thoại tiếng Anh" }] },
-  { label: "Khác", items: [{ href: "/settings", label: "⚙️ Cài đặt" }] },
-];
+import { NAV_GROUPS, isActivePath } from "./navItems";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -45,14 +17,11 @@ export function Sidebar() {
         {NAV_GROUPS.map((group, i) => (
           <div key={group.label ?? `group-${i}`}>
             {group.label && <div className="grp-label">{group.label}</div>}
-            {group.items.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <Link key={item.href} href={item.href} className={isActive ? "active" : undefined}>
-                  {item.label}
-                </Link>
-              );
-            })}
+            {group.items.map((item) => (
+              <Link key={item.href} href={item.href} className={isActivePath(pathname, item.href) ? "active" : undefined}>
+                {`${item.icon} ${item.label}`}
+              </Link>
+            ))}
           </div>
         ))}
       </nav>
