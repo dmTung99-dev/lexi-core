@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFirebaseFunctions } from "./firebase";
+import { tailByCodePoints } from "./sttPrompt";
 
 // Keep in sync with functions/src/transcribeAudio.ts.
 interface TranscribeAudioRequest {
@@ -35,7 +36,7 @@ export async function transcribeAudio(
     getFirebaseFunctions(),
     "transcribeAudio"
   );
-  const prompt = options.prompt?.trim().slice(-MAX_PROMPT_CHARS);
+  const prompt = tailByCodePoints(options.prompt?.trim() ?? "", MAX_PROMPT_CHARS, MAX_PROMPT_CHARS);
   const response = await callable({
     audioBase64: await blobToBase64(blob),
     language: "en",

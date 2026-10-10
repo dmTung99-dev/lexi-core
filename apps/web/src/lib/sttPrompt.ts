@@ -3,6 +3,22 @@ import type { ConversationSetup } from "./conversationTypes";
 /** Whisper only attends to roughly the last 224 tokens of initial_prompt. */
 export const STT_PROMPT_MAX_CHARS = 400;
 
+/** Keeps the last `maxPoints` code points (never splitting a surrogate pair);
+ *  if `maxUnits` is given, drops further leading code points until the result
+ *  also fits within that many UTF-16 units (what server-side `.length` counts). */
+export function tailByCodePoints(text: string, maxPoints: number, maxUnits?: number): string {
+  const points = Array.from(text).slice(-maxPoints);
+  let out = points.join("");
+  if (maxUnits !== undefined) {
+    let start = 0;
+    while (out.length > maxUnits && start < points.length) {
+      start++;
+      out = points.slice(start).join("");
+    }
+  }
+  return out;
+}
+
 function clean(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -11,9 +27,7 @@ function clean(text: string): string {
  *  most recent question survives and the oldest context is dropped first. */
 function build(parts: string[]): string {
   const joined = parts.map(clean).filter(Boolean).join(" ");
-  return joined.length > STT_PROMPT_MAX_CHARS
-    ? joined.slice(-STT_PROMPT_MAX_CHARS).trimStart()
-    : joined;
+  return tailByCodePoints(joined, STT_PROMPT_MAX_CHARS).trimStart();
 }
 
 /** Context hint for Whisper's initial_prompt: topic, optional persona, and
