@@ -46,6 +46,7 @@ import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
+import { conversationRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
 import { ChatThread } from "@/components/conversation/ChatThread";
 import { Composer } from "@/components/conversation/Composer";
 import { GoalChecklist } from "@/components/conversation/GoalChecklist";
@@ -76,6 +77,10 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   const summarizedRef = useRef(0);
   const condensingRef = useRef(false);
   const recordingRef = useRef<RecordedAudio | null>(null);
+  // Blobs of the voice segments (successfully transcribed) that make up the
+  // user message being composed; saved to the in-memory recordedAudioStore
+  // when the message is appended. Side channel only — never persisted.
+  const pendingBlobsRef = useRef<Blob[]>([]);
   const handledRef = useRef<ConversationState | null>(null);
   const stoppingRef = useRef(false);
   const unmountedRef = useRef(false);
@@ -141,6 +146,15 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     },
     [persist]
   );
+
+  // Call right BEFORE appending a user message: keys its pending voice blobs
+  // by the index that message is about to take, then resets the pending list.
+  const commitPendingRecordings = useCallback(() => {
+    if (id && pendingBlobsRef.current.length > 0) {
+      saveRecordings(conversationRecordingKey(id, messagesRef.current.length), pendingBlobsRef.current);
+    }
+    pendingBlobsRef.current = [];
+  }, [id]);
 
   // Background: folds old messages into the rolling summary. Failure is
   // ignored — later turns just send more history until a condense succeeds.
@@ -236,9 +250,11 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
           try {
             const text = await transcribeAudio(rec.blob);
             if (handledRef.current !== state) return;
+            if (text.trim()) pendingBlobsRef.current = [...pendingBlobsRef.current, rec.blob];
             if (!review && text.trim()) {
               // Persist the user's message BEFORE the AI call, so a failure
               // can never lose what they said.
+              commitPendingRecordings();
               appendMessage({ role: "user", text: joinSegments(state.segments, text) });
               recordingRef.current = null;
               setSuggestions(null);
@@ -315,7 +331,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
       default:
         return;
     }
-  }, [state, session, settings, user, id, audio, appendMessage, maybeCondense, router]);
+  }, [state, session, settings, user, id, audio, appendMessage, commitPendingRecordings, maybeCondense, router]);
 
   const handleStop = useCallback(async () => {
     if (stoppingRef.current) return;
@@ -373,6 +389,9 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
       cancelRecorder();
       return;
     }
+    // Re-recording from review discards the previous transcript (the reducer
+    // clears the draft), so its blob must not be kept either.
+    if (phaseRef.current === "review") pendingBlobsRef.current = pendingBlobsRef.current.slice(0, -1);
     dispatch({ type: "START_RECORDING" });
   }
 
@@ -391,6 +410,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     if (!canSend(state)) return;
     const text = joinSegments(state.segments, state.draft);
     audio.stop();
+    commitPendingRecordings();
     appendMessage({ role: "user", text });
     recordingRef.current = null;
     setSuggestions(null);
@@ -407,8 +427,12 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
       // has already been moved into `segments`.
       const draft = state.phase === "idle" || state.phase === "review" ? state.draft : "";
       const text = joinSegments(state.segments, draft);
-      if (text) appendMessage({ role: "user", text });
+      if (text) {
+        commitPendingRecordings();
+        appendMessage({ role: "user", text });
+      }
     }
+    pendingBlobsRef.current = [];
     recordingRef.current = null;
     setSuggestions(null);
     dispatch({ type: "END" });
@@ -511,6 +535,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             onReplay={handleReplay}
             onTranslate={(i) => void handleTranslate(i)}
             onHint={(i) => void handleHint(i)}
+            recordingKeyFor={(i) => conversationRecordingKey(session.id, i)}
           />
           {helperError && <p className="iv-error" role="alert">{helperError}</p>}
           {state.wrapUpOffered && !roleplay && state.phase === "idle" && (

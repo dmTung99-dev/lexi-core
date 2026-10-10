@@ -12,6 +12,7 @@ import { buildConversationReportPrompt, parseConversationReport, userMessageInde
 import { completeConversationSession, getConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
 import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
 import { capitalizeHeadword } from "@/lib/vocabDisplay";
+import { conversationRecordingKey } from "@/lib/recordedAudioStore";
 import type { ConversationPhrase, ConversationSession } from "@/lib/conversationTypes";
 import { ConversationReportSummary } from "@/components/conversation/ConversationReportSummary";
 import { RecurringMistakes } from "@/components/conversation/RecurringMistakes";
@@ -165,7 +166,10 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
         <>
           <ConversationReportSummary report={report} delta={delta} />
           <RecurringMistakes items={report.recurringMistakes} />
-          <CorrectionList items={report.corrections} />
+          <CorrectionList
+            items={report.corrections}
+            recordingKeyFor={(i) => conversationRecordingKey(session.id, i)}
+          />
           {phraseSaveError && <p className="iv-error" role="alert">{phraseSaveError}</p>}
           <PhraseSaveList phrases={report.phrases} saved={saved} onSave={(p) => void handleSavePhrase(p)} />
         </>

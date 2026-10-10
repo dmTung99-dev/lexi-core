@@ -13,6 +13,7 @@ import { completeInterviewSession, getInterviewSession, listRecentInterviewSessi
 import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
 import { capitalizeHeadword } from "@/lib/vocabDisplay";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { interviewRecordingKey } from "@/lib/recordedAudioStore";
 import {
   INTERVIEW_LEVELS,
   INTERVIEW_TYPES,
@@ -210,6 +211,9 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
             }}
             savedPhrases={saved}
             onSavePhrase={(p, ex) => void handleSavePhrase(p, ex)}
+            recordingKeys={session.turns.flatMap((t, ti) =>
+              t.mainIndex === i && !t.skipped ? [interviewRecordingKey(session.id, ti)] : []
+            )}
           />
         ))}
       </section>

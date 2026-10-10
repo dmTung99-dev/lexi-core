@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 import InterviewReportPage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
@@ -81,6 +82,64 @@ beforeEach(() => {
   vi.mocked(completeInterviewSession).mockResolvedValue(undefined);
   vi.mocked(getVocabRecordByHeadword).mockResolvedValue(null);
   vi.mocked(saveVocabRecord).mockResolvedValue("v1");
+});
+
+describe("InterviewReportPage — own-voice replay", () => {
+  afterEach(() => {
+    clearRecordings("");
+    vi.unstubAllGlobals();
+  });
+
+  it("offers one 'Nghe lại giọng tôi' per question, playing its main + follow-up recordings in turn order", async () => {
+    const played: string[] = [];
+    let player: { onended: (() => void) | null } | null = null;
+    vi.stubGlobal(
+      "Audio",
+      class {
+        src = "";
+        onended: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        pause = vi.fn();
+        play = () => {
+          played.push(this.src);
+          return Promise.resolve();
+        };
+        constructor() {
+          // eslint-disable-next-line @typescript-eslint/no-this-alias
+          player = this;
+        }
+      }
+    );
+    const urls = new Map<Blob, string>();
+    URL.createObjectURL = vi.fn((b: Blob) => urls.get(b) ?? "blob:?") as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as unknown as typeof URL.revokeObjectURL;
+    const main = new Blob(["main"]);
+    const follow = new Blob(["follow"]);
+    const other = new Blob(["other"]);
+    urls.set(main, "blob:main").set(follow, "blob:follow").set(other, "blob:other");
+    saveRecordings("interview:s1:0", [main]);
+    saveRecordings("interview:s1:1", [other]); // a different main question
+    saveRecordings("interview:s1:2", [follow]);
+    renderPage(
+      makeSession({
+        turns: [
+          { mainIndex: 0, kind: "main", question: "Conflict?", answer: "We disagree about Redux.", skipped: false, answerSeconds: 9 },
+          { mainIndex: 1, kind: "main", question: "Q2", answer: "Other.", skipped: false, answerSeconds: 4 },
+          { mainIndex: 0, kind: "follow_up", question: "Why?", answer: "Because.", skipped: false, answerSeconds: 3 },
+        ],
+      })
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Nghe lại giọng tôi" }));
+    expect(played).toEqual(["blob:main"]);
+    act(() => player?.onended?.());
+    expect(played).toEqual(["blob:main", "blob:follow"]);
+  });
+
+  it("shows no replay button when the recordings are gone (page reloaded)", async () => {
+    renderPage(makeSession());
+    expect(await screen.findByText("7.2")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nghe lại giọng tôi" })).not.toBeInTheDocument();
+  });
 });
 
 describe("InterviewReportPage", () => {

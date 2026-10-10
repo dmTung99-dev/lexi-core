@@ -1,5 +1,7 @@
 import type { InterviewPhrase, InterviewReportQuestion } from "@/lib/interviewTypes";
 import { WordDiff } from "./WordDiff";
+import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
+import { hasRecordings } from "@/lib/recordedAudioStore";
 
 export function sentenceContaining(text: string, phrase: string): string {
   const needle = phrase.toLowerCase();
@@ -17,10 +19,13 @@ export interface QuestionReviewProps {
   onPlayModel(text: string): void;
   savedPhrases: Set<string>;
   onSavePhrase(phrase: InterviewPhrase, example: string): void;
+  /** Recording keys of this question's turns (main + follow-ups), in order. */
+  recordingKeys?: string[];
 }
 
 export function QuestionReview(props: QuestionReviewProps) {
   const { item } = props;
+  const hasVoice = (props.recordingKeys ?? []).some((k) => hasRecordings(k));
   return (
     <div className={props.expanded ? "iv-qr iv-qr-open" : "iv-qr"}>
       <button type="button" className="iv-qr-head" aria-expanded={props.expanded} onClick={props.onToggle}>
@@ -34,7 +39,14 @@ export function QuestionReview(props: QuestionReviewProps) {
             <p className="iv-muted">(Đã bỏ qua)</p>
           ) : (
             <div className="iv-field">
-              <span className="iv-caps">Câu trả lời của bạn · đã sửa</span>
+              {hasVoice ? (
+                <div className="iv-row iv-model-head">
+                  <span className="iv-caps">Câu trả lời của bạn · đã sửa</span>
+                  <PlayMyVoiceButton recordingKeys={props.recordingKeys} className="btn-secondary" />
+                </div>
+              ) : (
+                <span className="iv-caps">Câu trả lời của bạn · đã sửa</span>
+              )}
               {item ? <WordDiff before={props.answer} after={item.corrected} /> : <p>{props.answer}</p>}
             </div>
           )}
