@@ -3317,3 +3317,224 @@ html {
     max-height: 40dvh;
   }
 }
+
+/* ── Phone: dashboard, lookup, vocab bank, practice ── */
+@media (max-width: 820px) {
+  /* Tra từ: input + "Tra từ" + "Khám phá" are ~470px side by side (the input's
+     intrinsic width alone is ~220px). Input takes its own line, the two buttons
+     share the next one. margin-top:4px on btn-primary would misalign them. */
+  .lookup-search-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .lookup-search-row input {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .lookup-search-row .btn-primary,
+  .lookup-search-row .lookup-discover-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    margin-top: 0;
+  }
+
+  /* Result card: 28px side padding leaves ~300px of text; long headwords,
+     phrases and sentences must wrap instead of pushing the pron button out. */
+  .lookup-result-card {
+    padding: 18px 16px;
+  }
+
+  .lookup-headword-row h3,
+  .lookup-sentence-original,
+  .lookup-example,
+  .lookup-meaning,
+  .lookup-definition,
+  .lookup-sentence-translation {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .lookup-headword-row {
+    flex-wrap: wrap;
+  }
+
+  /* Pronunciation button: 26px is far below a finger. Grow the visual a bit and
+     extend the hit area (transparent ::after) to 44px without changing layout. */
+  .pron-btn {
+    position: relative;
+    width: 32px;
+    height: 32px;
+  }
+
+  .pron-btn::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+
+  /* Vocab bank: the four-across row (dot, word, meaning, due label) leaves ~180px
+     for word + meaning. Two lines instead: [dot | word ... due] over [meaning]. */
+  .vrow {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  .vrow .dot {
+    grid-row: 1 / span 2;
+  }
+
+  .vrow .word {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .vrow .due {
+    grid-column: 3;
+    grid-row: 1;
+    margin-left: 0;
+    white-space: nowrap;
+  }
+
+  .vrow .meaning {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    margin-left: 0;
+  }
+
+  .vb-search-clear {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Topic / dropdown popovers are anchored to their (inline-block) chip, so a
+     320px panel under a chip that wrapped to the right overflows the screen.
+     In the vocab toolbar and the practice filters, anchor to the whole row
+     instead and span it. Scoped: other screens keep the generic width clamp. */
+  .vb-toolbar,
+  .practice-filters {
+    position: relative;
+  }
+
+  .vb-toolbar .vb-topic-popover-wrap,
+  .practice-filters .vb-topic-popover-wrap {
+    position: static;
+  }
+
+  .vb-toolbar .vb-topic-popover,
+  .practice-filters .vb-topic-popover {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+
+  /* Practice setup: three filter controls are ~370px in one non-wrapping row. */
+  .practice-filters {
+    flex-wrap: wrap;
+  }
+
+  /* Pagination: up to 9 items (7 buttons + 2 ellipses); 30px-wide, 44px-tall
+     buttons fit in one row at 40px wide with a tighter gap. */
+  .vb-pagination {
+    gap: 4px;
+  }
+
+  .vb-page-btn {
+    min-width: 40px;
+  }
+
+  /* Drawer / modal action buttons: ~43px / ~42px, just under the 44px floor. */
+  .fa button,
+  .modal-footer button {
+    min-height: 44px;
+  }
+
+  /* Drawer header: long headwords and IPA wrap instead of pushing the pill/close. */
+  .dh .titles {
+    min-width: 0;
+  }
+
+  .dh h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .dh .pr {
+    flex-wrap: wrap;
+  }
+
+  /* Vocab suggestions: headword, IPA + meaning and pill share one 226px column
+     next to the pron and dismiss buttons. Headword + pill on line 1, meaning
+     below. Card padding shrinks so the 44px dismiss button does not bloat it. */
+  .suggestion-card {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .suggestion-card-main {
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 4px 10px;
+  }
+
+  .suggestion-headword,
+  .suggestion-meaning {
+    overflow-wrap: anywhere;
+  }
+
+  .suggestion-meaning {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .suggestions-section .link-btn {
+    min-height: 44px;
+  }
+
+  /* Practice flashcard: 62vh is measured against the large viewport on iOS
+     Safari (taller than what is visible above the tab bar); tie the height to
+     dvh minus the progress header and tab bar instead, and give the face less
+     padding so a long headword or meaning has room. */
+  .fc-card {
+    height: clamp(360px, calc(100vh - 280px), 520px);
+    height: clamp(360px, calc(100dvh - 280px), 520px);
+  }
+
+  .fc-face {
+    padding: 22px 18px;
+  }
+
+  .fc-headword,
+  .fc-meaning,
+  .fc-example {
+    overflow-wrap: anywhere;
+  }
+
+  /* Practice result rows: ✔ + headword + meaning + pron in one line. Meaning
+     drops to its own line; the pron button stays at the right of line 1. */
+  .practice-result-list li {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .practice-result-headword,
+  .practice-result-meaning {
+    overflow-wrap: anywhere;
+  }
+
+  .practice-result-meaning {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .practice-result-actions {
+    flex-wrap: wrap;
+  }
+
+  .practice-result-actions > button {
+    flex: 1 1 auto;
+  }
+}
