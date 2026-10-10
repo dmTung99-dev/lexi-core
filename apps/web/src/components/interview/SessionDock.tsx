@@ -1,4 +1,5 @@
 import type { InterviewState } from "@/lib/interviewMachine";
+import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
 
 export function formatClock(seconds: number): string {
@@ -19,6 +20,8 @@ export interface SessionDockProps {
   onReplay(): void;
   onRetryPlan(): void;
   planError?: string;
+  /** The not-yet-sent recording (review / STT-failed), for "Nghe lại giọng tôi". */
+  recording?: Blob | null;
 }
 
 const NOTICE_TEXT = {
@@ -28,6 +31,7 @@ const NOTICE_TEXT = {
 
 export function SessionDock(props: SessionDockProps) {
   const { state, elapsed, micError } = props;
+  const listenBlobs = props.recording ? [props.recording] : [];
   return (
     <footer className="iv-dock">
       {state.phase === "warming" &&
@@ -90,6 +94,7 @@ export function SessionDock(props: SessionDockProps) {
           <div className="iv-dock-row">
             <button type="button" className="btn-primary" onClick={props.onRetryTranscribe}>Thử lại</button>
             <button type="button" className="btn-secondary" onClick={props.onStart}>Thu lại</button>
+            <PlayMyVoiceButton blobs={listenBlobs} className="btn-secondary" />
             <button type="button" className="btn-secondary" onClick={props.onSkip}>Bỏ qua câu này</button>
           </div>
         </div>
@@ -106,6 +111,7 @@ export function SessionDock(props: SessionDockProps) {
           <div className="iv-dock-actions">
             <button type="button" className="btn-primary" disabled={!state.draft.trim()} onClick={props.onSend}>Gửi câu trả lời</button>
             <button type="button" className="btn-secondary" onClick={props.onStart}>Thu lại</button>
+            <PlayMyVoiceButton blobs={listenBlobs} className="btn-secondary" />
             <button type="button" className="btn-secondary" onClick={props.onSkip}>Bỏ qua câu này</button>
           </div>
         </div>

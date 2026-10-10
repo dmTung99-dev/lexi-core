@@ -114,4 +114,40 @@ describe("Composer", () => {
     renderComposer({ phase: "aiThinking" });
     expect(screen.getByText("AI đang suy nghĩ…")).toBeInTheDocument();
   });
+  describe("listen back before sending", () => {
+    const blobs = [new Blob(["a"])];
+    const listen = () => screen.queryByRole("button", { name: "Nghe lại giọng tôi" });
+
+    it("review with blobs shows the button", () => {
+      renderComposer({ phase: "review", draft: "hi" }, { listenBlobs: blobs });
+      expect(listen()).toBeInTheDocument();
+    });
+    it("sttError with blobs shows the button", () => {
+      renderComposer({ phase: "sttError" }, { listenBlobs: blobs });
+      expect(listen()).toBeInTheDocument();
+    });
+    it("idle with pending voice segments shows the button", () => {
+      renderComposer({ phase: "idle", segments: ["first"] }, { listenBlobs: blobs });
+      expect(listen()).toBeInTheDocument();
+    });
+    it("is absent when listenBlobs is empty or undefined", () => {
+      const { unmount } = render(
+        <Composer state={{ ...initialConversationState, phase: "review", draft: "hi" }} elapsed={0} micError={false} suggestions={null} suggesting={false}
+          listenBlobs={[]} onEditDraft={vi.fn()} onSend={vi.fn()} onAddSegment={vi.fn()} onStart={vi.fn()} onStop={vi.fn()} onRetryTranscribe={vi.fn()}
+          onSuggest={vi.fn()} onPickSuggestion={vi.fn()} onCloseSuggestions={vi.fn()} onRetryReply={vi.fn()} onRetryOpening={vi.fn()} onSkipSpeech={vi.fn()}
+          onCancelRecording={vi.fn()} onDismissSttError={vi.fn()} />
+      );
+      expect(listen()).not.toBeInTheDocument();
+      unmount();
+      renderComposer({ phase: "sttError" });
+      expect(listen()).not.toBeInTheDocument();
+    });
+    it.each(["recording", "transcribing", "aiThinking", "aiSpeaking", "replyError", "warming"] as const)(
+      "is absent in the %s phase even with blobs",
+      (phase) => {
+        renderComposer({ phase }, { listenBlobs: blobs });
+        expect(listen()).not.toBeInTheDocument();
+      }
+    );
+  });
 });

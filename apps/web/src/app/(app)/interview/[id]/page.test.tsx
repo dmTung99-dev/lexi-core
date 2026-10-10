@@ -507,4 +507,65 @@ describe("InterviewSessionPage", () => {
       await screen.findByText("Chưa có API key cho nhà cung cấp AI đang chọn — vào Cài đặt để thêm.")
     ).toBeInTheDocument();
   });
+  describe("listen back before sending", () => {
+    const LISTEN = { name: "Nghe lại giọng tôi" };
+
+    it("offers the recording in the review step, before the answer is sent", async () => {
+      renderPage(makeSession({ plan: PLAN }));
+      await screen.findByText("Q1?");
+      fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+      expect(await screen.findByLabelText(/Bản chép lời/)).toHaveValue("My answer");
+      expect(screen.getByRole("button", LISTEN)).toBeInTheDocument();
+      expect(hasRecordings("interview:s1:0")).toBe(false);
+    });
+
+    it("offers the kept recording when transcription failed", async () => {
+      vi.mocked(transcribeAudio).mockRejectedValueOnce(new Error("503"));
+      renderPage(makeSession({ plan: PLAN }));
+      fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Chép lời thất bại");
+      expect(screen.getByRole("button", LISTEN)).toBeInTheDocument();
+    });
+
+    it("never offers the previous answer's blob for the next question", async () => {
+      const first = new Blob(["first"]);
+      const second = new Blob(["second"]);
+      const created: Blob[] = [];
+      URL.createObjectURL = vi.fn((b: Blob) => {
+        created.push(b);
+        return `blob:${created.length}`;
+      }) as unknown as typeof URL.createObjectURL;
+      URL.revokeObjectURL = vi.fn() as unknown as typeof URL.revokeObjectURL;
+      vi.stubGlobal(
+        "Audio",
+        class {
+          src = "";
+          onended: (() => void) | null = null;
+          onerror: (() => void) | null = null;
+          play = () => Promise.resolve();
+          pause = () => {};
+        }
+      );
+      try {
+        RECORDER.stop.mockResolvedValueOnce({ blob: first, seconds: 5 });
+        renderPage(makeSession({ plan: PLAN }));
+        await answerCurrentQuestion();
+        expect(await screen.findByText("Q2?")).toBeInTheDocument();
+        // Idle on Q2: only the sent answer's own replay button (in the thread).
+        expect(screen.getAllByRole("button", LISTEN)).toHaveLength(1);
+        RECORDER.stop.mockResolvedValueOnce({ blob: second, seconds: 5 });
+        fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+        await screen.findByLabelText(/Bản chép lời/);
+        const buttons = screen.getAllByRole("button", LISTEN);
+        expect(buttons).toHaveLength(2);
+        fireEvent.click(buttons[buttons.length - 1]);
+        expect(created).toEqual([second]);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
 });

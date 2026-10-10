@@ -35,7 +35,7 @@ Success criteria:
 - Realtime/streaming conversation (OpenAI Realtime / Gemini Live), barge-in.
 - Push-to-talk keyboard shortcut (Space).
 - Flutter parity.
-- Storing audio recordings or original CV files. (Added 2026-10-10: the learner can replay their own answer recordings — "Nghe lại giọng tôi" in the session thread and per question on the report — from an in-memory store only, key `interview:<sessionId>:<turnIndex>`, for the tab's lifetime; lost on reload, never uploaded or persisted.)
+- Storing audio recordings or original CV files. (Added 2026-10-10: the learner can replay their own answer recordings — "Nghe lại giọng tôi" in the session thread and per question on the report — from an in-memory store only, key `interview:<sessionId>:<turnIndex>`, for the tab's lifetime; lost on reload, never uploaded or persisted. It is also offered before sending: in the transcript-review step and after a failed transcription, playing the not-yet-sent recording straight from memory.)
 
 ## 3. Architecture & Infrastructure
 

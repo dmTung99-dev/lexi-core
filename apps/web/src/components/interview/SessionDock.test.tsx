@@ -17,9 +17,9 @@ function handlers() {
   };
 }
 
-function renderDock(patch: Partial<InterviewState>, elapsed = 0, micError = false) {
+function renderDock(patch: Partial<InterviewState>, elapsed = 0, micError = false, recording?: Blob | null) {
   const h = handlers();
-  render(<SessionDock state={{ ...initialInterviewState, question: "Q", ...patch }} elapsed={elapsed} micError={micError} {...h} />);
+  render(<SessionDock state={{ ...initialInterviewState, question: "Q", ...patch }} elapsed={elapsed} micError={micError} recording={recording} {...h} />);
   return h;
 }
 
@@ -97,5 +97,34 @@ describe("SessionDock", () => {
     unmount();
     renderDock({ phase: "processing" });
     expect(screen.getByText("Người phỏng vấn đang suy nghĩ…")).toBeInTheDocument();
+  });
+  describe("listen back before sending", () => {
+    const listen = () => screen.queryByRole("button", { name: "Nghe lại giọng tôi" });
+    const blob = new Blob(["a"]);
+
+    it("review and sttError show the button when a recording is passed", () => {
+      const { unmount } = render(
+        <SessionDock state={{ ...initialInterviewState, phase: "review", draft: "x" }} elapsed={0} micError={false} recording={blob} {...handlers()} />
+      );
+      expect(listen()).toBeInTheDocument();
+      unmount();
+      renderDock({ phase: "sttError" }, 0, false, blob);
+      expect(listen()).toBeInTheDocument();
+    });
+
+    it("is absent without a recording", () => {
+      renderDock({ phase: "review", draft: "x" });
+      expect(listen()).not.toBeInTheDocument();
+    });
+
+    it("is absent with null in review and sttError", () => {
+      renderDock({ phase: "sttError" }, 0, false, null);
+      expect(listen()).not.toBeInTheDocument();
+    });
+
+    it.each(["idle", "recording", "transcribing", "processing", "speaking"] as const)("is absent in %s even with a recording", (phase) => {
+      renderDock({ phase }, 0, false, blob);
+      expect(listen()).not.toBeInTheDocument();
+    });
   });
 });
