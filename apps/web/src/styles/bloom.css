@@ -3170,3 +3170,129 @@ html {
     font-size: 16px !important;
   }
 }
+
+/* ── Phone layout rules (≤ 820px) ────────────────────────────
+   Last in the file so they win at equal specificity. Desktop is untouched. */
+@media (max-width: 820px) {
+  /* Two-column layouts stack; side columns go below the main column. */
+  .iv-setup-layout,
+  .iv-session-body,
+  .vb-shell {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .iv-setup-main {
+    width: 100%;
+  }
+
+  .iv-setup-side,
+  .iv-session-side {
+    width: 100%;
+  }
+
+  .reading-result-row,
+  .knowledge-detail-columns,
+  .settings-page,
+  .mc-question-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Fixed widths relax. */
+  .iv-score-total {
+    width: 100%;
+  }
+
+  .iv-score-criteria,
+  .iv-grow,
+  .cv-input {
+    min-width: 0;
+  }
+
+  /* Grids shrink. */
+  .iv-type-grid,
+  .iv-voice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .iv-improve-grid,
+  .iv-criteria-grid,
+  .iv-feedback-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Vocab bank: the detail drawer becomes a bottom sheet above the tab bar. */
+  .vb-list-wrap {
+    max-height: none;
+  }
+
+  .vb-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 75vh;
+    max-height: 75dvh;
+    overflow-y: auto;
+    z-index: 45;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -18px 40px -20px rgba(54, 42, 51, 0.35);
+  }
+
+  .vb-drawer-inner {
+    width: 100%;
+  }
+
+  /* Popovers stay inside the screen. */
+  .vb-topic-popover {
+    width: min(320px, calc(100vw - 32px));
+  }
+
+  .word-popover {
+    width: min(220px, calc(100vw - 32px));
+  }
+
+  /* Modals become bottom sheets. */
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  /* Touch targets. */
+  .btn-primary,
+  .btn-secondary,
+  .vb-chip,
+  .vb-page-btn,
+  .iv-icon-btn,
+  .iv-phrase,
+  .cv-chip-btn,
+  .cv-tab,
+  .cv-pick {
+    min-height: 44px;
+  }
+
+  /* Long words wrap inside cards and bubbles. */
+  .cv-bubble,
+  .vrow .word,
+  .vrow .meaning,
+  .knowledge-card,
+  .reading-hub-card {
+    overflow-wrap: anywhere;
+  }
+
+  /* A tall composer must not swallow the screen when the keyboard is open. */
+  .cv-input {
+    max-height: 40vh;
+    max-height: 40dvh;
+  }
+}
