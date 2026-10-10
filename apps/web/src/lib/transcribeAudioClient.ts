@@ -5,6 +5,7 @@ import { getFirebaseFunctions } from "./firebase";
 interface TranscribeAudioRequest {
   audioBase64: string;
   language?: "vi" | "en";
+  prompt?: string;
 }
 
 interface TranscribeAudioResult {
@@ -24,11 +25,21 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 
 // Sends MediaRecorder output (webm/opus or mp4) as-is; faster-whisper
 // decodes it via PyAV.
-export async function transcribeAudio(blob: Blob): Promise<string> {
+const MAX_PROMPT_CHARS = 600;
+
+export async function transcribeAudio(
+  blob: Blob,
+  options: { prompt?: string } = {}
+): Promise<string> {
   const callable = httpsCallable<TranscribeAudioRequest, TranscribeAudioResult>(
     getFirebaseFunctions(),
     "transcribeAudio"
   );
-  const response = await callable({ audioBase64: await blobToBase64(blob), language: "en" });
+  const prompt = options.prompt?.trim().slice(-MAX_PROMPT_CHARS);
+  const response = await callable({
+    audioBase64: await blobToBase64(blob),
+    language: "en",
+    ...(prompt ? { prompt } : {}),
+  });
   return response.data.text;
 }

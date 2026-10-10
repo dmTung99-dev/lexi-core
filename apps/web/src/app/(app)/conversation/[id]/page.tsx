@@ -44,6 +44,7 @@ import { MAX_USER_TURNS, userTurnCount, type ConversationMessage, type Conversat
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
+import { conversationSttPrompt } from "@/lib/sttPrompt";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { conversationRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
@@ -248,7 +249,10 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             return;
           }
           try {
-            const text = await transcribeAudio(rec.blob);
+            const lastAi = [...messagesRef.current].reverse().find((m) => m.role === "ai")?.text ?? "";
+            const text = await transcribeAudio(rec.blob, {
+              prompt: conversationSttPrompt(session.setup, lastAi),
+            });
             if (handledRef.current !== state) return;
             if (text.trim()) pendingBlobsRef.current = [...pendingBlobsRef.current, rec.blob];
             if (!review && text.trim()) {
