@@ -4,6 +4,8 @@ import { transcribeViaCloudRun, toHttpsError } from "./services/cloudRunClient";
 export interface TranscribeAudioRequest {
   audioBase64: string;
   language?: "vi" | "en";
+  /** Optional context for Whisper's initial_prompt (max 600 chars). */
+  prompt?: string;
 }
 
 function isTranscribeAudioRequest(data: unknown): data is TranscribeAudioRequest {
@@ -13,7 +15,8 @@ function isTranscribeAudioRequest(data: unknown): data is TranscribeAudioRequest
     typeof d.audioBase64 === "string" &&
     d.audioBase64.length > 0 &&
     d.audioBase64.length <= 10_000_000 &&
-    (d.language === undefined || d.language === "vi" || d.language === "en")
+    (d.language === undefined || d.language === "vi" || d.language === "en") &&
+    (d.prompt === undefined || (typeof d.prompt === "string" && d.prompt.length <= 600))
   );
 }
 
@@ -26,7 +29,7 @@ export async function transcribeAudioHandler(
   if (!isTranscribeAudioRequest(request.data)) {
     throw new HttpsError(
       "invalid-argument",
-      "Expected { audioBase64: string, language?: 'vi'|'en' }."
+      "Expected { audioBase64: string, language?: 'vi'|'en', prompt?: string (<=600 chars) }."
     );
   }
   // Whisper runs on its own Cloud Run service (`stt`, concurrency=1) so it
@@ -39,7 +42,7 @@ export async function transcribeAudioHandler(
 
   try {
     const audio = Buffer.from(request.data.audioBase64, "base64");
-    return await transcribeViaCloudRun(serviceUrl, audio, request.data.language);
+    return await transcribeViaCloudRun(serviceUrl, audio, request.data.language, request.data.prompt);
   } catch (err) {
     throw toHttpsError(err, "Transcription failed. Please try again.");
   }

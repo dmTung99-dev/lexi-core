@@ -48,6 +48,34 @@ describe("transcribeAudioHandler", () => {
     ).rejects.toMatchObject({ code: "invalid-argument" });
   });
 
+  it("throws invalid-argument for a non-string prompt", async () => {
+    await expect(
+      transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=", prompt: 42 }))
+    ).rejects.toMatchObject({ code: "invalid-argument" });
+  });
+
+  it("throws invalid-argument for a prompt over 600 characters", async () => {
+    await expect(
+      transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=", prompt: "a".repeat(601) }))
+    ).rejects.toMatchObject({ code: "invalid-argument" });
+  });
+
+  it("forwards a valid prompt to Cloud Run", async () => {
+    vi.stubEnv("TTS_STT_SERVICE_URL", "https://tts-stt.a.run.app");
+    vi.mocked(transcribeViaCloudRun).mockResolvedValue({ text: "hi", language: "en" });
+
+    await transcribeAudioHandler(
+      makeRequest({ audioBase64: "aGVsbG8=", language: "en", prompt: "a".repeat(600) })
+    );
+
+    expect(transcribeViaCloudRun).toHaveBeenCalledWith(
+      "https://tts-stt.a.run.app",
+      expect.any(Buffer),
+      "en",
+      "a".repeat(600)
+    );
+  });
+
   it("throws failed-precondition when neither STT_SERVICE_URL nor TTS_STT_SERVICE_URL is set", async () => {
     vi.stubEnv("STT_SERVICE_URL", "");
     vi.stubEnv("TTS_STT_SERVICE_URL", "");
@@ -66,7 +94,8 @@ describe("transcribeAudioHandler", () => {
     expect(transcribeViaCloudRun).toHaveBeenCalledWith(
       "https://stt.a.run.app",
       expect.any(Buffer),
-      "en"
+      "en",
+      undefined
     );
   });
 
@@ -80,7 +109,8 @@ describe("transcribeAudioHandler", () => {
     expect(transcribeViaCloudRun).toHaveBeenCalledWith(
       "https://tts-stt.a.run.app",
       expect.any(Buffer),
-      "en"
+      "en",
+      undefined
     );
   });
 
@@ -95,7 +125,8 @@ describe("transcribeAudioHandler", () => {
     expect(transcribeViaCloudRun).toHaveBeenCalledWith(
       "https://tts-stt.a.run.app",
       Buffer.from("wav-bytes"),
-      "vi"
+      "vi",
+      undefined
     );
     expect(result).toEqual({ text: "xin chao", language: "vi" });
   });
