@@ -1,7 +1,7 @@
 # LexiCore — Mobile-responsive web app (iPhone 11)
 
 **Date:** 2026-10-10
-**Status:** Draft, pending spec review
+**Status:** Implemented (branch `feat/mobile-responsive`, merged to `master` 2026-10-11). Signed-in layouts were verified by CSS review and static headless-Chrome harnesses only; the owner's iPhone testing drives follow-up fixes.
 **Covers:** Making the React web app (`apps/web/`) comfortable to use on a phone (primary target: iPhone 11, Safari, 414×896 CSS px, portrait), with all existing features available, a phone-specific navigation, and a phone-specific type scale. Desktop appearance does not change.
 **Platform:** Web only (`apps/web/`). Flutter app untouched. No backend, Firestore, or dependency changes.
 **Depends on:** `apps/web/src/styles/bloom.css` (single global stylesheet), `AppShell` / `Sidebar` (`apps/web/src/components/shell/`), the `fontSize` user setting (small / normal / large).

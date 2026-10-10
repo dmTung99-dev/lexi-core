@@ -2423,3 +2423,19 @@ Task 11: complete (commit bd8ec5e, review clean). Minors: duplicate keys if AI r
 Task 10: complete after fix (320ac8d + 557516e, re-review clean).
 Polish pass: e9c8fc6 (Tasks 8/9/11 minors) done.
 Task 12: complete (commit ee2dd12; manual verification step 4 pending with user).
+
+## Mobile responsive web (2026-10-10, branch feat/mobile-responsive)
+Plan: docs/superpowers/plans/2026-10-10-mobile-responsive-web.md (9 tasks, SDD). Base: 560de8e
+Mobile Task 1: complete (560de8e..3bbbf38, review clean)
+Mobile Task 2: complete (3bbbf38..b78d88b, review clean). Minors for later: .main bottom padding applies on session routes where tab bar hidden (~80px dead space) → fix in Task 7; a11y polish: aria-current on active links, icon aria-hidden in sheet links, focus assertions in tests, aria-modal no trap.
+Mobile Task 3: complete (b78d88b..f7019c0, review clean). Mobile Task 4: implemented e10dfa3; found desktop regression (12px floor active on desktop) → fix dispatched (--type-min var).
+Mobile Task 4: fix 8da04a7 (floor only on phones). Review: Needs fixes → (a) wrap originals <15px (not 13.5) so fs-small phone stays ≥12px, (b) .app-frame { font-size: calc(16px * var(--type-scale)) } so unstyled text follows scale, (c) anchor convention-test regexes. Dispatch AFTER Task 5 commits (same file).
+Mobile Task 4: complete after fixes (e10dfa3, 8da04a7, 68f87a5); re-review folded into final whole-branch review. Mobile Task 5: implemented f729aa4 (audit only covers signed-out states — real layouts need iPhone check); review pending.
+Mobile Task 5: complete after fix (f729aa4 + b6359aa; detector fixed, modal sheet above tab bar, min-width fix). Tasks 6-9 = code-review passes (audit sees only signed-out pages); iPhone feedback loop is the real check.
+Mobile Task 6: implemented c45741d; review found Critical: phone .pron-btn{position:relative} defeats .selection-speak-btn{position:fixed} (reading selection button) → fix: scope with :not(.selection-speak-btn) or re-assert fixed + keep 26px; Minor: .lookup-sentence-original flex 1 1 0. Dispatch AFTER Task 7 commits (same file). Device-check list also: reading/listening/knowledge toolbars (.practice-filters/.vb-toolbar rules apply there).
+Mobile Task 6: complete after fix (c45741d + 214598e). Task 7: implemented f7c6497 (sticky dock fix via :has overflow), opus review pending.
+Mobile Task 7: complete (c45741d..f7c6497, opus review clean). Minors: button.btn-primary margin-top 4px in composer rows; mic order -1 vs DOM; dock overflow clips pulse ring; loading/error states of interview page lack .iv-session so keep 80px padding. Device checks: sticky dock w/ overflow:clip on Safari, dock height with iOS keyboard (50dvh), goal checklist reachability.
+Mobile Task 8: complete (214598e..1171c07, opus review clean). Follow-ups: Nghe hiểu audio controls scroll away on phones (could add compact play/stop in sticky bar); wide content on 5 session pages clipped not scrollable; .modal-field .link-btn 44px also hits EditVocabModal; device checks: popover static position on iOS, selection speak 🔊 on long-press, sticky Nộp bài bar with overflow clip.
+Mobile Task 9: complete (5fe5b2b). 0 FAIL at 414/375; desktop computed styles identical to baseline; build ok in shadow copy. Next: final whole-branch review.
+Mobile feature: ALL TASKS COMPLETE + final review fixes (50b5fad, 3ac272e, 4daf4b9) on feat/mobile-responsive. Not merged/deployed.
+Mobile responsive + Conversation/STT work: docs synced (README, specs, knowledge spec) and merged to master 2026-10-11.

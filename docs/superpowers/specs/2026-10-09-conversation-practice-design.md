@@ -1,7 +1,7 @@
 # LexiCore — English Conversation Practice (web)
 
 **Date:** 2026-10-09
-**Status:** Draft, pending spec review
+**Status:** Implemented and shipped to production 2026-10-10 (web). Later additions: Vietnamese translation stored with each AI message (§3.2, §5), "Nghe lại giọng tôi" (§4.4), Whisper `small` with en/vi per-chunk detection (§3).
 **Covers:** A new chat-style English speaking/writing practice feature. The learner talks (voice or typing) with an AI partner either about a free topic or inside a role-play scenario with goals, gets on-demand help during the chat, and a feedback report at the end.
 **Platform:** Web only (`apps/web/`). No Flutter work now; Flutter parity is a later, separate spec/plan (the Firestore schema and Cloud Functions here are platform-neutral so it can reuse them).
 **UI design:** https://claude.ai/artifact/9D6N3cv1cULLYjP3PyvFKU (5 artboards: Setup free topic, Chat free topic, Report, Setup role-play, Chat role-play). Where this spec and the design disagree, this spec wins (see §10).
@@ -84,6 +84,7 @@ interface ConversationMessage {
   role: "ai" | "user";
   text: string;                      // for a merged user turn: segments joined with a space
   hint?: ConversationHint;           // cached result of "Gợi ý sửa" (user messages only)
+  vi?: string;                       // Vietnamese translation of an AI message; omitted (never undefined) when empty
 }
 
 interface ConversationHint {
@@ -139,7 +140,7 @@ After the user sends message *k*:
 
 - **Gợi ý sửa** (per user message): calls `hint` for that message, stores the result in `messages[i].hint`. A second tap shows the cached result with no AI call.
 - **Gợi ý cách nói** (composer, both modes): calls `suggest` with the setup, current goal (role-play: first not-done goal), `summary`, and the last 4 messages; returns 2–3 English example replies appropriate to the level; shown in a transient panel, not stored, not scored. Tapping an option fills the composer text so the user can read it aloud or edit it.
-- **Translate** (per AI message): calls `translate`, result cached in component state for the session.
+- **Translate** (per AI message): `opening` and `reply` already return a Vietnamese `vi`, stored on the message, so the button shows it instantly with no AI call. Only when `vi` is missing (older sessions, or a model that omitted it) does it call `translate`, then persists the result onto that message so the next click is instant.
 - **Nghe lại giọng tôi** (per voice-composed user message, in the chat and next to each report correction): replays the learner's own recording(s) of that message — every kept "+ Nói thêm" segment in order; a re-recorded take is dropped; typed-only messages get no button. **It is also available before sending** (added 2026-10-10): next to the draft in the transcript-review step, in the STT-failed state (the kept recording), and in idle while earlier voice segments are pending ("+ Nói thêm") — it plays the unsent takes in order from blobs held in memory by the page (`PlayMyVoiceButton blobs`, object URLs created per click and revoked afterwards). Blobs live only in a module-level in-memory store (`recordedAudioStore`, key `conversation:<sessionId>:<messageIndex>`) for the tab's lifetime: they survive session → report navigation but are lost on reload. No Storage/Firestore change.
 - TTS is chunked by `splitSentences` (≤ 500 chars), first chunk plays while later ones synthesize.
 
@@ -150,8 +151,8 @@ All in `lib/conversationPrompts.ts` except `report`, which lives in `lib/convers
 | Prompt | Input | Output JSON |
 |---|---|---|
 | `scenario` | custom role-play description, level | `{ "persona": string, "goals": string[] }` (3–4 goals) |
-| `opening` | setup | `{ "say": string }` |
-| `reply` | setup, `summary`, unsummarized messages, user-turn count, flags (`offerEnd`, `mustClose`) | `{ "say": string, "goalsDone"?: number[], "suggestEnd"?: boolean }` |
+| `opening` | setup | `{ "say": string, "vi"?: string }` |
+| `reply` | setup, `summary`, unsummarized messages, user-turn count, flags (`offerEnd`, `mustClose`) | `{ "say": string, "vi"?: string, "goalsDone"?: number[], "suggestEnd"?: boolean }` |
 | `hint` | one user message, setup, previous AI message | `{ "corrected": string, "note": string, "alternatives": string[] }` |
 | `suggest` | setup, current goal, `summary`, last 4 messages | `{ "options": string[] }` (2–3) |
 | `condense` | previous `summary`, messages to fold | `{ "summary": string }` |
