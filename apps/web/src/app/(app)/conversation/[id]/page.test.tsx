@@ -79,6 +79,17 @@ beforeEach(() => {
   vi.mocked(callInterviewAi).mockResolvedValue('{"say":"Nice!","vi":"Hay!","goalsDone":[]}');
 });
 
+describe("ConversationSessionPage — STT prompt", () => {
+  it("passes the topic and the last AI message as the STT prompt", async () => {
+    renderPage(makeSession(true));
+    await recordVoice(new Blob(["a"]), "I went to Hue");
+    expect(await screen.findByLabelText("Câu trả lời của bạn")).toHaveValue("I went to Hue");
+    expect(transcribeAudio).toHaveBeenCalledWith(expect.any(Blob), {
+      prompt: "Topic: Travel. Where did you go?",
+    });
+  });
+});
+
 describe("ConversationSessionPage — own-voice recordings", () => {
   it("keeps every kept voice segment of a message, dropping a re-recorded one", async () => {
     const a = new Blob(["a"]);

@@ -33,6 +33,7 @@ import {
 } from "@/lib/interviewMachine";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
+import { interviewSttPrompt } from "@/lib/sttPrompt";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { interviewRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
@@ -210,7 +211,9 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             return;
           }
           try {
-            const text = await transcribeAudio(rec.blob);
+            const text = await transcribeAudio(rec.blob, {
+              prompt: interviewSttPrompt(session.setup.role, state.question),
+            });
             if (handledRef.current !== state) return;
             dispatch({ type: "TRANSCRIBED", text, review });
           } catch {

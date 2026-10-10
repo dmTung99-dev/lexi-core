@@ -49,6 +49,21 @@ describe("useRecorder", () => {
     expect(trackStop).toHaveBeenCalled();
   });
 
+  it("asks for a mono, noise-suppressed, echo-cancelled, gain-controlled mic", async () => {
+    const { result } = renderHook(() => useRecorder());
+    await act(async () => {
+      await result.current.start();
+    });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+    });
+  });
+
   it("sets error=denied when getUserMedia rejects", async () => {
     vi.mocked(navigator.mediaDevices.getUserMedia).mockRejectedValueOnce(new Error("NotAllowed"));
     const { result } = renderHook(() => useRecorder());

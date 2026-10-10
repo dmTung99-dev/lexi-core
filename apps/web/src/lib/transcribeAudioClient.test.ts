@@ -17,4 +17,32 @@ describe("transcribeAudioClient", () => {
     expect(httpsCallable).toHaveBeenCalledWith("fns", "transcribeAudio");
     expect(callableMock).toHaveBeenCalledWith({ audioBase64: "aGVsbG8=", language: "en" });
   });
+
+  it("sends a trimmed prompt when given", async () => {
+    callableMock.mockResolvedValue({ data: { text: "ok", language: "en" } });
+    await transcribeAudio(new Blob(["hello"]), { prompt: "  Topic: travel.  " });
+    expect(callableMock).toHaveBeenLastCalledWith({
+      audioBase64: "aGVsbG8=",
+      language: "en",
+      prompt: "Topic: travel.",
+    });
+  });
+
+  it("omits the prompt key when empty or whitespace", async () => {
+    callableMock.mockResolvedValue({ data: { text: "ok", language: "en" } });
+    await transcribeAudio(new Blob(["hello"]), { prompt: "   " });
+    expect(callableMock).toHaveBeenLastCalledWith({ audioBase64: "aGVsbG8=", language: "en" });
+    await transcribeAudio(new Blob(["hello"]), {});
+    expect(callableMock).toHaveBeenLastCalledWith({ audioBase64: "aGVsbG8=", language: "en" });
+  });
+
+  it("caps the prompt at 600 chars keeping the tail", async () => {
+    callableMock.mockResolvedValue({ data: { text: "ok", language: "en" } });
+    await transcribeAudio(new Blob(["hello"]), { prompt: "a".repeat(100) + "b".repeat(600) });
+    expect(callableMock).toHaveBeenLastCalledWith({
+      audioBase64: "aGVsbG8=",
+      language: "en",
+      prompt: "b".repeat(600),
+    });
+  });
 });

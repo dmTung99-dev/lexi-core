@@ -193,6 +193,14 @@ describe("InterviewSessionPage", () => {
     expect(await screen.findByText("Q2?")).toBeInTheDocument();
   });
 
+  it("passes the role and current question as the STT prompt", async () => {
+    renderPage(makeSession({ plan: PLAN }));
+    await answerCurrentQuestion();
+    expect(transcribeAudio).toHaveBeenCalledWith(expect.any(Blob), {
+      prompt: `Job interview for SE. ${PLAN[0].en}`,
+    });
+  });
+
   it("keeps the recording and offers retry when STT fails", async () => {
     vi.mocked(transcribeAudio).mockRejectedValueOnce(new Error("503"));
     renderPage(makeSession({ plan: PLAN }));
