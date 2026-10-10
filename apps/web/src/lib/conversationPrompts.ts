@@ -61,13 +61,15 @@ ${describeSetup(setup)}
 
 Write the FIRST thing you say to start the conversation. ${how} 1–2 short sentences, at the learner's level.
 
-Return ONLY a JSON object: {"say": "..."}`;
+Return ONLY a JSON object: {"say": "...", "vi": "..."}
+- "vi": a natural Vietnamese translation of "say".`;
 }
 
-export function parseOpening(raw: string): string {
-  const say = str(parseJson(raw).say);
+export function parseOpening(raw: string): { say: string; vi: string } {
+  const json = parseJson(raw);
+  const say = str(json.say);
   if (!say) throw new InterviewAiError("AI không mở đầu được cuộc trò chuyện.");
-  return say;
+  return { say, vi: str(json.vi) };
 }
 
 export interface ReplyInput {
@@ -108,20 +110,24 @@ export function buildReplyPrompt(input: ReplyInput): string {
   parts.push(`Rules:\n- ${rules.join("\n- ")}`);
   parts.push(
     setup.mode === "roleplay"
-      ? 'Return ONLY a JSON object: {"say": "...", "goalsDone": [0]}'
-      : 'Return ONLY a JSON object: {"say": "...", "suggestEnd": false}'
+      ? 'Return ONLY a JSON object: {"say": "...", "vi": "...", "goalsDone": [0]}'
+      : 'Return ONLY a JSON object: {"say": "...", "vi": "...", "suggestEnd": false}'
   );
+  parts.push('"vi": a natural Vietnamese translation of "say".');
   return parts.join("\n\n");
 }
 
-export function parseReply(raw: string, goalCount: number): { say: string; goalsDone: number[]; suggestEnd: boolean } {
+export function parseReply(
+  raw: string,
+  goalCount: number
+): { say: string; vi: string; goalsDone: number[]; suggestEnd: boolean } {
   const json = parseJson(raw);
   const say = str(json.say);
   if (!say) throw new InterviewAiError("AI chưa trả lời được.");
   const done = Array.isArray(json.goalsDone)
     ? json.goalsDone.filter((n: unknown): n is number => Number.isInteger(n) && (n as number) >= 0 && (n as number) < goalCount)
     : [];
-  return { say, goalsDone: [...new Set(done)], suggestEnd: json.suggestEnd === true };
+  return { say, vi: str(json.vi), goalsDone: [...new Set(done)], suggestEnd: json.suggestEnd === true };
 }
 
 export interface HintInput {

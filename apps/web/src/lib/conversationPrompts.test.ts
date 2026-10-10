@@ -56,8 +56,19 @@ describe("opening", () => {
     expect(buildOpeningPrompt(ROLE)).toContain("A friendly waiter");
   });
   it("parses say, rejects empty", () => {
-    expect(parseOpening('{"say":" Hi there! "}')).toBe("Hi there!");
+    expect(parseOpening('{"say":" Hi there! "}')).toEqual({ say: "Hi there!", vi: "" });
     expect(() => parseOpening('{"say":""}')).toThrow();
+  });
+  it("parses vi when present and defaults it to empty when absent", () => {
+    expect(parseOpening('{"say":"Hi!","vi":" Xin chào! "}')).toEqual({ say: "Hi!", vi: "Xin chào!" });
+    expect(parseOpening('{"say":"Hi!"}').vi).toBe("");
+  });
+  it("asks for a Vietnamese translation", () => {
+    for (const setup of [TOPIC, ROLE]) {
+      const p = buildOpeningPrompt(setup);
+      expect(p).toContain('"vi"');
+      expect(p).toContain("Vietnamese translation");
+    }
   });
 });
 
@@ -74,8 +85,19 @@ describe("reply", () => {
   });
   it("parses say, keeps only valid unique goal indexes, defaults suggestEnd to false", () => {
     const out = parseReply('{"say":"Nice!","goalsDone":[1,1,5,-1,"0",0],"suggestEnd":true}', 2);
-    expect(out).toEqual({ say: "Nice!", goalsDone: [1, 0], suggestEnd: true });
-    expect(parseReply('{"say":"Ok"}', 0)).toEqual({ say: "Ok", goalsDone: [], suggestEnd: false });
+    expect(out).toEqual({ say: "Nice!", vi: "", goalsDone: [1, 0], suggestEnd: true });
+    expect(parseReply('{"say":"Ok"}', 0)).toEqual({ say: "Ok", vi: "", goalsDone: [], suggestEnd: false });
+  });
+  it("parses vi when present and defaults it to empty when absent", () => {
+    expect(parseReply('{"say":"Nice!","vi":" Tuyệt! "}', 0).vi).toBe("Tuyệt!");
+    expect(parseReply('{"say":"Nice!"}', 0).vi).toBe("");
+  });
+  it("asks for a Vietnamese translation in both modes", () => {
+    for (const setup of [TOPIC, ROLE]) {
+      const p = buildReplyPrompt({ ...base, setup });
+      expect(p).toContain('"vi"');
+      expect(p).toContain("Vietnamese translation");
+    }
   });
   it("rejects a reply without say", () => {
     expect(() => parseReply('{"goalsDone":[0]}', 2)).toThrow();
