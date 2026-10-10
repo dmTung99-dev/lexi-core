@@ -36,7 +36,7 @@ import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
 import { interviewSttPrompt } from "@/lib/sttPrompt";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
-import { interviewRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
+import { clearOtherSessions, interviewRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
 import {
   INTERVIEW_CLOSING,
   INTERVIEW_GREETING,
@@ -112,6 +112,12 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
       unmountedRef.current = true;
     };
   }, []);
+
+  // Free the in-memory voice recordings of earlier sessions of this feature.
+  // Not done on the report page: it must still play its own session's audio.
+  useEffect(() => {
+    if (id) clearOtherSessions("interview:", id);
+  }, [id]);
 
   useEffect(() => {
     if (!user || !id) return;
