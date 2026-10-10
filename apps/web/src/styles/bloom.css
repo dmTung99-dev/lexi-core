@@ -3360,15 +3360,23 @@ html {
     flex-wrap: wrap;
   }
 
+  /* The sentence takes the leftover width and wraps beside the pron button
+     instead of filling the row and pushing the button to its own line. */
+  .lookup-sentence-original {
+    flex: 1 1 0;
+  }
+
   /* Pronunciation button: 26px is far below a finger. Grow the visual a bit and
-     extend the hit area (transparent ::after) to 44px without changing layout. */
-  .pron-btn {
+     extend the hit area (transparent ::after) to 44px without changing layout.
+     Excludes .selection-speak-btn: that floating button is position:fixed with
+     inline top/left and a 26px size baked into its clamp (SelectionSpeakButton). */
+  .pron-btn:not(.selection-speak-btn) {
     position: relative;
     width: 32px;
     height: 32px;
   }
 
-  .pron-btn::after {
+  .pron-btn:not(.selection-speak-btn)::after {
     content: "";
     position: absolute;
     inset: -6px;
