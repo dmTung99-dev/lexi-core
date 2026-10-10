@@ -157,6 +157,7 @@ Hỗ trợ 3 nhà cung cấp LLM, có thể chuyển đổi trong Cài đặt:
 
 ### Giao diện
 - **Chủ đề Sáng / Tối / Hệ thống** — Cài đặt → Giao diện, lưu cục bộ (không đồng bộ)
+- **Web trên điện thoại (≤ 820px)** — thanh tab dưới cùng (Tổng quan, Tra từ, Từ vựng, Ôn tập, Thêm), cỡ chữ tự co theo thang `--type-scale` (nhân với cài đặt Cỡ chữ), bố cục từng màn hình được tối ưu cho cảm ứng; desktop giữ nguyên thanh bên
 
 ---
 

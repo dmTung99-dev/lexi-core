@@ -27,6 +27,16 @@ Flutter UI uses the **Bloom** design system, ported from `apps/web/src/styles/bl
 - Light/dark follows `UserSettingsState.themePreference` (Sáng/Tối/Hệ thống), stored locally in SharedPreferences (`theme_preference`), not synced. The picker lives in Cài đặt → Giao diện (`BloomSegmented`).
 - Raw Material `SegmentedButton` / `Switch` / `RadioListTile` are retired app-wide — use `BloomSegmented` / `BloomSwitch`, and `showSingleSelectSheet` for single-choice pickers.
 
+## Mobile web (phone mode)
+
+- Phone mode is `@media (max-width: 820px)` in `apps/web/src/styles/bloom.css` (desktop CSS is untouched; phone rules live in commented blocks near the end of the file). Above 820px the sidebar layout is unchanged.
+- Navigation data lives in `apps/web/src/components/shell/navItems.ts` and feeds both `Sidebar` (desktop) and `MobileTabBar` (phone tab bar + "Thêm" sheet).
+- Every `font-size` must be `calc(N * var(--type-scale))` — or `max(var(--type-min), calc(N * var(--type-scale)))` for originals under 15px — enforced by `apps/web/src/styles/bloom.fontSize.test.ts`. Phone scale = 0.9 x the user's Cỡ chữ setting (small 0.9 / medium 1 / large 1.15); the desktop `zoom` for `.fs-small`/`.fs-large` is desktop-only.
+- Text inputs stay 16px on phones (iOS zooms the page on focus below 16px); touch targets are >= 44px.
+- Live interview/conversation session pages (`.iv-session`) hide the tab bar and use `:has(.iv-session)` overflow rules so the dock pins; reading/listening sessions pin their submit bar via `:has(.reading-submit-bar)`.
+- Audit: `AUDIT_BASE_URL=http://localhost:3000 node --experimental-websocket apps/web/scripts/mobile-audit.mjs` (needs `npm run dev`; `AUDIT_WIDTH`, `AUDIT_ROUTES`, `AUDIT_SELFTEST=1` options). It only sees signed-out routes (heading + sign-in prompt), and flags a harmless 1370/1280 frame overflow on desktop widths (decorative background blob; same at baseline).
+- Known limitation: signed-in layouts cannot be rendered headlessly; they are verified by CSS review, static harnesses built from the real markup, and the owner's iPhone.
+
 ## Backend/data decisions (see the spec above for full reasoning)
 
 - **Everything lives in Firebase/Google Cloud** — one platform, not split across Firebase + Vercel. Database, hosting, and the AI-proxy backend are all Firebase/GCP products in the same project.
