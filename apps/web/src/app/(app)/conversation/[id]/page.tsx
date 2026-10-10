@@ -47,7 +47,7 @@ import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
 import { conversationSttPrompt } from "@/lib/sttPrompt";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
-import { conversationRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
+import { clearOtherSessions, conversationRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
 import { ChatThread } from "@/components/conversation/ChatThread";
 import { Composer } from "@/components/conversation/Composer";
 import { GoalChecklist } from "@/components/conversation/GoalChecklist";
@@ -101,6 +101,12 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
       unmountedRef.current = true;
     };
   }, []);
+
+  // Free the in-memory voice recordings of earlier sessions of this feature.
+  // Not done on the report page: it must still play its own session's audio.
+  useEffect(() => {
+    if (id) clearOtherSessions("conversation:", id);
+  }, [id]);
 
   useEffect(() => {
     if (!user || !id) return;

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearOtherSessions,
   clearRecordings,
   conversationRecordingKey,
   getRecordingUrls,
@@ -100,5 +101,28 @@ describe("recordedAudioStore", () => {
     expect(revoke).toHaveBeenCalledTimes(2);
     expect(revoke).toHaveBeenCalledWith("blob:url-1");
     expect(revoke).toHaveBeenCalledWith("blob:url-2");
+  });
+
+  it("clearOtherSessions drops other sessions of the feature, revokes URLs, keeps the kept session and other features", () => {
+    saveRecordings("conversation:keep:1", [blob("a")]);
+    saveRecordings("conversation:old:1", [blob("b")]);
+    saveRecordings("conversation:old2:4", [blob("c")]);
+    saveRecordings("interview:old:1", [blob("d")]);
+    getRecordingUrls("conversation:old:1");
+    getRecordingUrls("conversation:keep:1");
+    clearOtherSessions("conversation:", "keep");
+    expect(hasRecordings("conversation:keep:1")).toBe(true);
+    expect(hasRecordings("conversation:old:1")).toBe(false);
+    expect(hasRecordings("conversation:old2:4")).toBe(false);
+    expect(hasRecordings("interview:old:1")).toBe(true);
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("clearOtherSessions does not treat an id that merely starts with the kept id as kept", () => {
+    saveRecordings("interview:abc:1", [blob("a")]);
+    saveRecordings("interview:abcd:1", [blob("b")]);
+    clearOtherSessions("interview:", "abc");
+    expect(hasRecordings("interview:abc:1")).toBe(true);
+    expect(hasRecordings("interview:abcd:1")).toBe(false);
   });
 });

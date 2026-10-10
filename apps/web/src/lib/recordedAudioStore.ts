@@ -68,3 +68,14 @@ export function clearRecordings(prefix: string): void {
     entries.delete(key);
   }
 }
+
+/** Frees the recordings of every session of one feature except `keepSessionId`
+ *  (`featurePrefix` is e.g. "conversation:" / "interview:"). */
+export function clearOtherSessions(featurePrefix: string, keepSessionId: string): void {
+  const keepPrefix = `${featurePrefix}${keepSessionId}:`;
+  for (const [key, entry] of [...entries]) {
+    if (!key.startsWith(featurePrefix) || key.startsWith(keepPrefix)) continue;
+    revokeEntry(entry);
+    entries.delete(key);
+  }
+}
