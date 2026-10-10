@@ -62,6 +62,6 @@ describe("bloom.css font-size convention", () => {
   it("scales unstyled text: .app-frame sets its own base font-size from --type-scale", () => {
     const rule = /\.app-frame\s*\{([^}]*)\}/g;
     const bodies = [...css.matchAll(rule)].map((m) => m[1]);
-    expect(bodies.some((b) => /(?<![-\w])font-size:\s*calc\(16px \* var\(--type-scale\)\);/.test(b))).toBe(true);
+    expect(bodies.some((b) => /(?<![-\w])font-size:\s*calc\(1rem \* var\(--type-scale\)\);/.test(b))).toBe(true);
   });
 });
