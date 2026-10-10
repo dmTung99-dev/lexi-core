@@ -31,7 +31,7 @@ RUN mkdir -p voices && \
 
 COPY app ./app
 
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8', download_root='models/whisper')"
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8', download_root='models/whisper')"
 
 ENV PORT=8080
 EXPOSE 8080
