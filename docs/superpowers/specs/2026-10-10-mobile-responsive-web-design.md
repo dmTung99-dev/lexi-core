@@ -38,6 +38,7 @@ Success criteria:
 - Phone type scale via a CSS variable, iOS focus-zoom guard, interplay with the font-size setting.
 - Generic phone layout rules plus per-area fixes for all 11 areas.
 - Tests for new components and for the font-size convention.
+- Landscape-phone safe-area padding: `.sidebar` (left) and `.main` (right) add `env(safe-area-inset-left/right)` outside any media query (`env()` is 0 on desktop, so desktop is unchanged), so landscape iPhones with the desktop layout (896 px) do not put content under the notch. The layout itself is unchanged.
 
 **Non-goals (deferred):**
 - iOS Home Screen icons / splash screens, offline mode, gestures (swipe), iPad-specific layout.
@@ -72,7 +73,7 @@ Success criteria:
 
 - **Mechanism:** a one-off script rewrites every `font-size: N<unit>` in `bloom.css` to `font-size: calc(N<unit> * var(--type-scale))`. Declarations are converted in place (px and rem). `:root { --type-scale: 1 }` so **desktop output is numerically identical**.
 - **Phone mode:** `--type-scale` = device scale `0.9` × user scale (`fs-small` 0.9, normal 1, `fs-large` 1.15). On phones the `zoom` rule for `.fs-small` / `.fs-large` is disabled (zoom would push inputs below 16 px) and only the variable changes, so spacing is unaffected. On desktop `zoom` stays as is.
-- Examples at normal user scale: body 17.5 → ~15.8 px, screen title 25 → ~22.5 px, group label 14.5 → ~13 px. The tab-bar label is set explicitly (11–12 px). A floor of 12 px applies to anything the scale would shrink below that: the script emits `max(12px, calc(N * var(--type-scale)))` for every declaration whose original size is under 13.5 px (rem values converted at 16 px), and the plain `calc(...)` form for the rest. The convention test accepts both forms.
+- Examples at normal user scale: body 17.5 → ~15.8 px, screen title 25 → ~22.5 px, group label 14.5 → ~13 px. The tab-bar label is set explicitly (11–12 px). A 12 px floor applies in phone mode only: every converted declaration whose original size is under 15 px (rem values converted at 16 px) is emitted as `max(var(--type-min), calc(N * var(--type-scale)))`, with `--type-min: 0px` on desktop (no effect) and `12px` in phone mode; declarations at 15 px or above use the plain `calc(...)` form. The convention test accepts both forms and checks which one each size uses. Unstyled text is scaled by `.app-frame { font-size: calc(1rem * var(--type-scale)) }` (`rem`, not `16px`, so a desktop user with a non-16 px browser default sees no change).
 - **iOS focus-zoom guard:** in phone mode `input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: 16px !important }` (the only `!important`, with a comment explaining why).
 - **Convention test:** a Vitest test reads `bloom.css` and fails if any `font-size` declaration is not of the form `calc(... * var(--type-scale))` (allow-list for the tab-bar rule, the guard rule, and `:root`/`body` base if needed), so future CSS follows the convention.
 
@@ -81,7 +82,8 @@ Success criteria:
 - Two-column layouts stack: `.iv-setup-layout`, `.iv-session-body`, `.reading-result-row`, `.knowledge-detail-columns` and similar; side columns (`.iv-setup-side`, `.iv-session-side`, role-play goal panel) become full-width blocks below the main column.
 - Fixed widths become `width: 100%; max-width: 100%` (the 220/240/320/580 px cases found).
 - Grids: 4-column → 2 (`.iv-type-grid`, `.iv-voice-grid`); 3-column → 1 (`.iv-improve-grid`); 2-column → 1 where content is text-heavy; the dashboard's 7-column calendar stays 7 columns with smaller cells; `auto-fill` grids use a smaller `minmax` so two cards fit when sensible.
-- Wide content (tables, long unbroken strings, code-like text) scrolls horizontally **inside its own container** (`overflow-x: auto`); long words wrap (`overflow-wrap: anywhere`) in chat bubbles, headwords, and cards.
+- Wide content: as built, no `overflow-x: auto` containers were added, because the app has no tables or `pre` blocks (deviation from the original plan); long words wrap (`overflow-wrap: anywhere`) in chat bubbles, headwords, and cards instead.
+- Sticky bottom bars: `.main` (`overflow-y: auto`) and `.app-frame` (`overflow: hidden`) are scroll containers that never scroll, so a sticky bar would never pin to the viewport. On the live interview/conversation session pages and the reading/listening session pages the shell therefore uses `.main:has(.iv-session)` / `.main:has(.reading-submit-bar)` (`overflow: visible`) and `.app-frame:has(...)` (`overflow: clip`, `hidden` fallback), so the page scrolls and the bars pin.
 - Modals become bottom sheets: full width, `max-height: 90dvh`, scrollable body.
 - Touch targets: buttons, chips, switches, list rows, icon buttons get `min-height: 44px` and adequate spacing.
 - Session docks: `position: sticky; bottom: 0` with safe-area padding; textareas in docks cap at about 40 % of the viewport height so they do not swallow the screen when the keyboard is open.
