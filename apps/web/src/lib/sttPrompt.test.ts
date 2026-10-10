@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { conversationSttPrompt, interviewSttPrompt } from "./sttPrompt";
+import {
+  STT_PROMPT_MAX_CHARS,
+  conversationSttPrompt,
+  interviewSttPrompt,
+  tailByCodePoints,
+} from "./sttPrompt";
 import type { ConversationSetup } from "./conversationTypes";
 
 function setup(over: Partial<ConversationSetup> = {}): ConversationSetup {
@@ -90,5 +95,30 @@ describe("interviewSttPrompt", () => {
     const out = interviewSttPrompt("Engineer", "x".repeat(500) + " END");
     expect(out.length).toBeLessThanOrEqual(400);
     expect(out.endsWith("x END")).toBe(true);
+  });
+});
+
+describe("surrogate safety", () => {
+  const hasLone = (s: string) => /\p{Surrogate}/u.test(s);
+
+  it("tailByCodePoints never splits an emoji and keeps the tail", () => {
+    const out = tailByCodePoints("a".repeat(10) + "😀".repeat(5), 3);
+    expect(out).toBe("😀😀😀");
+    expect(hasLone(out)).toBe(false);
+  });
+
+  it("tailByCodePoints also respects a UTF-16 unit cap", () => {
+    const out = tailByCodePoints("😀".repeat(10), 10, 7);
+    expect(out.length).toBeLessThanOrEqual(7);
+    expect(out).toBe("😀😀😀");
+  });
+
+  it("interviewSttPrompt cut inside an emoji yields no lone surrogate", () => {
+    for (let pad = 0; pad < 2; pad++) {
+      const out = interviewSttPrompt("Dev", "x".repeat(pad) + "😀".repeat(300));
+      expect(hasLone(out)).toBe(false);
+      expect(out.endsWith("😀")).toBe(true);
+      expect(Array.from(out).length).toBeLessThanOrEqual(STT_PROMPT_MAX_CHARS);
+    }
   });
 });

@@ -75,6 +75,25 @@ export async function synthesizeViaCloudRun(
   return Buffer.isBuffer(data) ? data : Buffer.from(data);
 }
 
+// Unpaired surrogates make encodeURIComponent throw URIError. Drop them.
+function stripLoneSurrogates(text: string): string {
+  return text.replace(
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
+    ""
+  );
+}
+
+function encodePromptParam(prompt: string | undefined): string | undefined {
+  if (!prompt) return undefined;
+  try {
+    const cleaned = stripLoneSurrogates(prompt);
+    return cleaned ? `prompt=${encodeURIComponent(cleaned)}` : undefined;
+  } catch {
+    // A bad hint must never fail the transcription itself.
+    return undefined;
+  }
+}
+
 export async function transcribeViaCloudRun(
   serviceUrl: string,
   audio: Buffer,
@@ -83,7 +102,8 @@ export async function transcribeViaCloudRun(
 ): Promise<{ text: string; language: string }> {
   const params: string[] = [];
   if (language) params.push(`language=${encodeURIComponent(language)}`);
-  if (prompt) params.push(`prompt=${encodeURIComponent(prompt)}`);
+  const promptParam = encodePromptParam(prompt);
+  if (promptParam) params.push(promptParam);
   const query = params.length > 0 ? `?${params.join("&")}` : "";
   return callCloudRun<{ text: string; language: string }>(serviceUrl, {
     path: `/transcribe${query}`,

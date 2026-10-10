@@ -97,6 +97,43 @@ describe("transcribeViaCloudRun", () => {
   });
 });
 
+describe("transcribeViaCloudRun malformed prompt", () => {
+  it("strips lone surrogates and still sends the rest of the prompt", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), "en", "\uDE00ok \uD83D");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe?language=en&prompt=ok%20" })
+    );
+  });
+
+  it("keeps valid emoji intact", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), "en", "😀");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://x.a.run.app/transcribe?language=en&prompt=%F0%9F%98%80",
+      })
+    );
+  });
+
+  it("omits the prompt when nothing is left after cleaning", async () => {
+    const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });
+    getIdTokenClientMock.mockResolvedValue({ request: requestMock });
+
+    await transcribeViaCloudRun("https://x.a.run.app", Buffer.from("w"), "en", "\uDE00");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://x.a.run.app/transcribe?language=en" })
+    );
+  });
+});
+
 describe("transcribeViaCloudRun prompt", () => {
   it("appends a URL-encoded prompt query param after language", async () => {
     const requestMock = vi.fn().mockResolvedValue({ data: { text: "hi", language: "en" } });

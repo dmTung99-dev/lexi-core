@@ -45,4 +45,13 @@ describe("transcribeAudioClient", () => {
       prompt: "b".repeat(600),
     });
   });
+
+  it("cuts the 600 cap by code point so an emoji is never split", async () => {
+    callableMock.mockResolvedValue({ data: { text: "ok", language: "en" } });
+    await transcribeAudio(new Blob(["hello"]), { prompt: "😀".repeat(400) + "y" });
+    const sent = callableMock.mock.calls.at(-1)![0].prompt as string;
+    expect(sent.length).toBeLessThanOrEqual(600);
+    expect(/\p{Surrogate}/u.test(sent)).toBe(false);
+    expect(sent).toBe("😀".repeat(299) + "y");
+  });
 });
