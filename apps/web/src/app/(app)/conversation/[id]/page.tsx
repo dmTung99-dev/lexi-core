@@ -519,6 +519,14 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   }
 
   const canReplay = state.phase === "idle" || state.phase === "review";
+  // Unsent takes the learner can hear before sending. The refs are always
+  // mutated BEFORE the dispatch that triggers the re-render reading them.
+  let listenBlobs: Blob[] = [];
+  if (state.phase === "sttError") {
+    listenBlobs = recordingRef.current ? [...pendingBlobsRef.current, recordingRef.current.blob] : [...pendingBlobsRef.current];
+  } else if (state.phase === "review" || state.phase === "idle") {
+    listenBlobs = pendingBlobsRef.current;
+  }
   const roleplay = setup.mode === "roleplay";
 
   return (
@@ -570,6 +578,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
         suggestions={suggestions}
         suggesting={suggesting}
         openingError={openingError ?? undefined}
+        listenBlobs={listenBlobs}
         onEditDraft={(text) => dispatch({ type: "EDIT_DRAFT", text })}
         onSend={handleSend}
         onAddSegment={() => dispatch({ type: "ADD_SEGMENT" })}

@@ -478,6 +478,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         state={state}
         elapsed={elapsed}
         micError={micError === "denied"}
+        recording={recordingRef.current?.blob ?? null}
         onStart={() => void handleStart()}
         onStop={() => void handleStop()}
         onSend={() => dispatch({ type: "SEND" })}

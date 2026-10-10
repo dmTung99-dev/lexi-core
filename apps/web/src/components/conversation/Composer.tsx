@@ -1,6 +1,7 @@
 import { formatClock } from "@/components/interview/SessionDock";
 import { canSend, type ConversationState } from "@/lib/conversationMachine";
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
+import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { SuggestPanel } from "./SuggestPanel";
 
 export interface ComposerProps {
@@ -10,6 +11,8 @@ export interface ComposerProps {
   suggestions: string[] | null;
   suggesting: boolean;
   openingError?: string;
+  /** Unsent voice takes (review / STT-failed / earlier "+ Nói thêm" segments), in order. */
+  listenBlobs?: Blob[];
   onEditDraft(text: string): void;
   onSend(): void;
   onAddSegment(): void;
@@ -101,6 +104,7 @@ export function Composer(props: ComposerProps) {
             >
               🎤
             </button>
+            <PlayMyVoiceButton blobs={props.listenBlobs ?? []} className="btn-secondary" />
             <button type="button" className="btn-secondary" disabled={!state.draft.trim()} onClick={props.onAddSegment}>+ Nói thêm</button>
             <button type="button" className="btn-primary" disabled={!sendable} onClick={props.onSend}>Gửi</button>
           </div>
@@ -129,6 +133,7 @@ export function Composer(props: ComposerProps) {
           <div className="iv-dock-row">
             <button type="button" className="btn-primary" onClick={props.onRetryTranscribe}>Thử lại</button>
             <button type="button" className="btn-secondary" onClick={props.onStart}>Thu lại</button>
+            <PlayMyVoiceButton blobs={props.listenBlobs ?? []} className="btn-secondary" />
             <button type="button" className="btn-secondary" onClick={props.onDismissSttError}>Gõ thay vì nói</button>
           </div>
         </div>
