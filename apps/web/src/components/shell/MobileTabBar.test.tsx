@@ -29,6 +29,27 @@ describe("MobileTabBar", () => {
     expect(screen.getByRole("button", { name: /Thêm/ })).not.toHaveClass("active");
   });
 
+  it("sets aria-current=page on the active tab only", () => {
+    at("/vocab-bank/whatever");
+    render(<MobileTabBar />);
+    expect(screen.getByRole("link", { name: "Từ vựng" })).toHaveAttribute("aria-current", "page");
+    for (const name of ["Tổng quan", "Tra từ", "Ôn tập"]) {
+      expect(screen.getByRole("link", { name })).not.toHaveAttribute("aria-current");
+    }
+  });
+
+  it("sets aria-current=page on the active sheet item only and hides its emoji from the name", () => {
+    at("/settings");
+    render(<MobileTabBar />);
+    fireEvent.click(screen.getByRole("button", { name: /Thêm/ }));
+    const dialog = screen.getByRole("dialog", { name: "Các khu vực khác" });
+    const current = dialog.querySelectorAll('a[aria-current="page"]');
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("link", { name: "Cài đặt" })).toBe(current[0]);
+    expect(current[0].querySelector('[aria-hidden="true"]')).not.toBeNull();
+  });
+
   it("marks Thêm active when the route belongs to one of its seven areas", () => {
     at("/settings");
     render(<MobileTabBar />);

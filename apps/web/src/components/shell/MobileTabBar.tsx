@@ -47,31 +47,39 @@ export function MobileTabBar() {
       {open && (
         <div ref={sheetRef} className="mtab-sheet" role="dialog" aria-modal="true" aria-label="Các khu vực khác">
           <ul>
-            {MORE_ITEMS.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={isActivePath(pathname, item.href) ? "active" : undefined}
-                  onClick={() => setOpen(false)}
-                >
-                  {`${item.icon} ${item.label}`}
-                </Link>
-              </li>
-            ))}
+            {MORE_ITEMS.map((item) => {
+              const active = isActivePath(pathname, item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={active ? "active" : undefined}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span aria-hidden="true">{item.icon}</span> {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
       <nav className="mtab" aria-label="Điều hướng chính">
-        {TAB_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={isActivePath(pathname, item.href) ? "mtab-item active" : "mtab-item"}
-          >
-            <span className="mtab-icon" aria-hidden="true">{item.icon}</span>
-            <span className="mtab-label">{item.shortLabel ?? item.label}</span>
-          </Link>
-        ))}
+        {TAB_ITEMS.map((item) => {
+          const active = isActivePath(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={active ? "mtab-item active" : "mtab-item"}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="mtab-icon" aria-hidden="true">{item.icon}</span>
+              <span className="mtab-label">{item.shortLabel ?? item.label}</span>
+            </Link>
+          );
+        })}
         <button
           ref={moreRef}
           type="button"
