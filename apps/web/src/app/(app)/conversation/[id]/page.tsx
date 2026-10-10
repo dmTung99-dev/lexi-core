@@ -190,9 +190,9 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
         }
         void (async () => {
           try {
-            const say = parseOpening(await callInterviewAi(settings, buildOpeningPrompt(session.setup)));
+            const { say, vi } = parseOpening(await callInterviewAi(settings, buildOpeningPrompt(session.setup)));
             if (handledRef.current !== state) return;
-            appendMessage({ role: "ai", text: say });
+            appendMessage({ role: "ai", text: say, ...(vi ? { vi } : {}) });
             dispatch({ type: "OPENING_READY" });
           } catch (err) {
             if (handledRef.current !== state) return;
@@ -270,7 +270,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             const merged = [...new Set([...goalsDoneRef.current, ...reply.goalsDone])].sort((a, b) => a - b);
             goalsDoneRef.current = merged;
             setGoalsDone(merged);
-            appendMessage({ role: "ai", text: reply.say }, { goalsDone: merged });
+            appendMessage({ role: "ai", text: reply.say, ...(reply.vi ? { vi: reply.vi } : {}) }, { goalsDone: merged });
             const final = flags.mustClose || isScenarioComplete(session.setup.goals, merged);
             const suggestEnd = session.setup.mode === "topic" && (reply.suggestEnd || flags.offerEnd);
             dispatch({ type: "REPLY_RECEIVED", final, suggestEnd });
@@ -423,12 +423,22 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
 
   async function handleTranslate(index: number) {
     const m = messagesRef.current[index];
-    if (!m || !settings || translations[index]) return;
+    if (!m || translations[index]) return;
+    if (m.vi) {
+      setTranslations((t) => ({ ...t, [index]: m.vi as string }));
+      return;
+    }
+    if (!settings) return;
     setTranslatingIndex(index);
     setHelperError(null);
     try {
       const vi = parseConversationTranslation(await callInterviewAi(settings, buildConversationTranslatePrompt(m.text)));
       setTranslations((t) => ({ ...t, [index]: vi }));
+      // Persist so the next click (and later visits) is instant.
+      const next = messagesRef.current.map((x, i) => (i === index ? { ...x, vi } : x));
+      messagesRef.current = next;
+      setMessages(next);
+      persist({ messages: next });
     } catch {
       setHelperError("Không dịch được — thử lại sau.");
     }

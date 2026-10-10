@@ -39,6 +39,8 @@ export interface ConversationMessage {
   text: string;
   /** Cached "Gợi ý sửa" result; user messages only. Omit the key when absent. */
   hint?: ConversationHint;
+  /** Vietnamese translation of `text`; AI messages only. Omit the key when absent. */
+  vi?: string;
 }
 
 export type ConversationCriterionKey = "grammar" | "vocabulary" | "fluency" | "coherence";
