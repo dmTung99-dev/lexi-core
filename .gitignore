@@ -85,3 +85,4 @@ skills-lock.json
 
 # CodeGraph local index (per-machine; rebuild with `codegraph init`)
 .codegraph/
+apps/web/audit-out/
