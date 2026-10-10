@@ -12,9 +12,11 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const BASE = process.env.AUDIT_BASE_URL ?? "http://localhost:3000";
-const OUT = path.resolve(process.env.AUDIT_OUT_DIR ?? "audit-out");
+// Default next to the script (apps/web/audit-out, git-ignored) whatever the CWD is.
+const OUT = path.resolve(process.env.AUDIT_OUT_DIR ?? fileURLToPath(new URL("../audit-out", import.meta.url)));
 const WIDTH = Number(process.env.AUDIT_WIDTH ?? 414);
 const HEIGHT = Number(process.env.AUDIT_HEIGHT ?? 896);
 const SELFTEST = process.env.AUDIT_SELFTEST === "1";
