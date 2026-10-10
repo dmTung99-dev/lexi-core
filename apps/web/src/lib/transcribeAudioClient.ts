@@ -39,7 +39,8 @@ export async function transcribeAudio(
   const prompt = tailByCodePoints(options.prompt?.trim() ?? "", MAX_PROMPT_CHARS, MAX_PROMPT_CHARS);
   const response = await callable({
     audioBase64: await blobToBase64(blob),
-    language: "en",
+    // No language: the STT service detects en/vi per speech chunk (biased to
+    // English), so Vietnamese names/phrases are not transliterated.
     ...(prompt ? { prompt } : {}),
   });
   return response.data.text;

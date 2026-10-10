@@ -130,6 +130,21 @@ describe("transcribeAudioHandler", () => {
     );
     expect(result).toEqual({ text: "xin chao", language: "vi" });
   });
+
+  it("forwards an absent language as undefined so the service auto-detects en/vi", async () => {
+    vi.stubEnv("TTS_STT_SERVICE_URL", "https://tts-stt.a.run.app");
+    vi.mocked(transcribeViaCloudRun).mockResolvedValue({ text: "hi", language: "auto" });
+
+    const result = await transcribeAudioHandler(makeRequest({ audioBase64: "aGVsbG8=" }));
+
+    expect(transcribeViaCloudRun).toHaveBeenCalledWith(
+      "https://tts-stt.a.run.app",
+      expect.any(Buffer),
+      undefined,
+      undefined
+    );
+    expect(result).toEqual({ text: "hi", language: "auto" });
+  });
 });
 
 describe("transcribeAudio region", () => {
