@@ -3997,3 +3997,69 @@ html {
     width: auto;
   }
 }
+
+/* ── Phone: settings ── */
+@media (max-width: 820px) {
+  /* 22px/26px card padding leaves ~300px of text width on a 390px screen. */
+  .settings-card {
+    padding: 18px 16px;
+  }
+
+  /* Long display names / emails / API error strings wrap instead of widening
+     .main (a long token inside a block does not show in its box, only in
+     .main's scrollWidth). */
+  .settings-account-name,
+  .settings-account-email,
+  .settings-card p {
+    overflow-wrap: anywhere;
+  }
+
+  /* Text inputs (API key, custom model): full card width instead of a fixed
+     220px minimum, and a 44px touch height (11px padding + text is ~42px). */
+  .settings-card select,
+  .settings-card input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .settings-card .btn-danger {
+    min-height: 44px;
+  }
+
+  /* Dropdown popovers: anchor to the field row (not to the chip) and span the
+     card's content width, so neither the 320px width nor the chip's x position
+     can push the list off a 360px screen. Triggers and options with a long
+     model id ("mistralai/mixtral-8x7b-instruct") wrap instead of overflowing,
+     most visibly with the large font setting. */
+  .settings-card .settings-field {
+    position: relative;
+  }
+
+  .settings-card .vb-topic-popover-wrap {
+    position: static;
+    max-width: 100%;
+  }
+
+  .settings-card .vb-topic-popover {
+    left: 0;
+    right: 0;
+    width: auto;
+    box-sizing: border-box;
+  }
+
+  /* Settings lists are short (<= 5 options): show them in full instead of a
+     220px nested scroller. */
+  .settings-card .vb-topic-popover-opts {
+    max-height: none;
+    margin-bottom: 0;
+  }
+
+  .settings-card .vb-chip {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+}
