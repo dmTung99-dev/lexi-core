@@ -1,4 +1,6 @@
 import type { InterviewTurn } from "@/lib/interviewTypes";
+import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
+import { hasRecordings } from "@/lib/recordedAudioStore";
 
 export interface SessionThreadProps {
   turns: InterviewTurn[];
@@ -10,6 +12,8 @@ export interface SessionThreadProps {
   onReplay(): void;
   onTranslate(): void;
   replayDisabled: boolean;
+  /** Recording key for a turn (by its index in `turns`); enables "Nghe lại giọng tôi". */
+  recordingKeyFor?: (turnIndex: number) => string;
 }
 
 export function SessionThread(props: SessionThreadProps) {
@@ -22,6 +26,11 @@ export function SessionThread(props: SessionThreadProps) {
             <p>{t.question}</p>
           </div>
           <p className="iv-bubble iv-bubble-me">{t.skipped ? "(Đã bỏ qua)" : t.answer}</p>
+          {!t.skipped && props.recordingKeyFor && hasRecordings(props.recordingKeyFor(i)) && (
+            <div className="cv-actions cv-actions-me">
+              <PlayMyVoiceButton recordingKey={props.recordingKeyFor(i)} />
+            </div>
+          )}
         </div>
       ))}
       {props.showQuestion && (

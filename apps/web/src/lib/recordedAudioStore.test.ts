@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearRecordings, getRecordingUrls, getRecordings, hasRecordings, saveRecordings } from "./recordedAudioStore";
+import {
+  clearRecordings,
+  conversationRecordingKey,
+  getRecordingUrls,
+  getRecordings,
+  hasRecordings,
+  interviewRecordingKey,
+  saveRecordings,
+} from "./recordedAudioStore";
 
 function blob(label: string): Blob {
   return new Blob([label], { type: "audio/webm" });
@@ -72,6 +80,11 @@ describe("recordedAudioStore", () => {
     saveRecordings("k", [blob("b")]);
     expect(revoke).toHaveBeenCalledWith("blob:url-1");
     expect(getRecordingUrls("k")).toEqual(["blob:url-2"]);
+  });
+
+  it("builds the conversation and interview keys", () => {
+    expect(conversationRecordingKey("s1", 3)).toBe("conversation:s1:3");
+    expect(interviewRecordingKey("s1", 0)).toBe("interview:s1:0");
   });
 
   it("clears by prefix and revokes cached URLs", () => {

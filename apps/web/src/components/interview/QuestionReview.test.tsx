@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QuestionReview, sentenceContaining } from "./QuestionReview";
 import type { InterviewReportQuestion } from "@/lib/interviewTypes";
+import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 
 const ITEM: InterviewReportQuestion = {
   mainIndex: 1,
@@ -69,5 +70,21 @@ describe("QuestionReview", () => {
   it("skipped and ungraded questions", () => {
     renderReview({ skipped: true, answer: "", item: undefined });
     expect(screen.getByText("(Đã bỏ qua)")).toBeInTheDocument();
+  });
+
+  it("offers no 'Nghe lại giọng tôi' when none of the keys has a recording", () => {
+    renderReview({ recordingKeys: ["interview:s1:9"] });
+    expect(screen.queryByRole("button", { name: "Nghe lại giọng tôi" })).not.toBeInTheDocument();
+  });
+
+  it("offers one 'Nghe lại giọng tôi' for the question's recordings", () => {
+    saveRecordings("interview:s1:2", [new Blob(["a"])]);
+    saveRecordings("interview:s1:3", [new Blob(["b"])]);
+    try {
+      renderReview({ recordingKeys: ["interview:s1:2", "interview:s1:3"] });
+      expect(screen.getAllByRole("button", { name: "Nghe lại giọng tôi" })).toHaveLength(1);
+    } finally {
+      clearRecordings("");
+    }
   });
 });

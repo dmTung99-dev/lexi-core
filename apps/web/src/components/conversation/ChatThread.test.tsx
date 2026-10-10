@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ChatThread } from "./ChatThread";
 import type { ConversationMessage } from "@/lib/conversationTypes";
+import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 
 function renderThread(messages: ConversationMessage[], patch: Partial<Parameters<typeof ChatThread>[0]> = {}) {
   const h = { onReplay: vi.fn(), onTranslate: vi.fn(), onHint: vi.fn() };
@@ -58,5 +59,38 @@ describe("ChatThread", () => {
   it("disables replay when canReplay is false", () => {
     renderThread(BASE, { canReplay: false });
     expect(screen.getByRole("button", { name: "Nghe lại" })).toBeDisabled();
+  });
+
+  it("shows 'Nghe lại giọng tôi' only on user messages that have a recording", () => {
+    saveRecordings("conversation:s1:1", [new Blob(["a"])]);
+    try {
+      renderThread([...BASE, { role: "user", text: "Typed only" }], { recordingKeyFor: (i) => `conversation:s1:${i}` });
+      expect(screen.getAllByRole("button", { name: "Nghe lại giọng tôi" })).toHaveLength(1);
+    } finally {
+      clearRecordings("");
+    }
+  });
+
+  it("keeps the recording button next to an existing hint", () => {
+    saveRecordings("conversation:s1:1", [new Blob(["a"])]);
+    try {
+      renderThread(
+        [BASE[0], { role: "user", text: "I go to Da Nang", hint: { corrected: "I went to Da Nang", note: "Quá khứ.", alternatives: [] } }],
+        { recordingKeyFor: (i) => `conversation:s1:${i}` }
+      );
+      expect(screen.getByRole("button", { name: "Nghe lại giọng tôi" })).toBeInTheDocument();
+    } finally {
+      clearRecordings("");
+    }
+  });
+
+  it("renders no recording button without recordingKeyFor", () => {
+    saveRecordings("conversation:s1:1", [new Blob(["a"])]);
+    try {
+      renderThread(BASE);
+      expect(screen.queryByRole("button", { name: "Nghe lại giọng tôi" })).not.toBeInTheDocument();
+    } finally {
+      clearRecordings("");
+    }
   });
 });

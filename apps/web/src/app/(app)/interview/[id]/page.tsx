@@ -35,6 +35,7 @@ import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
+import { interviewRecordingKey, saveRecordings } from "@/lib/recordedAudioStore";
 import {
   INTERVIEW_CLOSING,
   INTERVIEW_GREETING,
@@ -220,6 +221,11 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         return;
       }
       case "processing": {
+        // Side channel only: key the final accepted recording by the index
+        // this turn is about to take (saved first so the re-render shows it).
+        if (recordingRef.current) {
+          saveRecordings(interviewRecordingKey(id, turnsRef.current.length), [recordingRef.current.blob]);
+        }
         appendTurn({
           mainIndex: state.mainIndex,
           kind: state.kind,
@@ -383,6 +389,9 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
     audio.stop();
     cancelRecorder();
     if (state.phase === "review" && state.draft.trim()) {
+      if (id && recordingRef.current) {
+        saveRecordings(interviewRecordingKey(id, turnsRef.current.length), [recordingRef.current.blob]);
+      }
       appendTurn({
         mainIndex: state.mainIndex,
         kind: state.kind,
@@ -447,6 +456,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
           onReplay={() => dispatch({ type: "REPLAY" })}
           onTranslate={() => void handleTranslate()}
           replayDisabled={state.phase !== "idle"}
+          recordingKeyFor={(i) => interviewRecordingKey(session.id, i)}
         />
         <aside className="iv-session-side">
           <InterviewerCard statusText={status.text} tone={status.tone} />

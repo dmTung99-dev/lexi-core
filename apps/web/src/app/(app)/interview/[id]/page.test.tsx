@@ -16,6 +16,7 @@ import { InterviewAiError } from "@/lib/interviewPrompts";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { DEFAULT_SETTINGS, type UserSettings } from "@/lib/settings";
 import type { InterviewSession } from "@/lib/interviewTypes";
+import { clearRecordings, getRecordings, hasRecordings } from "@/lib/recordedAudioStore";
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
@@ -95,6 +96,7 @@ function renderPage(session: InterviewSession, options: { strict?: boolean } = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clearRecordings("");
   AUDIO.speak.mockResolvedValue(true);
   AUDIO.playPrefetched.mockResolvedValue(true);
   RECORDER.start.mockResolvedValue(true);
@@ -306,6 +308,35 @@ describe("InterviewSessionPage", () => {
       resolveTranscribe("My answer");
       await Promise.resolve();
     });
+  });
+
+  it("keeps the answered turn's recording in memory and offers 'Nghe lại giọng tôi'", async () => {
+    const blob = new Blob(["voice"]);
+    RECORDER.stop.mockResolvedValue({ blob, seconds: 5 });
+    renderPage(makeSession({ plan: PLAN }));
+    await answerCurrentQuestion();
+    expect(await screen.findByText("Q2?")).toBeInTheDocument();
+    expect(getRecordings("interview:s1:0")).toEqual([blob]);
+    expect(screen.getByRole("button", { name: "Nghe lại giọng tôi" })).toBeInTheDocument();
+  });
+
+  it("keys a recording after a skipped turn by its own turn index", async () => {
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bỏ qua câu này" }));
+    expect(await screen.findByText("Q2?")).toBeInTheDocument();
+    await answerCurrentQuestion();
+    await waitFor(() => expect(hasRecordings("interview:s1:1")).toBe(true));
+    expect(hasRecordings("interview:s1:0")).toBe(false);
+  });
+
+  it("ending from review also keeps that draft's recording", async () => {
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+    expect(await screen.findByLabelText(/Bản chép lời/)).toHaveValue("My answer");
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    expect(hasRecordings("interview:s1:0")).toBe(true);
+    await waitFor(() => expect(completeInterviewSession).toHaveBeenCalled());
   });
 
   it("ending from review saves the current draft as a turn before grading", async () => {

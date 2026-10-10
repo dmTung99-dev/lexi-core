@@ -15,6 +15,16 @@ interface Entry {
 
 const entries = new Map<string, Entry>();
 
+/** Key of a user message's recording (index into session.messages). */
+export function conversationRecordingKey(sessionId: string, messageIndex: number): string {
+  return `conversation:${sessionId}:${messageIndex}`;
+}
+
+/** Key of an answered turn's recording (index into session.turns). */
+export function interviewRecordingKey(sessionId: string, turnIndex: number): string {
+  return `interview:${sessionId}:${turnIndex}`;
+}
+
 function revokeEntry(entry: Entry): void {
   for (const url of entry.urls) {
     if (url) URL.revokeObjectURL(url);

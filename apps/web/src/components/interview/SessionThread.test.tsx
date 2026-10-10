@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { SessionThread } from "./SessionThread";
 import type { InterviewTurn } from "@/lib/interviewTypes";
+import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 
 const TURNS: InterviewTurn[] = [
   { mainIndex: 0, kind: "main", question: "Intro?", answer: "I am Tung.", skipped: false, answerSeconds: 5 },
@@ -42,5 +43,29 @@ describe("SessionThread", () => {
     expect(screen.getByText("Câu hỏi thêm")).toBeInTheDocument();
     rerender(<SessionThread {...props} kind="follow_up" showQuestion={false} />);
     expect(screen.queryByText("Why?")).not.toBeInTheDocument();
+  });
+
+  it("offers 'Nghe lại giọng tôi' on answered turns that have a recording", () => {
+    saveRecordings("interview:s1:0", [new Blob(["a"])]);
+    saveRecordings("interview:s1:1", [new Blob(["b"])]); // skipped turn: never shown
+    try {
+      render(
+        <SessionThread
+          turns={TURNS}
+          question=""
+          kind="main"
+          showQuestion={false}
+          translation={null}
+          translating={false}
+          onReplay={vi.fn()}
+          onTranslate={vi.fn()}
+          replayDisabled={false}
+          recordingKeyFor={(i) => `interview:s1:${i}`}
+        />
+      );
+      expect(screen.getAllByRole("button", { name: "Nghe lại giọng tôi" })).toHaveLength(1);
+    } finally {
+      clearRecordings("");
+    }
   });
 });

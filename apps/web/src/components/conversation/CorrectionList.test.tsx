@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CorrectionList } from "./CorrectionList";
 import { RecurringMistakes } from "./RecurringMistakes";
+import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 
 describe("CorrectionList", () => {
   it("renders the word diff and the Vietnamese note per correction", () => {
@@ -13,6 +14,23 @@ describe("CorrectionList", () => {
   it("shows an empty state", () => {
     render(<CorrectionList items={[]} />);
     expect(screen.getByText("Không có câu nào cần sửa.")).toBeInTheDocument();
+  });
+  it("offers 'Nghe lại giọng tôi' for corrections whose message has a recording", () => {
+    saveRecordings("conversation:s1:1", [new Blob(["a"])]);
+    try {
+      render(
+        <CorrectionList
+          items={[
+            { messageIndex: 1, said: "I go", corrected: "I went", note: "" },
+            { messageIndex: 3, said: "He go", corrected: "He went", note: "" },
+          ]}
+          recordingKeyFor={(i) => `conversation:s1:${i}`}
+        />
+      );
+      expect(screen.getAllByRole("button", { name: "Nghe lại giọng tôi" })).toHaveLength(1);
+    } finally {
+      clearRecordings("");
+    }
   });
 });
 

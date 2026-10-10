@@ -32,7 +32,7 @@ Success criteria:
 **Non-goals (deferred):**
 - Pronunciation scoring (Whisper returns text only; the report says so).
 - Realtime/streaming voice, barge-in, sending several separate messages before the AI replies.
-- Flutter parity; storing audio; per-turn automatic correction.
+- Flutter parity; storing audio (the learner's recordings are only kept in browser memory for "Nghe lại giọng tôi", §4.4 — never uploaded or persisted); per-turn automatic correction.
 - Practising again only the weak sentences; leaderboards/streaks.
 
 ## 3. Architecture & Infrastructure
@@ -138,6 +138,7 @@ After the user sends message *k*:
 - **Gợi ý sửa** (per user message): calls `hint` for that message, stores the result in `messages[i].hint`. A second tap shows the cached result with no AI call.
 - **Gợi ý cách nói** (composer, both modes): calls `suggest` with the setup, current goal (role-play: first not-done goal), `summary`, and the last 4 messages; returns 2–3 English example replies appropriate to the level; shown in a transient panel, not stored, not scored. Tapping an option fills the composer text so the user can read it aloud or edit it.
 - **Translate** (per AI message): calls `translate`, result cached in component state for the session.
+- **Nghe lại giọng tôi** (per voice-composed user message, in the chat and next to each report correction): replays the learner's own recording(s) of that message — every kept "+ Nói thêm" segment in order; a re-recorded take is dropped; typed-only messages get no button. Blobs live only in a module-level in-memory store (`recordedAudioStore`, key `conversation:<sessionId>:<messageIndex>`) for the tab's lifetime: they survive session → report navigation but are lost on reload. No Storage/Firestore change.
 - TTS is chunked by `splitSentences` (≤ 500 chars), first chunk plays while later ones synthesize.
 
 ## 5. Prompts
