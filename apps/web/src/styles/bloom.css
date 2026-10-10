@@ -3538,3 +3538,208 @@ html {
     flex: 1 1 auto;
   }
 }
+
+/* ── Phone: conversation + interview ── */
+@media (max-width: 820px) {
+  /* Live session pages (/interview/<id>, /conversation/<id>; .iv-session is the
+     root of exactly those two pages) hide the tab bar, so .main does not need to
+     reserve room for it. 16px + the home-indicator inset replaces the 80px+.
+     .main (overflow-y:auto) and .app-frame (overflow:hidden) are both scroll
+     containers that never scroll (they grow with their content), and a sticky
+     element pins to its nearest scroll container, so .iv-dock's
+     `position: sticky; bottom: 0` never pinned to the viewport. Let the page
+     scroll instead: .main visible, the frame clipped (clip is not a scroll
+     container; browsers without it keep hidden = the old behaviour). */
+  .main:has(.iv-session) {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    overflow: visible;
+  }
+
+  .app-frame:has(.iv-session) {
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  /* Header: "Kết thúc & xem báo cáo" is ~190px, which leaves the title ~150px.
+     Let the title drop to its own full-width line instead (basis 200px). */
+  .iv-session-head {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .iv-session-title {
+    flex: 1 1 200px;
+    min-width: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* Dock: 24px side padding + min-height 120px made it ~200-570px tall. Tighter
+     padding, no forced height, and a cap at half the viewport (scrolls inside)
+     so it never swallows the screen. align-items:flex-start so a capped dock
+     scrolls from its top instead of clipping it (centered overflow is
+     unreachable). */
+  .iv-dock {
+    min-height: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 20px;
+    align-items: flex-start;
+    max-height: 50vh;
+    max-height: 50dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Button rows share the line and grow instead of leaving ragged gaps. */
+  .iv-dock-row > button {
+    flex: 1 1 auto;
+  }
+
+  /* Idle (interview): [Nghe lại câu hỏi] [mic] [Bỏ qua] is ~360px in a ~320px
+     dock. Mic gets its own centered line, the two buttons share the next one. */
+  .iv-dock-col > .iv-dock-row > .iv-mic-wrap {
+    order: -1;
+    flex: 1 1 100%;
+  }
+
+  .iv-dock-col > .iv-dock-row:has(> .iv-mic-wrap) > button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Recording: clock + mic + a 150px empty spacer (aria-hidden) is wider than
+     the dock. Drop the spacer; clock and mic share one line. */
+  .iv-clock {
+    width: auto;
+  }
+
+  .iv-clock[aria-hidden="true"] {
+    display: none;
+  }
+
+  .iv-dock-row > .iv-mic-wrap {
+    flex: 1 1 140px;
+    min-width: 0;
+    text-align: center;
+  }
+
+  /* Interview review: the 4 action buttons stacked into ~200px. Primary on its
+     own line, the rest wrap beside each other. */
+  .iv-dock-actions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .iv-dock-actions > button {
+    flex: 1 1 auto;
+  }
+
+  .iv-dock-actions > .btn-primary {
+    flex-basis: 100%;
+  }
+
+  /* Conversation composer: textarea (min 220px) + 80px mic + 3 buttons wrapped
+     into three ragged lines with the mic taller than its neighbours. Textarea on
+     its own line; a 56px mic and the buttons share the following lines. */
+  .cv-input-row {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cv-input {
+    flex: 1 1 100%;
+  }
+
+  .cv-input-row .iv-mic {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+
+  .cv-input-row > .btn-secondary,
+  .cv-input-row > .btn-primary {
+    flex: 1 1 auto;
+  }
+
+  /* Bubbles and cards: long unbroken strings wrap instead of widening .main. */
+  .iv-bubble-ai > p,
+  .iv-current,
+  .iv-bubble-me,
+  .iv-diff,
+  .iv-model p,
+  .iv-good,
+  .iv-gap,
+  .iv-qr-question,
+  .iv-recent-main,
+  .iv-cv-name,
+  .cv-translation,
+  .cv-hint,
+  .cv-alts,
+  .cv-segments,
+  .cv-suggest-option,
+  .cv-goals li,
+  .cv-example {
+    overflow-wrap: anywhere;
+  }
+
+  .iv-bubble-ai > p,
+  .iv-current,
+  .iv-qr-question,
+  .iv-recent-main {
+    min-width: 0;
+  }
+
+  /* 80% of a ~300px thread leaves ~210px of text in the user's bubble. */
+  .iv-bubble-me {
+    max-width: 90%;
+  }
+
+  /* 20px side padding + the 36px avatar + gap leave ~270px for a bubble. */
+  .cv-thread {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  /* Touch targets: "Nghe lại", "Dịch sang tiếng Việt", "Nghe lại giọng tôi",
+     "Gợi ý sửa", "Đóng gợi ý" are 36px tall. Padding widens the hit area; the
+     gap shrinks so the row of links does not grow wider. */
+  .cv-link {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .cv-actions {
+    flex-wrap: wrap;
+    gap: 0 4px;
+  }
+
+  .iv-checkbox {
+    min-height: 44px;
+  }
+
+  .iv-report-head a:not(.btn-primary) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* Setup: the two mode tabs (~290px natural) fill the card width and may wrap
+     their label rather than overflow at the larger font setting. */
+  .cv-tabs {
+    display: flex;
+    align-self: stretch;
+  }
+
+  .cv-tab {
+    flex: 1 1 auto;
+    padding: 10px 12px;
+  }
+
+  /* Scenario cards: 190px minimum gave one column; 140px fits two at 390px. */
+  .cv-picks {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
