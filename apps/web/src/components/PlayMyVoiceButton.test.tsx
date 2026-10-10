@@ -127,4 +127,101 @@ describe("PlayMyVoiceButton", () => {
     unmount();
     expect(audio.pause).toHaveBeenCalled();
   });
+  describe("blobs mode (unsent recordings)", () => {
+    const click = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Nghe lại giọng tôi" }));
+      });
+    };
+
+    it("renders nothing for an empty blobs array", () => {
+      const { container } = render(<PlayMyVoiceButton blobs={[]} />);
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it("creates URLs only at click time", async () => {
+      render(<PlayMyVoiceButton blobs={[new Blob(["a"])]} />);
+      expect(URL.createObjectURL).not.toHaveBeenCalled();
+      await click();
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    });
+
+    it("plays blobs in order and revokes each URL at the end", async () => {
+      render(<PlayMyVoiceButton blobs={[new Blob(["a"]), new Blob(["b"])]} />);
+      await click();
+      const audio = current();
+      expect(audio.src).toBe("blob:url-1");
+      await act(async () => {
+        audio.onended?.();
+      });
+      expect(audio.src).toBe("blob:url-2");
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      await act(async () => {
+        audio.onended?.();
+      });
+      expect(URL.revokeObjectURL).toHaveBeenCalledTimes(2);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:url-1");
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:url-2");
+      expect(screen.getByRole("button", { name: "Nghe lại giọng tôi" })).toBeInTheDocument();
+    });
+
+    it("does not cache URLs across clicks", async () => {
+      render(<PlayMyVoiceButton blobs={[new Blob(["a"])]} />);
+      await click();
+      await act(async () => {
+        current().onended?.();
+      });
+      await click();
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(2);
+      expect(current().src).toBe("blob:url-2");
+    });
+
+    it("revokes when stopped mid-play", async () => {
+      render(<PlayMyVoiceButton blobs={[new Blob(["a"]), new Blob(["b"])]} />);
+      await click();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Dừng" }));
+      });
+      expect(URL.revokeObjectURL).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("button", { name: "Nghe lại giọng tôi" })).toBeInTheDocument();
+    });
+
+    it("revokes on unmount", async () => {
+      const { unmount } = render(<PlayMyVoiceButton blobs={[new Blob(["a"])]} />);
+      await click();
+      unmount();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:url-1");
+    });
+
+    it("revokes when play() rejects", async () => {
+      render(<PlayMyVoiceButton blobs={[new Blob(["a"])]} />);
+      vi.stubGlobal(
+        "Audio",
+        class extends FakeAudio {
+          play = vi.fn(() => Promise.reject(new Error("blocked")));
+        }
+      );
+      await click();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:url-1");
+      expect(screen.getByRole("button", { name: "Nghe lại giọng tôi" })).toBeInTheDocument();
+    });
+
+    it("keeps playing when the blobs array identity changes between renders", async () => {
+      const a = new Blob(["a"]);
+      const b = new Blob(["b"]);
+      const { rerender } = render(<PlayMyVoiceButton blobs={[a, b]} />);
+      await click();
+      const audio = current();
+      rerender(<PlayMyVoiceButton blobs={[a, b]} />);
+      rerender(<PlayMyVoiceButton blobs={[a, b]} />);
+      expect(screen.getByRole("button", { name: "Dừng" })).toBeInTheDocument();
+      expect(audio.pause).not.toHaveBeenCalled();
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      await act(async () => {
+        audio.onended?.();
+      });
+      expect(audio.src).toBe("blob:url-2");
+      expect(audio.play).toHaveBeenCalledTimes(2);
+    });
+  });
 });
