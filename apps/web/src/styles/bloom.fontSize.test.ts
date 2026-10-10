@@ -4,7 +4,7 @@ import path from "node:path";
 
 const css = readFileSync(path.resolve(import.meta.dirname, "bloom.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
-const SCALED = /^(?:max\(12px, )?calc\([0-9.]+(?:px|rem) \* var\(--type-scale\)\)\)?$/;
+const SCALED = /^(?:max\(var\(--type-min\), )?calc\([0-9.]+(?:px|rem) \* var\(--type-scale\)\)\)?$/;
 const RELATIVE = /^(?:[0-9.]+(?:em|%)|inherit)$/;
 const IOS_GUARD = "16px !important";
 
@@ -29,5 +29,11 @@ describe("bloom.css font-size convention", () => {
     expect(css).toMatch(/--device-type-scale:\s*0\.9/);
     expect(css).toMatch(/--user-type-scale:\s*0\.9/);
     expect(css).toMatch(/--user-type-scale:\s*1\.15/);
+  });
+
+  it("defines the phone-only type floor: --type-min 0px on desktop, 12px at <=820px", () => {
+    expect(css).toMatch(/--type-min:\s*0px/);
+    expect(css).toMatch(/--type-min:\s*12px/);
+    expect(css).not.toMatch(/max\(12px/);
   });
 });
