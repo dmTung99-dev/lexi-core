@@ -94,7 +94,7 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
 - Chấm cuối buổi (5 tiêu chí, sửa lỗi theo từ, câu trả lời gợi ý, lưu cụm từ vào Ngân hàng từ vựng)
 - STT: Whisper `small` (faster-whisper) chạy trên Cloud Run `tts-stt`, tự nhận diện tiếng Anh/tiếng Việt theo từng đoạn (nghiêng về tiếng Anh) và nhận gợi ý ngữ cảnh (vị trí, câu hỏi hiện tại) để nghe đúng tên riêng; có nút **Nghe lại giọng tôi** (ghi âm chỉ giữ trong bộ nhớ trình duyệt, nghe được cả trước khi gửi)
 - Chỉ trên web (React) không có trên app Flutter
-- **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu (kèm giải thích "Tại sao?" bằng tiếng Việt cho thì, giới từ, trật tự từ, cụm cố định — ở gợi ý cách nói thì bấm mới mở), báo cáo cuối buổi với lỗi lặp lại, câu đáng sửa và cụm từ lưu vào Ngân hàng từ vựng. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
+- **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu (kèm giải thích "Tại sao?" bằng tiếng Việt cho thì, giới từ, trật tự từ, cụm cố định — ở gợi ý cách nói thì bấm mới mở), báo cáo cuối buổi với lỗi lặp lại (kèm một câu quy tắc dễ nhớ), câu đáng sửa (kèm "Tại sao?" cho từng chỗ sửa) và cụm từ lưu vào Ngân hàng từ vựng; chỗ nhận dạng giọng nói nghe nhầm (từ phát âm gần giống nhưng vô nghĩa trong ngữ cảnh) không bị tính là lỗi. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
 
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).
@@ -565,11 +565,11 @@ users/
 - [x] **Kiểu bài Flashcard/Trộn AI ở SM-2** — tùy chọn mỗi phiên tại màn Ôn tập (mặc định Flashcard, không lưu); Trộn AI bốc ngẫu nhiên 1 tỉ lệ AI 20–80%/phiên thay vì cố định 70% — cả app Flutter và web
 - [x] **Cutover web sang React** (2026-09-05) — Flutter Web ngừng hẳn: xoá thư mục `web/`, bỏ `hosting` block, `firebase hosting:disable`. App React trên App Hosting là bản web duy nhất, phục vụ ở URL `*.hosted.app`. App mobile Flutter không đổi.
 - [x] **Kiến thức** — thư viện ghi chú ngữ pháp/cấu trúc câu theo ngôn ngữ, tự viết hoặc AI soạn, có bộ mẫu tiếng Anh (cả app Flutter lẫn app React web)
+- [x] **Hội thoại tiếng Anh** (web) — trò chuyện chủ đề tự do hoặc nhập vai tình huống có mục tiêu với AI đóng vai đối phương, chấm điểm cuối buổi; gợi ý và báo cáo có giải thích "Tại sao?"
 
 **Ý tưởng khác đã brainstorm (chưa xếp lịch):**
 
 - [ ] **Serial Story** — AI viết truyện nhiều kỳ dùng từ vựng sắp đến hạn ôn, ra chương mới mỗi ngày
-- [ ] AI Roleplay Conversation — luyện hội thoại tình huống với AI đóng vai đối phương, chấm điểm cuối buổi
 - [ ] Shadowing Practice — nói đè lên TTS, AI so sánh nhịp điệu/độ trễ
 - [ ] Error Pattern Coach — AI phân tích lịch sử làm bài để tự sinh bài tập nhắm đúng lỗi hay lặp lại
 

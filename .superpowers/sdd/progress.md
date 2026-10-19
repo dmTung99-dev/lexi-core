@@ -2439,3 +2439,9 @@ Mobile Task 8: complete (214598e..1171c07, opus review clean). Follow-ups: Nghe 
 Mobile Task 9: complete (5fe5b2b). 0 FAIL at 414/375; desktop computed styles identical to baseline; build ok in shadow copy. Next: final whole-branch review.
 Mobile feature: ALL TASKS COMPLETE + final review fixes (50b5fad, 3ac272e, 4daf4b9) on feat/mobile-responsive. Not merged/deployed.
 Mobile responsive + Conversation/STT work: docs synced (README, specs, knowledge spec) and merged to master 2026-10-11.
+
+## Conversation "Tại sao?" explanations (2026-10-19, direct on master)
+Small change, no plan (brainstormed in chat; a separate sentence-building drill feature was considered and deferred until this is tried).
+- Suggest options → {text, why[]} with collapsed "Tại sao?" toggle; hint + report corrections get why[] per edit; recurring mistakes get a one-line rule. Shared WHY_RULES/parseWhy in conversationPrompts.ts, WhyList component. Old hints/reports render unchanged; parser writes rule ""/why [] (never undefined).
+- Report prompt: likely STT mishearings (sound-alike nonsense words) are not counted as learner mistakes.
+- Commit 0ea5fff. Docs synced (README, conversation spec). Manual check with a live AI key still pending with user.
