@@ -94,7 +94,7 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
 - Chấm cuối buổi (5 tiêu chí, sửa lỗi theo từ, câu trả lời gợi ý, lưu cụm từ vào Ngân hàng từ vựng)
 - STT: Whisper `small` (faster-whisper) chạy trên Cloud Run `tts-stt`, tự nhận diện tiếng Anh/tiếng Việt theo từng đoạn (nghiêng về tiếng Anh) và nhận gợi ý ngữ cảnh (vị trí, câu hỏi hiện tại) để nghe đúng tên riêng; có nút **Nghe lại giọng tôi** (ghi âm chỉ giữ trong bộ nhớ trình duyệt, nghe được cả trước khi gửi)
 - Chỉ trên web (React) không có trên app Flutter
-- **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu, báo cáo cuối buổi với lỗi lặp lại, câu đáng sửa và cụm từ lưu vào Ngân hàng từ vựng. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
+- **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu (kèm giải thích "Tại sao?" bằng tiếng Việt cho thì, giới từ, trật tự từ, cụm cố định — ở gợi ý cách nói thì bấm mới mở), báo cáo cuối buổi với lỗi lặp lại, câu đáng sửa và cụm từ lưu vào Ngân hàng từ vựng. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
 
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).

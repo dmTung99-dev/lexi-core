@@ -8,6 +8,7 @@ export function RecurringMistakes({ items }: { items: ConversationMistake[] }) {
       {items.map((m, i) => (
         <div key={i} className="cv-mistake">
           <strong>{m.pattern}</strong>
+          {m.rule && <p className="cv-rule">{m.rule}</p>}
           {m.examples.map((e, j) => (
             <p key={j} className="cv-example">
               <del>{e.said}</del> → <ins>{e.better}</ins>

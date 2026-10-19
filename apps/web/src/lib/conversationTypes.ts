@@ -28,10 +28,24 @@ export interface ConversationSetup {
   goals: string[];
 }
 
+/** One "Tại sao?" point: a fragment of an English sentence and why it is said that way. */
+export interface WhyPoint {
+  part: string;   // English fragment, quoted from the sentence
+  reason: string; // Vietnamese
+}
+
 export interface ConversationHint {
   corrected: string;
   note: string;
   alternatives: string[];
+  /** Absent on hints cached before the "Tại sao?" points existed. */
+  why?: WhyPoint[];
+}
+
+/** One "Gợi ý cách nói" option. */
+export interface ConversationSuggestion {
+  text: string;
+  why: WhyPoint[];
 }
 
 export interface ConversationMessage {
@@ -63,10 +77,14 @@ export interface ConversationCorrection {
   said: string;
   corrected: string;
   note: string;         // Vietnamese
+  /** Absent on reports saved before the "Tại sao?" points existed. */
+  why?: WhyPoint[];
 }
 
 export interface ConversationMistake {
   pattern: string; // Vietnamese description
+  /** One-sentence Vietnamese rule to remember; absent on older reports. */
+  rule?: string;
   examples: { said: string; better: string }[];
 }
 

@@ -43,4 +43,15 @@ describe("RecurringMistakes", () => {
     expect(screen.getByText("I go")).toBeInTheDocument();
     expect(screen.getByText("I went")).toBeInTheDocument();
   });
+  it("shows the rule under the pattern when present", () => {
+    render(<RecurringMistakes items={[{ pattern: "Trật tự cụm danh từ", rule: "Danh từ bổ nghĩa đứng trước.", examples: [] }]} />);
+    expect(screen.getByText("Danh từ bổ nghĩa đứng trước.")).toBeInTheDocument();
+  });
+});
+
+describe("CorrectionList why points", () => {
+  it("lists why points when present", () => {
+    render(<CorrectionList items={[{ messageIndex: 1, said: "my list task", corrected: "my task list", note: "n", why: [{ part: "task list", reason: "Danh từ bổ nghĩa đứng trước." }] }]} />);
+    expect(screen.getByText(/Danh từ bổ nghĩa đứng trước/)).toBeInTheDocument();
+  });
 });
