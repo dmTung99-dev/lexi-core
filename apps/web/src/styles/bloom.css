@@ -2953,6 +2953,11 @@ button.btn-google svg {
 .cv-chip-btn { font: inherit; font-size: max(var(--type-min), calc(13px * var(--type-scale))); font-weight: 600; border: 1px solid var(--border); background: var(--surface-2); color: var(--accent); border-radius: 999px; padding: 8px 14px; min-height: 44px; cursor: pointer; }
 .cv-suggest { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .cv-suggest-option { font: inherit; text-align: left; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 12px; padding: 10px 14px; min-height: 44px; cursor: pointer; }
+.cv-suggest-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.cv-suggest-item .cv-suggest-option { align-self: stretch; }
+.cv-why { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: max(var(--type-min), calc(14px * var(--type-scale))); color: var(--ink-soft); }
+.cv-why strong { color: var(--ink); }
+.cv-rule { margin: 2px 0 4px; font-size: max(var(--type-min), calc(14px * var(--type-scale))); color: var(--ink-soft); }
 .cv-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .cv-goals li { display: flex; gap: 10px; align-items: flex-start; font-size: calc(15px * var(--type-scale)); }
 .cv-goal-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; box-sizing: border-box; font-size: max(var(--type-min), calc(12px * var(--type-scale))); display: flex; align-items: center; justify-content: center; }
@@ -3698,6 +3703,8 @@ html {
   .cv-alts,
   .cv-segments,
   .cv-suggest-option,
+  .cv-why,
+  .cv-rule,
   .cv-goals li,
   .cv-example {
     overflow-wrap: anywhere;

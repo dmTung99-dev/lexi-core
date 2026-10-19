@@ -26,6 +26,9 @@ describe("buildConversationReportPrompt", () => {
     expect(p).toContain("[1] Learner: I want water");
     expect(p).toContain("[4] Learner: The bill please");
     expect(p).toContain('earlier hint: "The bill, please."');
+    expect(p).toContain("transcription error");
+    expect(p).toContain('"rule"');
+    expect(p).toContain('"why"');
     expect(p).toContain("0. Gọi đồ uống (done)");
     expect(p).toContain("1. Xin thanh toán (not done)");
     expect(p).toContain("Earlier they ordered.");
@@ -50,6 +53,24 @@ const VALID = {
 };
 
 describe("parseConversationReport", () => {
+  it("parses the mistake rule and correction why points", () => {
+    const raw = {
+      ...VALID,
+      recurringMistakes: [{ pattern: "Trật tự cụm danh từ", rule: "Danh từ bổ nghĩa đứng trước.", examples: [] }],
+      corrections: [{
+        messageIndex: 1, said: "my list task", corrected: "my task list", note: "n",
+        why: [{ part: "task list", reason: "Danh từ bổ nghĩa đứng trước." }, { part: "", reason: "x" }],
+      }],
+    };
+    const r = parseConversationReport(JSON.stringify(raw), [1], false);
+    expect(r.recurringMistakes[0].rule).toBe("Danh từ bổ nghĩa đứng trước.");
+    expect(r.corrections[0].why).toEqual([{ part: "task list", reason: "Danh từ bổ nghĩa đứng trước." }]);
+  });
+  it("defaults rule and why to empty (never undefined, which Firestore rejects)", () => {
+    const r = parseConversationReport(JSON.stringify(VALID), [1, 4], false);
+    expect(r.recurringMistakes[0].rule).toBe("");
+    expect(r.corrections[0].why).toEqual([]);
+  });
   it("parses a valid report, rounding scores and filtering bad rows", () => {
     const r = parseConversationReport(JSON.stringify(VALID), [1, 4], true);
     expect(r.overall).toBe(7.2);

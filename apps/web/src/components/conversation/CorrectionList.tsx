@@ -2,6 +2,7 @@ import type { ConversationCorrection } from "@/lib/conversationTypes";
 import { WordDiff } from "@/components/interview/WordDiff";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
+import { WhyList } from "./WhyList";
 
 export function CorrectionList({
   items,
@@ -19,6 +20,7 @@ export function CorrectionList({
         <div key={`${c.messageIndex}-${i}`} className="cv-hint">
           <WordDiff before={c.said} after={c.corrected} />
           {c.note && <p className="iv-muted">{c.note}</p>}
+          {c.why && c.why.length > 0 && <WhyList points={c.why} />}
           {recordingKeyFor && hasRecordings(recordingKeyFor(c.messageIndex)) && (
             <div className="cv-actions">
               <PlayMyVoiceButton recordingKey={recordingKeyFor(c.messageIndex)} />

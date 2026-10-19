@@ -1,4 +1,5 @@
 import { InterviewAiError, parseJson, str } from "./interviewPrompts";
+import { WHY_RULES, parseWhy } from "./conversationPrompts";
 import {
   CONVERSATION_CRITERIA,
   type ConversationCorrection,
@@ -8,6 +9,7 @@ import {
   type ConversationPhrase,
   type ConversationReport,
   type ConversationSetup,
+  type WhyPoint,
 } from "./conversationTypes";
 
 export function userMessageIndexes(messages: ConversationMessage[]): number[] {
@@ -44,15 +46,16 @@ Assess ONLY the learner's own messages. Return ONLY a JSON object, no prose:
   "overall": 7.0,
   "criteria": {"grammar": 7, "vocabulary": 7, "fluency": 7, "coherence": 7},
   "criteriaNotes": {"grammar": "...", "vocabulary": "...", "fluency": "...", "coherence": "..."},
-  "recurringMistakes": [{"pattern": "...", "examples": [{"said": "...", "better": "..."}]}],
-  "corrections": [{"messageIndex": 1, "said": "...", "corrected": "...", "note": "..."}],
+  "recurringMistakes": [{"pattern": "...", "rule": "...", "examples": [{"said": "...", "better": "..."}]}],
+  "corrections": [{"messageIndex": 1, "said": "...", "corrected": "...", "note": "...", "why": [{"part": "...", "reason": "..."}]}],
   "phrases": [{"text": "...", "meaning": "...", "example": "..."}]${goalJson}
 }
 
 - Scores are 0–10 (one decimal for "overall"). Pronunciation cannot be judged; do not mention it.
 - "criteriaNotes", recurringMistakes "pattern", corrections "note" and "goalResult.comment" are in VIETNAMESE, one short sentence each.
-- "recurringMistakes": at most 3 patterns that repeat; "said"/"better" are exact English quotes.
-- "corrections": at most 8 of the most worthwhile fixes. "messageIndex" is the bracketed number of a Learner message; "said" is that message (or the relevant part) verbatim; "corrected" changes as little as possible. If a hint was already given for a message, stay consistent with it.
+- Speech transcription can mishear words. When a word is nonsense in context but SOUNDS like a word that fits (e.g. "the book" where "a bug" is clearly meant, or "lorry" for "later"), treat it as a transcription error, not a learner mistake: leave it out of recurringMistakes, corrections and the scores. Only flag what the learner really got wrong.
+- "recurringMistakes": at most 3 patterns that repeat; "said"/"better" are exact English quotes. "rule" is ONE short VIETNAMESE sentence stating the English rule to remember, contrasting with Vietnamese when that is the cause (e.g. "Danh từ bổ nghĩa đứng TRƯỚC danh từ chính, ngược tiếng Việt: danh sách công việc → task list").
+- "corrections": at most 8 of the most worthwhile fixes. "messageIndex" is the bracketed number of a Learner message; "said" is that message (or the relevant part) verbatim; "corrected" changes as little as possible. If a hint was already given for a message, stay consistent with it. "why": one entry per edit (max 4). ${WHY_RULES} Here "part" is the fixed fragment as it appears in "corrected", and "reason" states the rule behind the fix, not just what changed.
 - "phrases": 4 to 8 useful English phrases for THIS learner to remember (natural alternatives to what they said, or good phrases from the AI). "meaning" is a short Vietnamese meaning; "example" is a short English sentence using the phrase.`;
 }
 
@@ -87,7 +90,7 @@ export function parseConversationReport(raw: string, userIndexes: number[], hasG
       const examples = listOf(o.examples)
         .map((e) => ({ said: str(objectOf(e).said), better: str(objectOf(e).better) }))
         .filter((e) => e.said && e.better);
-      return { pattern: str(o.pattern), examples };
+      return { pattern: str(o.pattern), rule: str(o.rule), examples };
     })
     .filter((m) => m.pattern)
     .slice(0, 3);
@@ -95,10 +98,16 @@ export function parseConversationReport(raw: string, userIndexes: number[], hasG
   const corrections: ConversationCorrection[] = listOf(json.corrections)
     .map((item) => {
       const o = objectOf(item);
-      return { messageIndex: o.messageIndex, said: str(o.said), corrected: str(o.corrected), note: str(o.note) };
+      return {
+        messageIndex: o.messageIndex,
+        said: str(o.said),
+        corrected: str(o.corrected),
+        note: str(o.note),
+        why: parseWhy(o.why, 4),
+      };
     })
     .filter(
-      (c): c is ConversationCorrection =>
+      (c): c is ConversationCorrection & { why: WhyPoint[] } =>
         typeof c.messageIndex === "number" && userIndexes.includes(c.messageIndex) && !!c.said && !!c.corrected
     )
     .slice(0, 8);

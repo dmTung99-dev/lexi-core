@@ -110,9 +110,26 @@ describe("hint", () => {
     expect(p).toContain("I go to Da Nang");
     expect(p).toContain("Where did you go?");
   });
+  it("asks for why points", () => {
+    expect(buildHintPrompt({ setup: TOPIC, userText: "x", previousAi: "y" })).toContain('"why"');
+  });
   it("parses corrected, note and up to 2 alternatives", () => {
     const out = parseHint('{"corrected":"I went to Da Nang","note":"Dùng quá khứ.","alternatives":["a","b","c"]}');
-    expect(out).toEqual({ corrected: "I went to Da Nang", note: "Dùng quá khứ.", alternatives: ["a", "b"] });
+    expect(out).toEqual({ corrected: "I went to Da Nang", note: "Dùng quá khứ.", alternatives: ["a", "b"], why: [] });
+  });
+  it("parses why points, dropping incomplete ones and capping at 4", () => {
+    const why = [
+      { part: "went", reason: "Quá khứ đơn vì chuyến đi đã kết thúc." },
+      { part: "", reason: "x" },
+      { part: "to", reason: "" },
+      "junk",
+      { part: "b", reason: "r" }, { part: "c", reason: "r" }, { part: "d", reason: "r" }, { part: "e", reason: "r" },
+    ];
+    const out = parseHint(JSON.stringify({ corrected: "I went", note: "n", why }));
+    expect(out.why).toEqual([
+      { part: "went", reason: "Quá khứ đơn vì chuyến đi đã kết thúc." },
+      { part: "b", reason: "r" }, { part: "c", reason: "r" }, { part: "d", reason: "r" },
+    ]);
   });
   it("rejects missing corrected or note", () => {
     expect(() => parseHint('{"corrected":"x"}')).toThrow();
@@ -126,9 +143,29 @@ describe("suggest", () => {
     expect(p).toContain("Xin thanh toán");
     expect(p).toContain("Anything else?");
   });
-  it("parses 2-3 options, rejects fewer than 2", () => {
-    expect(parseSuggest('{"options":["a","b","c","d"]}')).toEqual(["a", "b", "c"]);
-    expect(() => parseSuggest('{"options":["a"]}')).toThrow();
+  it("asks for why points per option", () => {
+    const p = buildSuggestPrompt({ setup: TOPIC, currentGoal: null, summary: "", window: [] });
+    expect(p).toContain('"why"');
+  });
+  it("parses 2-3 options with why points, rejects fewer than 2", () => {
+    const raw = JSON.stringify({
+      options: [
+        { text: "a", why: [{ part: "p", reason: "r" }, { part: "q", reason: "s" }, { part: "x", reason: "y" }, { part: "z", reason: "w" }] },
+        { text: "b" },
+        { text: "" },
+        { text: "c", why: [] },
+        { text: "d", why: [] },
+      ],
+    });
+    expect(parseSuggest(raw)).toEqual([
+      { text: "a", why: [{ part: "p", reason: "r" }, { part: "q", reason: "s" }, { part: "x", reason: "y" }] },
+      { text: "b", why: [] },
+      { text: "c", why: [] },
+    ]);
+    expect(() => parseSuggest('{"options":[{"text":"a"}]}')).toThrow();
+  });
+  it("still accepts plain-string options", () => {
+    expect(parseSuggest('{"options":["a","b"]}')).toEqual([{ text: "a", why: [] }, { text: "b", why: [] }]);
   });
 });
 

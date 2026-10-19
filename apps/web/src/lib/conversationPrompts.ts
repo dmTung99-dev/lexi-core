@@ -4,6 +4,8 @@ import type {
   ConversationLevel,
   ConversationMessage,
   ConversationSetup,
+  ConversationSuggestion,
+  WhyPoint,
 } from "./conversationTypes";
 
 const LEVEL_GUIDE: Record<ConversationLevel, string> = {
@@ -130,6 +132,21 @@ export function parseReply(
   return { say, vi: str(json.vi), goalsDone: [...new Set(done)], suggestEnd: json.suggestEnd === true };
 }
 
+export const WHY_RULES =
+  '"part" quotes the exact English fragment from the sentence; "reason" is ONE short VIETNAMESE sentence explaining WHY it is said that way — the tense, the preposition, the word order, or a fixed collocation. Skip anything obvious.';
+
+function field(value: unknown, key: string): unknown {
+  return value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined;
+}
+
+export function parseWhy(value: unknown, max: number): WhyPoint[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((p) => ({ part: str(field(p, "part")), reason: str(field(p, "reason")) }))
+    .filter((p) => p.part && p.reason)
+    .slice(0, max);
+}
+
 export interface HintInput {
   setup: ConversationSetup;
   userText: string;
@@ -145,11 +162,12 @@ The AI said: "${input.previousAi}"
 The learner replied: "${input.userText}"
 
 Return ONLY a JSON object, no prose:
-{"corrected": "...", "note": "...", "alternatives": ["..."]}
+{"corrected": "...", "note": "...", "alternatives": ["..."], "why": [{"part": "...", "reason": "..."}]}
 
 - "corrected": the learner's sentence(s) with the MINIMUM edits needed for correct, natural English. Keep their meaning and as many of their words as possible. If it is already correct, repeat it unchanged.
-- "note": in VIETNAMESE, 1–2 short sentences explaining the main fixes (or praise if nothing to fix).
-- "alternatives": 0–2 more natural ways to say the same thing, in English.`;
+- "note": in VIETNAMESE, 1–2 short sentences summing up the main fixes (or praise if nothing to fix).
+- "alternatives": 0–2 more natural ways to say the same thing, in English.
+- "why": one entry per edit you made (max 4; [] if nothing was fixed). ${WHY_RULES} Here "part" is the fixed fragment as it appears in "corrected", and "reason" says what the learner wrote and why the fix is right.`;
 }
 
 export function parseHint(raw: string): ConversationHint {
@@ -157,7 +175,7 @@ export function parseHint(raw: string): ConversationHint {
   const corrected = str(json.corrected);
   const note = str(json.note);
   if (!corrected || !note) throw new InterviewAiError("AI không đưa ra được gợi ý sửa.");
-  return { corrected, note, alternatives: strList(json.alternatives).slice(0, 2) };
+  return { corrected, note, alternatives: strList(json.alternatives).slice(0, 2), why: parseWhy(json.why, 4) };
 }
 
 export interface SuggestInput {
@@ -179,11 +197,17 @@ ${formatTranscript(input.window)}
 
 Suggest 2 or 3 different things the learner could say next, as natural English replies at their level (1–2 sentences each). Do not repeat what they already said.
 
-Return ONLY a JSON object: {"options": ["...", "..."]}`;
+For each option, add 2–3 "why" points so the learner understands how the sentence is built. ${WHY_RULES}
+
+Return ONLY a JSON object: {"options": [{"text": "...", "why": [{"part": "...", "reason": "..."}]}]}`;
 }
 
-export function parseSuggest(raw: string): string[] {
-  const options = strList(parseJson(raw).options).slice(0, 3);
+export function parseSuggest(raw: string): ConversationSuggestion[] {
+  const list = parseJson(raw).options;
+  const options = (Array.isArray(list) ? list : [])
+    .map((o) => (typeof o === "string" ? { text: str(o), why: [] } : { text: str(field(o, "text")), why: parseWhy(field(o, "why"), 3) }))
+    .filter((o) => o.text)
+    .slice(0, 3);
   if (options.length < 2) throw new InterviewAiError("AI không gợi ý được câu trả lời.");
   return options;
 }

@@ -1,6 +1,7 @@
 import { formatClock } from "@/components/interview/SessionDock";
 import { canSend, type ConversationState } from "@/lib/conversationMachine";
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
+import type { ConversationSuggestion } from "@/lib/conversationTypes";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { SuggestPanel } from "./SuggestPanel";
 
@@ -8,7 +9,7 @@ export interface ComposerProps {
   state: ConversationState;
   elapsed: number;
   micError: boolean;
-  suggestions: string[] | null;
+  suggestions: ConversationSuggestion[] | null;
   suggesting: boolean;
   openingError?: string;
   /** Unsent voice takes (review / STT-failed / earlier "+ Nói thêm" segments), in order. */

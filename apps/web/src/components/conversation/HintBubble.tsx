@@ -1,5 +1,6 @@
 import type { ConversationHint } from "@/lib/conversationTypes";
 import { WordDiff } from "@/components/interview/WordDiff";
+import { WhyList } from "./WhyList";
 
 export function HintBubble({ original, hint }: { original: string; hint: ConversationHint }) {
   return (
@@ -7,6 +8,7 @@ export function HintBubble({ original, hint }: { original: string; hint: Convers
       <span className="iv-caps">Gợi ý sửa</span>
       <WordDiff before={original} after={hint.corrected} />
       <p className="iv-muted">{hint.note}</p>
+      {hint.why && hint.why.length > 0 && <WhyList points={hint.why} />}
       {hint.alternatives.length > 0 && (
         <ul className="cv-alts">
           {hint.alternatives.map((a, i) => (

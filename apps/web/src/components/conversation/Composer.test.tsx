@@ -104,11 +104,26 @@ describe("Composer", () => {
     expect(screen.getByText(/Không phát được âm thanh/)).toBeInTheDocument();
   });
   it("suggestions: listing, picking and closing", () => {
-    const h = renderComposer({ phase: "idle" }, { suggestions: ["Option one", "Option two"] });
+    const h = renderComposer({ phase: "idle" }, { suggestions: [{ text: "Option one", why: [] }, { text: "Option two", why: [] }] });
+    expect(screen.queryByRole("button", { name: "Tại sao?" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Option two" }));
     expect(h.onPickSuggestion).toHaveBeenCalledWith("Option two");
     fireEvent.click(screen.getByRole("button", { name: "Đóng gợi ý" }));
     expect(h.onCloseSuggestions).toHaveBeenCalled();
+  });
+  it("suggestions: why points stay hidden until toggled", () => {
+    const h = renderComposer({ phase: "idle" }, {
+      suggestions: [
+        { text: "I've been living here for two years.", why: [{ part: "have been living", reason: "Việc bắt đầu từ trước và vẫn còn." }] },
+        { text: "Option two", why: [] },
+      ],
+    });
+    expect(screen.queryByText(/Việc bắt đầu từ trước/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tại sao?" }));
+    expect(screen.getByText(/Việc bắt đầu từ trước/)).toBeInTheDocument();
+    expect(h.onPickSuggestion).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Ẩn giải thích" }));
+    expect(screen.queryByText(/Việc bắt đầu từ trước/)).not.toBeInTheDocument();
   });
   it("aiThinking and grading show status text only", () => {
     renderComposer({ phase: "aiThinking" });

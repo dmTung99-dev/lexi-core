@@ -40,7 +40,7 @@ import {
   replyFlags,
   type ConversationState,
 } from "@/lib/conversationMachine";
-import { MAX_USER_TURNS, userTurnCount, type ConversationMessage, type ConversationReport, type ConversationSession } from "@/lib/conversationTypes";
+import { MAX_USER_TURNS, userTurnCount, type ConversationMessage, type ConversationReport, type ConversationSession, type ConversationSuggestion } from "@/lib/conversationTypes";
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
@@ -68,7 +68,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   const [translatingIndex, setTranslatingIndex] = useState<number | null>(null);
   const [hintLoadingIndex, setHintLoadingIndex] = useState<number | null>(null);
   const [helperError, setHelperError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+  const [suggestions, setSuggestions] = useState<ConversationSuggestion[] | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [openingError, setOpeningError] = useState<string | null>(null);
   const [state, dispatch] = useReducer(conversationReducer, initialConversationState);
