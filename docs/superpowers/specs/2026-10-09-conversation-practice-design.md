@@ -1,7 +1,7 @@
 # LexiCore — English Conversation Practice (web)
 
 **Date:** 2026-10-09
-**Status:** Implemented and shipped to production 2026-10-10 (web). Later additions: Vietnamese translation stored with each AI message (§3.2, §5), "Nghe lại giọng tôi" (§4.4), Whisper `small` with en/vi per-chunk detection (§3).
+**Status:** Implemented and shipped to production 2026-10-10 (web). Later additions: Vietnamese translation stored with each AI message (§3.2, §5), "Nghe lại giọng tôi" (§4.4), Whisper `small` with en/vi per-chunk detection (§3), Vietnamese "Tại sao?" explanations on suggestions / hints / report and transcription-mishearing filtering in the report (2026-10-19, §4.4, §5, §6).
 **Covers:** A new chat-style English speaking/writing practice feature. The learner talks (voice or typing) with an AI partner either about a free topic or inside a role-play scenario with goals, gets on-demand help during the chat, and a feedback report at the end.
 **Platform:** Web only (`apps/web/`). No Flutter work now; Flutter parity is a later, separate spec/plan (the Firestore schema and Cloud Functions here are platform-neutral so it can reuse them).
 **UI design:** https://claude.ai/artifact/9D6N3cv1cULLYjP3PyvFKU (5 artboards: Setup free topic, Chat free topic, Report, Setup role-play, Chat role-play). Where this spec and the design disagree, this spec wins (see §10).
@@ -89,8 +89,14 @@ interface ConversationMessage {
 
 interface ConversationHint {
   corrected: string;                 // minimal edit of the user's text, same meaning
-  note: string;                      // Vietnamese explanation
+  note: string;                      // Vietnamese summary of the fixes, 1–2 sentences
   alternatives: string[];            // 0–2 more natural phrasings, English
+  why?: WhyPoint[];                  // ≤ 4, one per edit; absent on hints cached before 2026-10-19
+}
+
+interface WhyPoint {                 // one "Tại sao?" point (added 2026-10-19)
+  part: string;                      // English fragment quoted from the sentence
+  reason: string;                    // one short Vietnamese sentence: the tense / preposition / word order / collocation rule
 }
 ```
 
@@ -139,7 +145,8 @@ After the user sends message *k*:
 ### 4.4 On-demand helpers (no effect on the turn order)
 
 - **Gợi ý sửa** (per user message): calls `hint` for that message, stores the result in `messages[i].hint`. A second tap shows the cached result with no AI call.
-- **Gợi ý cách nói** (composer, both modes): calls `suggest` with the setup, current goal (role-play: first not-done goal), `summary`, and the last 4 messages; returns 2–3 English example replies appropriate to the level; shown in a transient panel, not stored, not scored. Tapping an option fills the composer text so the user can read it aloud or edit it.
+- **Gợi ý cách nói** (composer, both modes): calls `suggest` with the setup, current goal (role-play: first not-done goal), `summary`, and the last 4 messages; returns 2–3 English example replies appropriate to the level, each with 0–3 `WhyPoint`s (`ConversationSuggestion { text, why }`); shown in a transient panel, not stored, not scored. Tapping an option fills the composer text so the user can read it aloud or edit it. Each option with points has a **"Tại sao?"** toggle (collapsed by default, so the learner can try to work out the reason first; "Ẩn giải thích" closes it) that lists the points under the option (`WhyList`).
+- **"Tại sao?" in "Gợi ý sửa"** (added 2026-10-19): `HintBubble` lists `hint.why` (always shown, one line per edit) under the note. Hints cached before then have no `why` and render as before.
 - **Translate** (per AI message): `opening` and `reply` already return a Vietnamese `vi`, stored on the message, so the button shows it instantly with no AI call. Only when `vi` is missing (older sessions, or a model that omitted it) does it call `translate`, then persists the result onto that message so the next click is instant.
 - **Nghe lại giọng tôi** (per voice-composed user message, in the chat and next to each report correction): replays the learner's own recording(s) of that message — every kept "+ Nói thêm" segment in order; a re-recorded take is dropped; typed-only messages get no button. **It is also available before sending** (added 2026-10-10): next to the draft in the transcript-review step, in the STT-failed state (the kept recording), and in idle while earlier voice segments are pending ("+ Nói thêm") — it plays the unsent takes in order from blobs held in memory by the page (`PlayMyVoiceButton blobs`, object URLs created per click and revoked afterwards). Blobs live only in a module-level in-memory store (`recordedAudioStore`, key `conversation:<sessionId>:<messageIndex>`) for the tab's lifetime: they survive session → report navigation but are lost on reload. No Storage/Firestore change.
 - TTS is chunked by `splitSentences` (≤ 500 chars), first chunk plays while later ones synthesize.
@@ -153,13 +160,15 @@ All in `lib/conversationPrompts.ts` except `report`, which lives in `lib/convers
 | `scenario` | custom role-play description, level | `{ "persona": string, "goals": string[] }` (3–4 goals) |
 | `opening` | setup | `{ "say": string, "vi"?: string }` |
 | `reply` | setup, `summary`, unsummarized messages, user-turn count, flags (`offerEnd`, `mustClose`) | `{ "say": string, "vi"?: string, "goalsDone"?: number[], "suggestEnd"?: boolean }` |
-| `hint` | one user message, setup, previous AI message | `{ "corrected": string, "note": string, "alternatives": string[] }` |
-| `suggest` | setup, current goal, `summary`, last 4 messages | `{ "options": string[] }` (2–3) |
+| `hint` | one user message, setup, previous AI message | `{ "corrected": string, "note": string, "alternatives": string[], "why": WhyPoint[] }` |
+| `suggest` | setup, current goal, `summary`, last 4 messages | `{ "options": { "text": string, "why": WhyPoint[] }[] }` (2–3; plain-string options are still accepted, with no points) |
 | `condense` | previous `summary`, messages to fold | `{ "summary": string }` |
 | `translate` | one AI message | `{ "vi": string }` |
 | `report` | setup, `summary`, all user messages (+ any cached hints), goals/`goalsDone` | see §6 |
 
 Constraints put in the `reply` prompt: 1–3 short sentences; vocabulary and grammar at the stated CEFR level; end with a question or an opening for the learner to continue; never correct the learner's mistakes during the chat; role-play: stay in persona, report `goalsDone` only for goals the learner clearly completed this turn; `mustClose`/all-goals-done: say a natural closing line. `hint.corrected` must change as little as possible so `wordDiff` is meaningful.
+
+"Why" points (`hint`, `suggest`, `report` corrections) share one instruction, `WHY_RULES` in `conversationPrompts.ts`: `part` quotes the exact English fragment, `reason` is one short Vietnamese sentence on *why* it is said that way (tense, preposition, word order, fixed collocation), skipping anything obvious. For `hint` and report corrections, `part` is the fixed fragment as it appears in `corrected`. `parseWhy` drops points missing either field and caps the count (hint/corrections 4, suggest 3).
 
 ## 6. Report
 
@@ -170,8 +179,8 @@ interface ConversationReport {
   overall: number;                       // 0–10, one decimal
   criteria: { grammar: number; vocabulary: number; fluency: number; coherence: number };
   criteriaNotes: Record<keyof ConversationReport["criteria"], string>;   // one Vietnamese line each
-  recurringMistakes: { pattern: string; examples: { said: string; better: string }[] }[];  // ≤ 3
-  corrections: { messageIndex: number; said: string; corrected: string; note: string }[];  // ≤ ~8, most worthwhile
+  recurringMistakes: { pattern: string; rule?: string; examples: { said: string; better: string }[] }[];  // ≤ 3
+  corrections: { messageIndex: number; said: string; corrected: string; note: string; why?: WhyPoint[] }[];  // ≤ ~8, most worthwhile
   phrases: { text: string; meaning: string; example: string }[];  // 4–8 English phrases; meaning is Vietnamese
   goalResult?: { achieved: boolean; comment: string };                    // role-play only
 }
@@ -179,6 +188,8 @@ interface ConversationReport {
 
 - Feedback text (notes, pattern descriptions, comments) is Vietnamese; `said`, `corrected`, `better`, `phrases[].text` and `example` are English, `meaning` is Vietnamese. `corrected` changes as little as possible; rendered with `WordDiff`.
 - Where a message already has a cached `hint`, the report prompt receives it so the report does not contradict it.
+- **"Tại sao?" in the report** (added 2026-10-19): each correction carries ≤ 4 `why` points stating the rule behind each edit (not just what changed), listed under its note by `CorrectionList`; each recurring mistake carries a one-sentence Vietnamese `rule` to remember, contrasting with Vietnamese when that is the cause (e.g. noun modifiers go before the head noun: "danh sách công việc" → *task list*), shown under the pattern by `RecurringMistakes`. The parser always writes `rule: ""` / `why: []` rather than omitting them (Firestore rejects `undefined`); reports saved earlier lack both and render as before.
+- **Transcription mishearings are not learner mistakes** (added 2026-10-19): the prompt tells the model that when a word is nonsense in context but sounds like a word that fits (e.g. "the book" for "a bug", "lorry" for "later"), it is an STT error and is left out of `recurringMistakes`, `corrections` and the scores. This is a prompt instruction, not a guarantee.
 - "+x so với buổi trước" compares against the most recent previous `completed` conversation session with a report; hidden when none exists.
 - The report states that pronunciation is not scored.
 
@@ -195,7 +206,7 @@ interface ConversationReport {
 
 `apps/web/src/components/conversation/`:
 - Setup: `ModeTabs`, `ScenarioCards`, `ScenarioPreview` (persona/goals, editable), `ConversationSetupForm`, `RecentConversations`.
-- Chat: `ChatThread`, `Composer` (text, mic, transcript review, "+ Nói thêm", "Gợi ý cách nói"), `HintBubble`, `SuggestPanel`, `GoalChecklist` (role-play side panel). The wrap-up chip is inline JSX in the chat page.
+- Chat: `ChatThread`, `Composer` (text, mic, transcript review, "+ Nói thêm", "Gợi ý cách nói"), `HintBubble`, `SuggestPanel` (with the "Tại sao?" toggle), `WhyList` (shared list of "Tại sao?" points, also used by the report), `GoalChecklist` (role-play side panel). The wrap-up chip is inline JSX in the chat page.
 - Report: `ConversationReportSummary`, `CorrectionList`, `RecurringMistakes`, `PhraseSaveList`.
 
 Reused unchanged: `useRecorder`, `transcribeAudioClient`, `warmUpSpeechClient`, `splitSentences`, `wordDiff`, `WordDiff`, the readiness card pattern (AI key + mic), Bloom styles.
@@ -222,8 +233,8 @@ Rule: a message the user has said or typed is never discarded by a failure.
 
 ## 9. Testing
 
-- **Vitest (pure):** `conversationMachine` (all transitions; typing skips STT; "+ Nói thêm" merge; strict alternation; topic wrap-up offer at turn 12; hard cap at 30; role-play closes when all goals done; early end with zero messages; error branches); `conversationPrompts` parsers (valid, malformed JSON, missing fields, out-of-range `goalsDone`, wrong counts); `conversationHistory` (unsummarized window, condense trigger at ≥ 16 unsummarized, folds all but the last 8, failure leaves state unchanged); `conversationScenarios` (every preset has persona and 3–4 goals).
-- **Component tests (Testing Library, mocked clients):** `Composer` (type / record / review / merge segments / send); `ChatThread` (a cached hint replaces the hint button, no AI call); `Composer` also covers the suggestions list / pick / close; `GoalChecklist` (progress from `goalsDone`); `CorrectionList` (diff + phrase save / already saved).
+- **Vitest (pure):** `conversationMachine` (all transitions; typing skips STT; "+ Nói thêm" merge; strict alternation; topic wrap-up offer at turn 12; hard cap at 30; role-play closes when all goals done; early end with zero messages; error branches); `conversationPrompts` parsers (valid, malformed JSON, missing fields, out-of-range `goalsDone`, wrong counts, `why` points filtered and capped, plain-string suggest options); `conversationReportPrompt` (prompt carries the mishearing / `rule` / `why` instructions; `rule` and `why` parsed and defaulted to empty); `conversationHistory` (unsummarized window, condense trigger at ≥ 16 unsummarized, folds all but the last 8, failure leaves state unchanged); `conversationScenarios` (every preset has persona and 3–4 goals).
+- **Component tests (Testing Library, mocked clients):** `Composer` (type / record / review / merge segments / send); `ChatThread` (a cached hint replaces the hint button, no AI call); `Composer` also covers the suggestions list / pick / close and the "Tại sao?" toggle; `HintBubble` (why points shown; an old cached hint without them still renders); `GoalChecklist` (progress from `goalsDone`); `CorrectionList` (diff + phrase save / already saved, why points); `RecurringMistakes` (rule under the pattern).
 - **Manual, after deploying web:** one free-topic and one role-play session by voice end-to-end; per-turn wait warm and cold; role-play ending naturally on goal completion; reopening an old report with no AI key.
 
 ## 10. Deviations from the UI design artifact
