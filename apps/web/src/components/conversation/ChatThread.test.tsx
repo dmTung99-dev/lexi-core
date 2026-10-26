@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ChatThread } from "./ChatThread";
 import type { ConversationMessage } from "@/lib/conversationTypes";
@@ -92,5 +92,48 @@ describe("ChatThread", () => {
     } finally {
       clearRecordings("");
     }
+  });
+});
+
+describe("ChatThread auto-scroll", () => {
+  const original = Element.prototype.scrollIntoView;
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+
+  const props = {
+    hintLoadingIndex: null,
+    translations: {},
+    translatingIndex: null,
+    canReplay: true,
+    onReplay: vi.fn(),
+    onTranslate: vi.fn(),
+    onHint: vi.fn(),
+  };
+
+  it("renders an aria-hidden sentinel as the last child and scrolls when a message is appended", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container, rerender } = render(<ChatThread {...props} messages={BASE.slice(0, 1)} thinking={false} />);
+    const thread = container.querySelector(".cv-thread") as HTMLElement;
+    const last = thread.lastElementChild as HTMLElement;
+    expect(last.getAttribute("aria-hidden")).toBe("true");
+    expect(last.textContent).toBe("");
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={BASE} thinking={false} />);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "smooth" });
+    expect(scrollIntoView.mock.contexts.at(-1)).toBe(thread.lastElementChild);
+  });
+
+  it("scrolls when the thinking indicator appears, but not on an unrelated re-render", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container, rerender } = render(<ChatThread {...props} messages={BASE} thinking={false} />);
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={BASE} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    rerender(<ChatThread {...props} messages={BASE} thinking />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect((container.querySelector(".cv-thread") as HTMLElement).lastElementChild?.getAttribute("aria-hidden")).toBe("true");
   });
 });
