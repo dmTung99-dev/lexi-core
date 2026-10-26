@@ -554,15 +554,21 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             onTranslate={(i) => void handleTranslate(i)}
             onHint={(i) => void handleHint(i)}
             recordingKeyFor={(i) => conversationRecordingKey(session.id, i)}
+            footer={
+              (helperError || (state.wrapUpOffered && !roleplay && state.phase === "idle")) ? (
+                <>
+                  {helperError && <p className="iv-error" role="alert">{helperError}</p>}
+                  {state.wrapUpOffered && !roleplay && state.phase === "idle" && (
+                    <div className="cv-wrapup" role="status">
+                      <span>Bạn đã trò chuyện khá lâu — kết thúc và xem báo cáo?</span>
+                      <button type="button" className="btn-primary" onClick={handleEnd}>Kết thúc</button>
+                      <button type="button" className="btn-secondary" onClick={() => dispatch({ type: "DISMISS_WRAP_UP" })}>Nói tiếp</button>
+                    </div>
+                  )}
+                </>
+              ) : null
+            }
           />
-          {helperError && <p className="iv-error" role="alert">{helperError}</p>}
-          {state.wrapUpOffered && !roleplay && state.phase === "idle" && (
-            <div className="cv-wrapup" role="status">
-              <span>Bạn đã trò chuyện khá lâu — kết thúc và xem báo cáo?</span>
-              <button type="button" className="btn-primary" onClick={handleEnd}>Kết thúc</button>
-              <button type="button" className="btn-secondary" onClick={() => dispatch({ type: "DISMISS_WRAP_UP" })}>Nói tiếp</button>
-            </div>
-          )}
         </div>
         {roleplay && (
           <aside className="iv-session-side">

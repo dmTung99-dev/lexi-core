@@ -18,7 +18,7 @@ export interface SessionThreadProps {
 }
 
 export function SessionThread(props: SessionThreadProps) {
-  const endRef = useScrollToEnd([props.turns.length, props.showQuestion, props.question]);
+  const endRef = useScrollToEnd([props.turns.length, props.showQuestion, props.question, props.translation]);
   return (
     <section className="iv-thread" aria-label="Hội thoại">
       {props.turns.map((t, i) => (

@@ -27,7 +27,7 @@ describe("useScrollToEnd", () => {
   it("scrolls instantly to the end on mount", () => {
     render(<Harness n={1} />);
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "auto" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
   });
 
   it("scrolls smoothly when a dependency changes", () => {
@@ -35,7 +35,7 @@ describe("useScrollToEnd", () => {
     scrollIntoView.mockClear();
     rerender(<Harness n={2} />);
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "smooth" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "smooth" });
   });
 
   it("does not scroll when the dependencies are unchanged", () => {
