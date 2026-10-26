@@ -2818,23 +2818,27 @@ button.btn-google svg {
   .iv-type-grid, .iv-voice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .iv-docs { grid-template-columns: minmax(0, 1fr); }
 }
-.iv-session { display: flex; flex-direction: column; gap: 14px; }
-.iv-session-head { display: flex; align-items: center; gap: 20px; }
+/* Live session pages (/interview/<id>, /conversation/<id>) are a fixed-height
+   frame: the viewport minus .main's vertical padding (32px + 32px; phone
+   override in the "Phone: conversation + interview" block). The header and the
+   dock keep their size and the thread scrolls in between, so the composer can
+   never scroll away. min-height lets a very short window fall back to normal
+   page scrolling. */
+.iv-session { display: flex; flex-direction: column; gap: 14px; height: calc(100vh - 64px); height: calc(100dvh - 64px); min-height: 480px; }
+.iv-session-head { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
 .iv-session-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .iv-progress { display: flex; gap: 6px; }
 .iv-progress span { width: 8px; height: 8px; border-radius: 999px; background: var(--border); }
 .iv-progress span.done { background: var(--sage); }
 .iv-progress span.current { width: 22px; background: var(--accent); }
-/* No forced min-height/flex:1 stretch here on purpose — that combo used to
-   leave the short side column's leftover space as dead air below it while
-   pushing the sticky dock past the fold on shorter viewports (needed a
-   scroll to reach it). Sizing to natural content keeps the dock right below
-   the question/side cards; .iv-dock's `position: sticky; bottom: 0` still
-   keeps it pinned to view once the thread grows long enough to scroll. */
-.iv-session-body { display: flex; gap: 22px; align-items: flex-start; }
-.iv-session-side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+/* The body fills the space between header and dock (min-height: 0 lets it
+   shrink below its content). Above 980px the thread column and the side column
+   each scroll on their own; at <= 980px (see the media query below) the whole
+   body is the one scroll region. */
+.iv-session-body { flex: 1; min-height: 0; display: flex; gap: 22px; align-items: stretch; }
+.iv-session-side { width: 320px; flex-shrink: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .iv-note { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--amber-bg); font-size: max(var(--type-min), calc(14.5px * var(--type-scale))); }
-.iv-thread { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.iv-thread { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .iv-exchange { display: flex; flex-direction: column; gap: 10px; }
 .iv-bubble { display: flex; gap: 10px; align-items: flex-start; margin: 0; }
 .iv-bubble p { margin: 0; }
@@ -2852,7 +2856,7 @@ button.btn-google svg {
 .iv-status-thinking { color: var(--accent); }
 .iv-star { margin: 0; display: flex; gap: 10px; font-size: max(var(--type-min), calc(14.5px * var(--type-scale))); }
 .iv-star-letter { width: 24px; height: 24px; flex-shrink: 0; border-radius: 8px; background: var(--surface-3); color: var(--accent); font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.iv-dock { position: sticky; bottom: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 24px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+.iv-dock { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 24px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
 .iv-dock-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .iv-dock-col { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .iv-dock-status { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; font-weight: 600; }
@@ -2869,8 +2873,11 @@ button.btn-google svg {
 .iv-warn-text { color: var(--danger); }
 .iv-grading { padding-top: 60px; text-align: center; }
 @media (max-width: 980px) {
-  .iv-session-body { flex-direction: column; }
-  .iv-session-side { width: 100%; }
+  /* Stacked: the whole body is the scroll region (thread, then the side cards),
+     so nothing inside it scrolls separately. */
+  .iv-session-body { flex-direction: column; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
+  .iv-thread { overflow: visible; flex: none; }
+  .iv-session-side { width: 100%; overflow: visible; }
 }
 .iv-report { display: flex; flex-direction: column; gap: 20px; }
 .iv-report-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
@@ -2930,7 +2937,7 @@ button.btn-google svg {
 .cv-pick-custom { border-style: dashed; color: var(--accent); }
 .cv-preview { gap: 14px; }
 
-.cv-thread { display: flex; flex-direction: column; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; min-height: 320px; }
+.cv-thread { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
 .cv-row { display: flex; gap: 12px; align-items: flex-start; }
 .cv-row-me { justify-content: flex-end; }
 .cv-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-3); color: var(--ink-soft); font-size: max(var(--type-min), calc(12px * var(--type-scale))); font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -2967,7 +2974,14 @@ button.btn-google svg {
 .cv-bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 .cv-persona-title { margin: 8px 0 0; font-size: max(var(--type-min), calc(14px * var(--type-scale))); }
 .cv-wrapup { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
-.cv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.cv-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.cv-main > .iv-error, .cv-main > .cv-wrapup { flex-shrink: 0; }
+/* Stacked (<= 980px): the body scrolls (see .iv-session-body), not the thread.
+   After the base rules above so these win at equal specificity. */
+@media (max-width: 980px) {
+  .cv-main { flex: none; min-height: auto; }
+  .cv-thread { flex: none; overflow: visible; min-height: 320px; }
+}
 
 .cv-summary { gap: 16px; }
 .cv-overall { display: flex; flex-direction: column; gap: 2px; }
@@ -3567,20 +3581,19 @@ html {
   /* Live session pages (/interview/<id>, /conversation/<id>; .iv-session is the
      root of exactly those two pages) hide the tab bar, so .main does not need to
      reserve room for it. 16px + the home-indicator inset replaces the 80px+.
-     .main (overflow-y:auto) and .app-frame (overflow:hidden) are both scroll
-     containers that never scroll (they grow with their content), and a sticky
-     element pins to its nearest scroll container, so .iv-dock's
-     `position: sticky; bottom: 0` never pinned to the viewport. Let the page
-     scroll instead: .main visible, the frame clipped (clip is not a scroll
-     container; browsers without it keep hidden = the old behaviour). */
+     .iv-session is a fixed-height frame: the viewport minus .main's padding
+     (16px + the top inset above, 16px + the bottom inset below). Header and dock
+     keep their size; .iv-session-body is the one scroll region, so the page
+     itself never scrolls. No min-height here: a landscape phone is shorter than
+     the desktop 480px floor and must still keep the dock on screen. */
   .main:has(.iv-session) {
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    overflow: visible;
   }
 
-  .app-frame:has(.iv-session) {
-    overflow: hidden;
-    overflow: clip;
+  .iv-session {
+    height: calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 0;
   }
 
   /* Header: "Kết thúc & xem báo cáo" is ~190px, which leaves the title ~150px.
