@@ -97,16 +97,25 @@ describe("SessionThread auto-scroll", () => {
     expect(last.textContent).toBe("");
     scrollIntoView.mockClear();
     rerender(<SessionThread {...base} turns={TURNS} />);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "smooth" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "smooth" });
     expect(scrollIntoView.mock.contexts.at(-1)).toBe(thread.lastElementChild);
   });
 
-  it("does not scroll when only the translation changes", () => {
+  it("scrolls when the current question's translation appears", () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     const { rerender } = render(<SessionThread {...base} turns={TURNS} />);
     scrollIntoView.mockClear();
     rerender(<SessionThread {...base} turns={TURNS} translation="Dự án?" />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not scroll on an unrelated re-render", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { rerender } = render(<SessionThread {...base} turns={TURNS} />);
+    scrollIntoView.mockClear();
+    rerender(<SessionThread {...base} turns={TURNS} translating />);
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

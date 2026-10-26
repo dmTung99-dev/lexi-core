@@ -121,7 +121,7 @@ describe("ChatThread auto-scroll", () => {
     expect(last.textContent).toBe("");
     scrollIntoView.mockClear();
     rerender(<ChatThread {...props} messages={BASE} thinking={false} />);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "smooth" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "smooth" });
     expect(scrollIntoView.mock.contexts.at(-1)).toBe(thread.lastElementChild);
   });
 
@@ -135,5 +135,47 @@ describe("ChatThread auto-scroll", () => {
     rerender(<ChatThread {...props} messages={BASE} thinking />);
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect((container.querySelector(".cv-thread") as HTMLElement).lastElementChild?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("does not scroll when an older message gets a translation or hint", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const msgs: ConversationMessage[] = [...BASE, { role: "ai", text: "Nice!" }];
+    const { rerender } = render(<ChatThread {...props} messages={msgs} thinking={false} />);
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={msgs} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    const hinted = [msgs[0], { ...msgs[1], hint: { corrected: "I went", note: "n", alternatives: [] } }, msgs[2]];
+    rerender(<ChatThread {...props} messages={hinted} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("scrolls when the last message gets a translation or a hint", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { rerender } = render(<ChatThread {...props} messages={BASE.slice(0, 1)} thinking={false} />);
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={BASE.slice(0, 1)} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    scrollIntoView.mockClear();
+    const hinted = [BASE[0], { ...BASE[1], hint: { corrected: "I went", note: "n", alternatives: [] } }];
+    rerender(<ChatThread {...props} messages={BASE} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={hinted} thinking={false} translations={{ 0: "Bạn đã đi đâu?" }} />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the footer inside the thread before the sentinel, and scrolls when it appears", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container, rerender } = render(<ChatThread {...props} messages={BASE} thinking={false} />);
+    scrollIntoView.mockClear();
+    rerender(<ChatThread {...props} messages={BASE} thinking={false} footer={<div role="status">Kết thúc?</div>} />);
+    const thread = container.querySelector(".cv-thread") as HTMLElement;
+    const footer = screen.getByRole("status", { name: "" });
+    expect(thread.contains(footer)).toBe(true);
+    const kids = Array.from(thread.children);
+    expect(kids.indexOf(footer)).toBe(kids.length - 2);
+    expect(kids.at(-1)?.getAttribute("aria-hidden")).toBe("true");
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });
