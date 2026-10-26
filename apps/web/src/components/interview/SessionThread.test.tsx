@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { SessionThread } from "./SessionThread";
 import type { InterviewTurn } from "@/lib/interviewTypes";
@@ -67,5 +67,46 @@ describe("SessionThread", () => {
     } finally {
       clearRecordings("");
     }
+  });
+});
+
+describe("SessionThread auto-scroll", () => {
+  const original = Element.prototype.scrollIntoView;
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+
+  const base = {
+    question: "Project?",
+    kind: "main" as const,
+    showQuestion: true,
+    translation: null,
+    translating: false,
+    onReplay: vi.fn(),
+    onTranslate: vi.fn(),
+    replayDisabled: false,
+  };
+
+  it("renders an aria-hidden sentinel as the last child and scrolls when a turn is added", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container, rerender } = render(<SessionThread {...base} turns={TURNS.slice(0, 1)} />);
+    const thread = container.querySelector(".iv-thread") as HTMLElement;
+    const last = thread.lastElementChild as HTMLElement;
+    expect(last.getAttribute("aria-hidden")).toBe("true");
+    expect(last.textContent).toBe("");
+    scrollIntoView.mockClear();
+    rerender(<SessionThread {...base} turns={TURNS} />);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end", behavior: "smooth" });
+    expect(scrollIntoView.mock.contexts.at(-1)).toBe(thread.lastElementChild);
+  });
+
+  it("does not scroll when only the translation changes", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { rerender } = render(<SessionThread {...base} turns={TURNS} />);
+    scrollIntoView.mockClear();
+    rerender(<SessionThread {...base} turns={TURNS} translation="Dự án?" />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import type { ConversationMessage } from "@/lib/conversationTypes";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
+import { useScrollToEnd } from "@/lib/useScrollToEnd";
 import { HintBubble } from "./HintBubble";
 
 export interface ChatThreadProps {
@@ -18,6 +19,7 @@ export interface ChatThreadProps {
 }
 
 export function ChatThread(props: ChatThreadProps) {
+  const endRef = useScrollToEnd([props.messages.length, props.thinking]);
   // The key of a user message's recording, or null when it has none (typed).
   const recordingKey = (i: number): string | null => {
     const key = props.recordingKeyFor?.(i);
@@ -56,6 +58,7 @@ export function ChatThread(props: ChatThreadProps) {
         )
       )}
       {props.thinking && <p className="iv-muted" role="status">AI đang soạn câu trả lời…</p>}
+      <div ref={endRef} aria-hidden="true" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { InterviewTurn } from "@/lib/interviewTypes";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
+import { useScrollToEnd } from "@/lib/useScrollToEnd";
 
 export interface SessionThreadProps {
   turns: InterviewTurn[];
@@ -17,6 +18,7 @@ export interface SessionThreadProps {
 }
 
 export function SessionThread(props: SessionThreadProps) {
+  const endRef = useScrollToEnd([props.turns.length, props.showQuestion, props.question]);
   return (
     <section className="iv-thread" aria-label="Hội thoại">
       {props.turns.map((t, i) => (
@@ -47,6 +49,7 @@ export function SessionThread(props: SessionThreadProps) {
           </div>
         </div>
       )}
+      <div ref={endRef} aria-hidden="true" />
     </section>
   );
 }
