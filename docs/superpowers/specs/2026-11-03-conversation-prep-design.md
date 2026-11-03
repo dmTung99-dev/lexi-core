@@ -54,7 +54,7 @@ interface PrepPattern {
 
 interface ConversationPrep {
   id: string;
-  createdAt: number;
+  createdAt: string;           // ISO, same as conversation_sessions
   situation: string;           // the learner's Vietnamese description
   level: ConversationLevel;    // "A2" | "B1" | "B2" | "C1"
   title: string;               // short Vietnamese title from the AI, for lists
@@ -72,16 +72,17 @@ interface ConversationPrep {
 ### 3.3 Modules (new unless noted)
 
 - `lib/conversationPrepTypes.ts`: the types above.
-- `lib/conversationPrepPrompt.ts`: `buildPrepPrompt(situation, level)`, `parsePrep(raw)`, `findPatternSpan(line, pattern)`.
+- `lib/conversationPrepPrompt.ts`: `buildPrepPrompt(situation, level)`, `parsePrep(raw, situation)`, `PrepUnclearError`.
 - `lib/conversationPreps.ts`: `createConversationPrep`, `getConversationPrep`, `listRecentConversationPreps`, `deleteConversationPrep` (same shape as `conversationSessions.ts`).
-- `lib/savePhraseToVocab.ts`: extracted from the Hội thoại report page's `handleSavePhrase` (headword capitalization, existing-record check, `saveVocabRecord`), with `cefrLevel` and `personalNotes` as parameters. The report page switches to it (behaviour unchanged); the prep page uses it with its own note ("Từ Chuẩn bị tình huống") and the kit's level.
-- Components under `components/conversation/prep/`: `PrepForm`, `RecentPreps`, `PrepJumpBar`, `PrepDialogue` (bubbles + highlights), `PrepPatternCard` (uses `WhyList`), `PrepCtaBar`. The word list reuses `PhraseSaveList`.
+- `lib/savePhraseToVocab.ts`: extracted from the Hội thoại report page's `handleSavePhrase` (headword capitalization, existing-record check, `saveVocabRecord`), with the CEFR level and `personalNotes` as parameters, plus `isPhraseSaved`. The report page switches to it and now passes the session's level instead of the hard-coded `b1` (otherwise unchanged); the prep page uses it with its own note ("Từ Chuẩn bị tình huống") and the kit's level.
+- `lib/prepHighlight.ts`: `findPatternSpan`, `lineHighlights`.
+- Components under `components/conversation/prep/`: `PrepDialogue` (bubbles + highlights), `PrepPatternCard` (uses `WhyList`), `PrepVocabList` (rows: text, meaning, example, TTS, Lưu/Đã lưu — `PhraseSaveList`'s chip layout has no room for meaning/example/TTS), `RecentPreps`. The form, jump bar and CTA are plain markup in the two pages.
 - `app/(app)/conversation/prep/page.tsx`, `app/(app)/conversation/prep/[id]/page.tsx`.
 - Modified: `app/(app)/conversation/page.tsx` (entry card, `?prep=` prefill), `ConversationSetup` gains optional `prepId?: string` (stored on the session for reference only).
 
 ## 4. Flow
 
-1. Learner types the situation (or taps a chip that fills the textarea), picks a level (default: the level last used in Hội thoại), taps **Tạo kịch bản**.
+1. Learner types the situation (or taps a chip that fills the textarea), picks a level (default: the level of the most recent kit, else B1), taps **Tạo kịch bản**.
 2. One `callInterviewAi` call with `buildPrepPrompt`. While waiting the button reads "Đang tạo…", the textarea is locked, and rotating progress lines are shown ("Đang viết kịch bản…", "Đang chọn mẫu câu…", "Đang chọn từ mới…"). These are cosmetic; there is only one call.
 3. `parsePrep` validates; on success `createConversationPrep` writes the doc and the page navigates to `/conversation/prep/[id]`.
 4. On the kit page, each word's saved state is computed on load by checking the vocab bank (as the Hội thoại report does); **Lưu** calls `savePhraseToVocab` and flips to **Đã lưu**.
@@ -112,7 +113,7 @@ Constraints in the prompt:
 - `persona`: English, same style as the Hội thoại `scenario` prompt; `goals`: 3-4 Vietnamese goals the learner would pursue in this situation, consistent with the dialogue.
 - If the situation is not a usable communicative situation (gibberish, a single word), return `{"error":"unclear"}`.
 
-`parsePrep(raw)`:
+`parsePrep(raw, situation)`:
 
 - Strips markdown fences, parses JSON. `{"error":"unclear"}` throws a typed `PrepUnclearError`.
 - Throws on: fewer than 4 dialogue lines, empty persona, no goals, no patterns, no vocab.
@@ -132,7 +133,7 @@ See the mockup. All styling uses existing Bloom tokens/classes; no new colors; d
 
 - **Kịch bản mẫu:** chat bubbles; `you` right-aligned, `partner` left-aligned with its `partnerRole` label; each bubble has a TTS button (Piper, conversation default voice, silent best-effort on failure) and a **Dịch / Ẩn dịch** toggle. Pattern spans are underlined in the accent color; tapping one scrolls to its pattern card and briefly rings it.
 - **Mẫu câu hay dùng:** cards with pattern, meaning, example (with TTS), and a collapsed-by-default **Tại sao?** toggle rendering `WhyList`.
-- **Từ/cụm từ mới:** `PhraseSaveList` with TTS per item.
+- **Từ/cụm từ mới:** `PrepVocabList` rows with TTS per item.
 - **CTA:** phone: a bar pinned to the bottom above the tab bar; desktop: the button sits next to the title (top right), no pinned bar.
 
 Desktop layout: two columns, dialogue left, patterns + words right.
