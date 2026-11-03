@@ -2445,3 +2445,23 @@ Small change, no plan (brainstormed in chat; a separate sentence-building drill 
 - Suggest options → {text, why[]} with collapsed "Tại sao?" toggle; hint + report corrections get why[] per edit; recurring mistakes get a one-line rule. Shared WHY_RULES/parseWhy in conversationPrompts.ts, WhyList component. Old hints/reports render unchanged; parser writes rule ""/why [] (never undefined).
 - Report prompt: likely STT mishearings (sound-alike nonsense words) are not counted as learner mistakes.
 - Commit 0ea5fff. Docs synced (README, conversation spec). Manual check with a live AI key still pending with user.
+
+## Conversation prep (feat/conversation-prep) — SDD ledger
+Plan: docs/superpowers/plans/2026-11-03-conversation-prep.md. Branch base ba3ea91.
+- Task 1: complete (commits ba3ea91..2601032, review clean). Minor: SITUATION>>> fence not stripped from input; no check that dialogue has a "you" line; pattern example not verified verbatim; title fallback slice may cut a surrogate pair.
+- Task 2: complete (commits 2601032..f9d76ec, review clean). Minor: no word boundaries on pattern match; only first occurrence tried; no tests for …/sb/sth stripping. Reports now named prep-task-N-report.md (old task-N-report.md files are from earlier initiatives).
+- Task 3: complete (commits f9d76ec..1fca082, review clean). Minor: unchecked snap.data() cast (same as sessions module).
+- Task 4: complete (commits 1fca082..15ed699, review clean). Minor: exists-check+write not atomic (pre-existing); no test that saveVocabRecord errors propagate.
+- Task 5: complete (commits 15ed699..362a1f6, review clean). Minor: no test for missing partnerRole fallback / text around marks; index keys assume fixed lines (kit page should remount per kit). Trailer says Haiku 5.5 (process only).
+- Task 6: complete (commits 362a1f6..43bfea7, review clean). Plan fix: why-text test queries use regex (WhyList mixed markup). Minor: shortDate uses local time.
+- Task 7: complete (commits 43bfea7..dc9e819, review clean). Deviation (approved by review): levelLockedRef so the late recent-kits load can't change the level mid-generation. Minor: delete failure shares 'error' so 'Thử lại' re-runs create (mislabel); no test for chip-click lock path; eslint not runnable (no eslint.config).
+- Task 8: complete (commits dc9e819..a244e74, review clean). Minor: saved-set load can overwrite an optimistic save (merge instead); any load error shows 'not found'; missing not reset on id change; no tests for ring clear / signed-out / isPhraseSaved rejection.
+- Task 9: complete (commits a244e74..61b494e, review clean). Minor: prepId not cleared if user switches scenario after prefill (plan-mandated); bad-id test weak; no test that Start without ?prep= omits prepId; prefill load failure silent.
+- Task 10: complete (commits 61b494e..62055c7, review clean). Signed-out audit 414px clean. PENDING owner: signed-in kit page at 414x896 / real iPhone 11. Minor: .prep-jump negative margin ignores safe-area insets (landscape); desktop jump bar won't pin; .prep-mark/back link inline targets <44px; no overflow-wrap on .prep-en.
+
+## 2026-11-03 — Chuẩn bị tình huống (conversation prep, web)
+
+- Spec: `docs/superpowers/specs/2026-11-03-conversation-prep-design.md`; plan: `docs/superpowers/plans/2026-11-03-conversation-prep.md`.
+- New: `/conversation/prep` (create + recent), `/conversation/prep/[id]` (kit), Firestore `users/{uid}/conversation_preps`, Hội thoại Setup `?prep=` prefill.
+- `savePhraseToVocab` extracted; the Hội thoại report now saves phrases at the session's CEFR level (was hard-coded b1).
+- Deploy: web only (App Hosting push). Check Firestore rules allow `users/{uid}/conversation_preps/**` before pushing.
