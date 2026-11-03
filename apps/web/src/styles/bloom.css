@@ -2794,6 +2794,8 @@ button.btn-google svg {
 .iv-recent-main { display: flex; flex-direction: column; }
 .iv-recent-title { font-weight: 600; }
 .iv-recent-score { font-weight: 800; font-size: calc(16px * var(--type-scale)); }
+.iv-unfinished { margin-bottom: 18px; border-color: var(--accent); }
+.iv-unfinished-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .iv-setup-layout { display: flex; gap: 22px; align-items: flex-start; }
 .iv-setup-main { flex: 1; min-width: 0; }
 .iv-setup-side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
@@ -2826,6 +2828,7 @@ button.btn-google svg {
    page scrolling. */
 .iv-session { display: flex; flex-direction: column; gap: 14px; height: calc(100vh - 2 * var(--sess-pad, 32px)); height: calc(100dvh - 2 * var(--sess-pad, 32px)); min-height: 480px; }
 .iv-session-head { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+.iv-session-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .iv-session-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .iv-progress { display: flex; gap: 6px; }
 .iv-progress span { width: 8px; height: 8px; border-radius: 999px; background: var(--border); }

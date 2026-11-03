@@ -234,3 +234,27 @@ describe("ConversationSessionPage — listen back before sending", () => {
     expect(screen.getAllByRole("button", LISTEN)).toHaveLength(1);
   });
 });
+
+describe("ConversationSessionPage — Lưu & thoát", () => {
+  it("saves the typed draft as a user message and leaves without grading", async () => {
+    renderPage(makeSession(true));
+    fireEvent.change(await screen.findByLabelText("Câu trả lời của bạn"), { target: { value: "I went to Hue" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu & thoát" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation"));
+    expect(saveConversationProgress).toHaveBeenLastCalledWith("u1", "s1", {
+      messages: [
+        { role: "ai", text: "Where did you go?" },
+        { role: "user", text: "I went to Hue" },
+      ],
+      goalsDone: [],
+    });
+    expect(callInterviewAi).not.toHaveBeenCalled();
+  });
+
+  it("resuming with an unanswered last user message asks the AI to reply", async () => {
+    const session = makeSession(true);
+    session.messages = [...session.messages, { role: "user", text: "I went to Hue" }];
+    renderPage(session);
+    expect(await screen.findByText("Nice!")).toBeInTheDocument();
+  });
+});

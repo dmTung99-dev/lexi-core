@@ -6,16 +6,23 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { SignInButton } from "@/components/SignInButton";
 import { hasAiKey } from "@/lib/interviewAi";
-import { createInterviewSession, listRecentInterviewSessions } from "@/lib/interviewSessions";
+import {
+  createInterviewSession,
+  deleteInterviewSession,
+  listRecentInterviewSessions,
+  listUnfinishedInterviewSessions,
+} from "@/lib/interviewSessions";
+import { resumeIndex } from "@/lib/interviewMachine";
 import { getCvProfile } from "@/lib/cvProfile";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
-import type { InterviewCvProfile, InterviewSession, InterviewVoice } from "@/lib/interviewTypes";
+import { INTERVIEW_TYPES, type InterviewCvProfile, type InterviewSession, type InterviewVoice } from "@/lib/interviewTypes";
 import { DEFAULT_SETUP_DRAFT, SetupForm, type SetupDraft } from "@/components/interview/SetupForm";
 import { CvUpload } from "@/components/interview/CvUpload";
 import { ReadinessCard } from "@/components/interview/ReadinessCard";
 import { RecentSessions } from "@/components/interview/RecentSessions";
+import { UnfinishedSessions, shortDate } from "@/components/interview/UnfinishedSessions";
 
 const VOICE_SAMPLE = "Hi, I'll be your interviewer today.";
 
@@ -26,6 +33,7 @@ export default function InterviewSetupPage() {
   const [draft, setDraft] = useState<SetupDraft>(DEFAULT_SETUP_DRAFT);
   const [cv, setCv] = useState<InterviewCvProfile | null>(null);
   const [recent, setRecent] = useState<InterviewSession[]>([]);
+  const [unfinished, setUnfinished] = useState<InterviewSession[]>([]);
   const [mic, setMic] = useState<MicPermission>("prompt");
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
@@ -37,6 +45,7 @@ export default function InterviewSetupPage() {
     void warmUpSpeech();
     getCvProfile(user.uid).then(setCv).catch(() => {});
     listRecentInterviewSessions(user.uid).then(setRecent).catch(() => {});
+    listUnfinishedInterviewSessions(user.uid).then(setUnfinished).catch(() => {});
     void getMicPermission().then(setMic);
   }, [user]);
 
@@ -72,6 +81,12 @@ export default function InterviewSetupPage() {
     setMic((await requestMicPermission()) ? "granted" : "denied");
   }
 
+  function handleDiscard(id: string) {
+    if (!user) return;
+    setUnfinished((list) => list.filter((s) => s.id !== id));
+    void deleteInterviewSession(user.uid, id).catch(() => {});
+  }
+
   async function handleStart() {
     if (!user || !canStart) return;
     setStarting(true);
@@ -96,6 +111,19 @@ export default function InterviewSetupPage() {
       <p className="scr-sub">
         Luyện trả lời phỏng vấn bằng giọng nói với người phỏng vấn AI. Nói xong một câu, AI nghe, hỏi tiếp, và chấm chi tiết ở cuối buổi.
       </p>
+      <UnfinishedSessions
+        items={unfinished.map((s) => {
+          const typeLabel = INTERVIEW_TYPES.find((t) => t.id === s.setup.type)?.label ?? s.setup.type;
+          const total = s.plan.length || s.setup.questionCount;
+          return {
+            id: s.id,
+            title: `${s.setup.role} · ${typeLabel}`,
+            detail: `${shortDate(s.createdAt)} · Đã xong ${Math.min(resumeIndex(s.turns), total)} / ${total} câu`,
+            href: `/interview/${s.id}`,
+          };
+        })}
+        onDiscard={handleDiscard}
+      />
       <div className="iv-setup-layout">
         <section className="iv-card iv-setup-main" aria-label="Thiết lập">
           <SetupForm
