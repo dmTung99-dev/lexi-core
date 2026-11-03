@@ -8,7 +8,7 @@ import type {
   WhyPoint,
 } from "./conversationTypes";
 
-const LEVEL_GUIDE: Record<ConversationLevel, string> = {
+export const LEVEL_GUIDE: Record<ConversationLevel, string> = {
   A2: "CEFR A2 — very simple sentences, the most common words, present and simple past only",
   B1: "CEFR B1 — everyday vocabulary, simple connected sentences, common tenses",
   B2: "CEFR B2 — fairly natural speech, idioms are fine, varied grammar",
