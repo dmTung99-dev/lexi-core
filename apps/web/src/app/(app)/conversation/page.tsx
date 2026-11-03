@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi, hasAiKey } from "@/lib/interviewAi";
 import { createConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
 import { buildScenarioPrompt, parseScenario } from "@/lib/conversationPrompts";
+import { getConversationPrep } from "@/lib/conversationPreps";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
@@ -26,7 +28,7 @@ import { ReadinessCard } from "@/components/interview/ReadinessCard";
 
 const VOICE_SAMPLE = "Hi! Let's have a chat.";
 
-export default function ConversationSetupPage() {
+function ConversationSetupContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
   const { settings } = useSettingsContext();
@@ -39,6 +41,33 @@ export default function ConversationSetupPage() {
   const [buildError, setBuildError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
   const preview = useInterviewAudio(draft.voice);
+  const prepParam = useSearchParams().get("prep");
+  const [prepId, setPrepId] = useState<string | null>(null);
+
+  // ?prep=<id>: prefill a role-play from a Chuẩn bị tình huống kit — persona and
+  // goals already exist, so the `scenario` call is skipped. A bad id is ignored.
+  useEffect(() => {
+    if (!user || !prepParam) return;
+    let cancelled = false;
+    getConversationPrep(user.uid, prepParam)
+      .then((p) => {
+        if (cancelled || !p) return;
+        setPrepId(p.id);
+        setDraft((d) => ({
+          ...d,
+          mode: "roleplay",
+          presetId: CUSTOM_PRESET_ID,
+          topic: p.title,
+          persona: p.persona,
+          goals: [...p.goals],
+          level: p.level,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user, prepParam]);
 
   useEffect(() => {
     if (!user) return;
@@ -95,7 +124,11 @@ export default function ConversationSetupPage() {
     setStarting(true);
     setStartError(null);
     try {
-      const id = await createConversationSession(user.uid, draftToSetup(draft));
+      const setup = draftToSetup(draft);
+      const id = await createConversationSession(
+        user.uid,
+        prepId && setup.mode === "roleplay" ? { ...setup, prepId } : setup
+      );
       router.push(`/conversation/${id}`);
     } catch (err) {
       setStartError(err instanceof Error ? err.message : "Không tạo được buổi trò chuyện.");
@@ -127,10 +160,22 @@ export default function ConversationSetupPage() {
           </div>
         </section>
         <aside className="iv-setup-side">
+          <Link href="/conversation/prep" className="iv-card prep-entry-card">
+            <span className="iv-card-title">Chuẩn bị tình huống</span>
+            <span className="iv-muted">Mô tả tình huống sắp tới, AI viết kịch bản mẫu, mẫu câu và từ mới.</span>
+          </Link>
           <ReadinessCard aiReady={aiReady} mic={mic} onRequestMic={() => void requestMicPermission().then((ok) => setMic(ok ? "granted" : "denied"))} />
           <RecentConversations sessions={recent} />
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function ConversationSetupPage() {
+  return (
+    <Suspense fallback={<p>Đang tải…</p>}>
+      <ConversationSetupContent />
+    </Suspense>
   );
 }

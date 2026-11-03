@@ -26,6 +26,8 @@ export interface ConversationSetup {
   persona: string | null;
   /** Role-play only: 3-4 goals (Vietnamese). [] in topic mode. */
   goals: string[];
+  /** Set when the role-play was started from a Chuẩn bị tình huống kit (reference only). */
+  prepId?: string;
 }
 
 /** One "Tại sao?" point: a fragment of an English sentence and why it is said that way. */
