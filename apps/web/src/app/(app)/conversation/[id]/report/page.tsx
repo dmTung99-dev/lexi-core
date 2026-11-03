@@ -10,8 +10,7 @@ import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi, hasAiKey } from "@/lib/interviewAi";
 import { buildConversationReportPrompt, parseConversationReport, userMessageIndexes } from "@/lib/conversationReportPrompt";
 import { completeConversationSession, getConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
-import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
-import { capitalizeHeadword } from "@/lib/vocabDisplay";
+import { savePhraseToVocab } from "@/lib/savePhraseToVocab";
 import { conversationRecordingKey } from "@/lib/recordedAudioStore";
 import type { ConversationPhrase, ConversationSession } from "@/lib/conversationTypes";
 import { ConversationReportSummary } from "@/components/conversation/ConversationReportSummary";
@@ -110,37 +109,13 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
   }
 
   async function handleSavePhrase(phrase: ConversationPhrase) {
-    if (!user) return;
+    if (!user || !session) return;
     // Guards a double-click from firing two saves for the same phrase.
     if (savingRef.current.has(phrase.text)) return;
     savingRef.current.add(phrase.text);
-    const headword = capitalizeHeadword(phrase.text.trim());
     setPhraseSaveError(null);
     try {
-      const existing = await getVocabRecordByHeadword(user.uid, headword, "english");
-      if (!existing) {
-        const now = new Date().toISOString();
-        await saveVocabRecord(user.uid, {
-          headword,
-          inputType: "phrase",
-          ipa: "",
-          meaning: phrase.meaning,
-          examples: phrase.example ? [phrase.example] : [],
-          personalNotes: "Từ luyện Hội thoại tiếng Anh",
-          topicIds: [],
-          targetLanguage: "english",
-          cefrLevel: "b1",
-          activeContext: "general",
-          createdAt: now,
-          updatedAt: now,
-          nextReviewAt: null,
-          sm2Repetitions: 0,
-          sm2EaseFactor: 2.5,
-          sm2Interval: 1,
-          definition: "",
-          synonyms: [],
-        });
-      }
+      await savePhraseToVocab(user.uid, phrase, { level: session.setup.level, note: "Từ luyện Hội thoại tiếng Anh" });
       setSaved((prev) => new Set(prev).add(phrase.text));
     } catch {
       setPhraseSaveError("Không lưu được cụm từ — thử lại.");
