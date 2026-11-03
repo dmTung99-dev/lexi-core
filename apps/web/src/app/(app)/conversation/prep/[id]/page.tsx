@@ -20,6 +20,8 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
   const { user, loading: authLoading } = useAuthUser();
   const [prep, setPrep] = useState<ConversationPrep | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
   const [ringed, setRinged] = useState<number | null>(null);
@@ -39,15 +41,15 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
         }
         setPrep(p);
         const flags = await Promise.all(p.vocab.map((v) => isPhraseSaved(user.uid, v.text).catch(() => false)));
-        if (!cancelled) setSaved(new Set(p.vocab.filter((_, i) => flags[i]).map((v) => v.text)));
+        if (!cancelled) setSaved((prev) => new Set([...prev, ...p.vocab.filter((_, i) => flags[i]).map((v) => v.text)]));
       })
       .catch(() => {
-        if (!cancelled) setMissing(true);
+        if (!cancelled) setLoadError(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [user, id]);
+  }, [user, id, reloadKey]);
 
   useEffect(() => () => {
     if (ringTimer.current) clearTimeout(ringTimer.current);
@@ -60,6 +62,26 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
         <h2 className="scr-title">Chuẩn bị tình huống</h2>
         <p className="scr-sub">Đăng nhập để xem bộ tài liệu.</p>
         <SignInButton />
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div>
+        <h2 className="scr-title">Không tải được bộ tài liệu</h2>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => {
+            setLoadError(false);
+            setReloadKey((k) => k + 1);
+          }}
+        >
+          Thử lại
+        </button>
+        <p>
+          <Link href="/conversation/prep">Về Chuẩn bị tình huống</Link>
+        </p>
       </div>
     );
   }

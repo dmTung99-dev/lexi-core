@@ -25,6 +25,7 @@ export default function ConversationPrepPage() {
   const [generating, setGenerating] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // A parsed kit whose Firestore write failed: Thử lại re-saves it without a new AI call.
   const pendingRef = useRef<NewConversationPrep | null>(null);
   // Once the user picks a level or starts generating, the late-arriving "latest kit" default must not change it.
@@ -93,11 +94,12 @@ export default function ConversationPrepPage() {
 
   async function handleDelete(id: string) {
     if (!user) return;
+    setDeleteError(null);
     try {
       await deleteConversationPrep(user.uid, id);
       setRecent((list) => list.filter((p) => p.id !== id));
     } catch {
-      setError("Không xoá được bộ tài liệu — thử lại.");
+      setDeleteError("Không xoá được bộ tài liệu — thử lại.");
     }
   }
 
@@ -121,7 +123,7 @@ export default function ConversationPrepPage() {
             disabled={generating}
             onChange={(e) => setSituation(e.target.value)}
           />
-          <div className="prep-chips" aria-label="Gợi ý">
+          <div className="prep-chips" role="group" aria-label="Gợi ý">
             {PREP_SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" className="vb-chip" disabled={generating} onClick={() => setSituation(s.text)}>
                 {s.label}
@@ -148,11 +150,9 @@ export default function ConversationPrepPage() {
           <button type="button" className="btn-primary" disabled={!canCreate} onClick={() => void handleCreate()}>
             {generating ? "Đang tạo…" : "Tạo kịch bản"}
           </button>
-          {generating && (
-            <p className="prep-progress" aria-live="polite">
-              {PROGRESS[step]}
-            </p>
-          )}
+          <p className="prep-progress" aria-live="polite">
+            {generating ? PROGRESS[step] : ""}
+          </p>
           {error && (
             <div className="iv-row">
               <p className="iv-error" role="alert">{error}</p>
@@ -169,7 +169,10 @@ export default function ConversationPrepPage() {
             </p>
           )}
         </section>
-        <RecentPreps preps={recent} onDelete={(id) => void handleDelete(id)} />
+        <div>
+          {deleteError && <p className="iv-error" role="alert">{deleteError}</p>}
+          <RecentPreps preps={recent} onDelete={(id) => void handleDelete(id)} />
+        </div>
       </div>
     </div>
   );

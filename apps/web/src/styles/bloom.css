@@ -3004,7 +3004,7 @@ button.btn-google svg {
 .prep-bubble { max-width: 85%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); }
 .prep-line-partner .prep-bubble { background: var(--surface); border-radius: 18px 18px 18px 6px; }
 .prep-line-you .prep-bubble { background: var(--surface-2); border-radius: 18px 18px 6px 18px; }
-.prep-en { margin: 0; color: var(--ink); line-height: 1.5; font-size: calc(15px * var(--type-scale)); }
+.prep-en { overflow-wrap: anywhere; margin: 0; color: var(--ink); line-height: 1.5; font-size: calc(15px * var(--type-scale)); }
 .prep-vi { margin: 0; padding-top: 6px; border-top: 1px dashed var(--border); color: var(--ink-soft); line-height: 1.5; font-size: max(var(--type-min), calc(14px * var(--type-scale))); }
 .prep-line-actions { display: flex; align-items: center; gap: 2px; margin: -4px -6px -6px; }
 .prep-mark { display: inline; padding: 0; border: 0; background: color-mix(in srgb, var(--accent) 10%, transparent); color: inherit; font: inherit; text-align: inherit; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; }
@@ -3021,7 +3021,7 @@ button.btn-google svg {
 .prep-vocab-row { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .prep-vocab-row:last-child { border-bottom: 0; }
 .prep-vocab-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.prep-vocab-text { font-weight: 600; color: var(--ink); font-size: calc(15px * var(--type-scale)); }
+.prep-vocab-text { overflow-wrap: anywhere; font-weight: 600; color: var(--ink); font-size: calc(15px * var(--type-scale)); }
 .prep-vocab-meaning { color: var(--ink-soft); font-size: max(var(--type-min), calc(13px * var(--type-scale))); }
 .prep-vocab-example { font-style: italic; line-height: 1.5; font-size: max(var(--type-min), calc(13px * var(--type-scale))); }
 .prep-save-btn { min-height: 44px; padding: 0 16px; flex-shrink: 0; border: 1px solid var(--accent); border-radius: 999px; background: var(--surface); color: var(--accent); font-family: inherit; font-weight: 600; font-size: max(var(--type-min), calc(14px * var(--type-scale))); cursor: pointer; }

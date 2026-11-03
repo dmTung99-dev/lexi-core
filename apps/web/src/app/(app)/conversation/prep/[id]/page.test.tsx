@@ -92,6 +92,16 @@ describe("ConversationPrepKitPage", () => {
     expect(container.querySelector("#prep-pattern-0")).toHaveClass("prep-pattern-ringed");
   });
 
+  it("shows a load error with a retry that reloads the kit", async () => {
+    vi.mocked(getConversationPrep).mockRejectedValueOnce(new Error("offline"));
+    renderPage();
+    expect(await screen.findByRole("heading", { name: "Không tải được bộ tài liệu" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Về Chuẩn bị tình huống" })).toHaveAttribute("href", "/conversation/prep");
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+    expect(await screen.findByRole("heading", { name: "Báo cáo trễ tiến độ" })).toBeInTheDocument();
+    expect(getConversationPrep).toHaveBeenCalledTimes(2);
+  });
+
   it("shows not-found for a missing kit", async () => {
     vi.mocked(getConversationPrep).mockResolvedValueOnce(null);
     renderPage();

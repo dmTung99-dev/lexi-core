@@ -129,4 +129,16 @@ describe("ConversationPrepPage", () => {
     await waitFor(() => expect(screen.queryByText("Kỷ niệm Đà Lạt")).not.toBeInTheDocument());
     expect(deleteConversationPrep).toHaveBeenCalledWith("u1", "p9");
   });
+
+  it("shows a delete error without offering a create retry", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(deleteConversationPrep).mockRejectedValueOnce(new Error("offline"));
+    render(<ConversationPrepPage />);
+    typeSituation("Báo cáo task A");
+    fireEvent.click(await screen.findByRole("button", { name: "Xoá Kỷ niệm Đà Lạt" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Không xoá được bộ tài liệu — thử lại.");
+    expect(screen.getByText("Kỷ niệm Đà Lạt")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Thử lại" })).not.toBeInTheDocument();
+    expect(callInterviewAi).not.toHaveBeenCalled();
+  });
 });
