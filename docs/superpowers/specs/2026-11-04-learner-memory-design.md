@@ -119,7 +119,7 @@ When `session.memory` exists, `buildOpeningPrompt` and `buildReplyPrompt` get an
   - Do not ask again about angles already covered; when the learner returns to a known subject, ask about something not yet covered or how they feel about it now. Deepen lightly; never press for small details or private matters.
   - If answers get short, or a subject has been covered well, move to a different angle or a neighbouring subject.
   - Do not open by saying you remember; mention a past detail only if it fits naturally.
-- *"Practice targets"* — the targets' pattern/rule/example, with: create natural chances for the learner to use these forms (e.g. ask about a past event for a past-tense target); never correct, never mention the targets. The reply prompt includes this section only on the learner's user turns 2, 5, 8 and 11 (the model sees just a recent window and cannot count, so the app decides), worded as "if it fits naturally, let your question this turn invite one of these forms".
+- *"Practice targets"* — the targets' pattern/rule/example, with: create natural chances for the learner to use these forms (e.g. ask about a past event for a past-tense target); never correct, never mention the targets. The reply prompt includes this section only on the learner's user turns 2, 5, 8 and 11 (the model sees just a recent window and cannot count, so the app decides), worded as "if it fits naturally, let your question this turn invite one of these forms". The reply prompt includes this section only on the learner's user turns 2, 5, 8 and 11 (the model sees just a recent window and cannot count, so the app decides), worded as "if it fits naturally, let your question this turn invite one of these forms".
 
 The suggest/hint prompts are unchanged.
 
