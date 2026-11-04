@@ -1,4 +1,5 @@
 import { InterviewAiError, parseJson, str } from "./interviewPrompts";
+import { reportMemorySection, type ReportMemoryInput } from "./learnerMemoryPrompt";
 import { WHY_RULES, parseWhy } from "./conversationPrompts";
 import {
   CONVERSATION_CRITERIA,
@@ -20,7 +21,8 @@ export function buildConversationReportPrompt(
   setup: ConversationSetup,
   summary: string,
   messages: ConversationMessage[],
-  goalsDone: number[]
+  goalsDone: number[],
+  memory?: ReportMemoryInput
 ): string {
   const lines = messages
     .map((m, i) => {
@@ -34,6 +36,7 @@ export function buildConversationReportPrompt(
       ? `\nRole-play goals:\n${setup.goals.map((g, i) => `${i}. ${g} (${goalsDone.includes(i) ? "done" : "not done"})`).join("\n")}\n`
       : "";
   const goalJson = setup.mode === "roleplay" ? ',\n  "goalResult": {"achieved": true, "comment": "..."}' : "";
+  const memorySection = memory ? reportMemorySection(memory, "conversation") : "";
   return `You are an English speaking coach reviewing a practice conversation by a Vietnamese learner (level ${setup.level}).
 
 Mode: ${setup.mode === "roleplay" ? `role-play — ${setup.topic}` : `free conversation — ${setup.topic}`}
@@ -56,7 +59,7 @@ Assess ONLY the learner's own messages. Return ONLY a JSON object, no prose:
 - Speech transcription can mishear words. When a word is nonsense in context but SOUNDS like a word that fits (e.g. "the book" where "a bug" is clearly meant, or "lorry" for "later"), treat it as a transcription error, not a learner mistake: leave it out of recurringMistakes, corrections and the scores. Only flag what the learner really got wrong.
 - "recurringMistakes": at most 3 patterns that repeat; "said"/"better" are exact English quotes. "rule" is ONE short VIETNAMESE sentence stating the English rule to remember, contrasting with Vietnamese when that is the cause (e.g. "Danh từ bổ nghĩa đứng TRƯỚC danh từ chính, ngược tiếng Việt: danh sách công việc → task list").
 - "corrections": at most 8 of the most worthwhile fixes. "messageIndex" is the bracketed number of a Learner message; "said" is that message (or the relevant part) verbatim; "corrected" changes as little as possible. If a hint was already given for a message, stay consistent with it. "why": one entry per edit (max 4). ${WHY_RULES} Here "part" is the fixed fragment as it appears in "corrected", and "reason" states the rule behind the fix, not just what changed.
-- "phrases": 4 to 8 useful English phrases for THIS learner to remember (natural alternatives to what they said, or good phrases from the AI). "meaning" is a short Vietnamese meaning; "example" is a short English sentence using the phrase.`;
+- "phrases": 4 to 8 useful English phrases for THIS learner to remember (natural alternatives to what they said, or good phrases from the AI). "meaning" is a short Vietnamese meaning; "example" is a short English sentence using the phrase.${memorySection ? `\n\n${memorySection}` : ""}`;
 }
 
 function score(value: unknown): number {
@@ -90,7 +93,9 @@ export function parseConversationReport(raw: string, userIndexes: number[], hasG
       const examples = listOf(o.examples)
         .map((e) => ({ said: str(objectOf(e).said), better: str(objectOf(e).better) }))
         .filter((e) => e.said && e.better);
-      return { pattern: str(o.pattern), rule: str(o.rule), examples };
+      const mistake: ConversationMistake = { pattern: str(o.pattern), rule: str(o.rule), examples };
+      if (typeof o.trackedId === "string" && o.trackedId.trim()) mistake.trackedId = o.trackedId.trim();
+      return mistake;
     })
     .filter((m) => m.pattern)
     .slice(0, 3);

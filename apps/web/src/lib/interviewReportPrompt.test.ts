@@ -60,10 +60,33 @@ describe("buildReportPrompt", () => {
     expect(p).toContain("Because Redux.");
     expect(p).not.toContain("mainIndex 2");
     expect(p).toContain('"criteria"');
+    expect(p).toContain('"recurringMistakes"');
+    expect(p).not.toContain("mistakeChecks");
+  });
+  it("adds tracked mistakes when memory is given", () => {
+    const p = buildReportPrompt(SETUP, [{ en: "Intro?", vi: "" }, { en: "Conflict?", vi: "" }], TURNS, {
+      tracked: [{ id: "m1", pattern: "tense", rule: "Use past." }],
+      facts: null,
+    });
+    expect(p).toContain("m1");
+    expect(p).toContain('"mistakeChecks"');
+    expect(p).not.toContain("topicFacts");
   });
 });
 
 describe("parseReport", () => {
+  it("parses optional recurringMistakes (max 3) and omits the key when absent", () => {
+    const withMistakes = {
+      ...GOOD,
+      recurringMistakes: [1, 2, 3, 4].map((n) => ({
+        pattern: `p${n}`, rule: "r", examples: [{ said: "a", better: "b" }, { said: "", better: "x" }], trackedId: n === 1 ? "m1" : undefined,
+      })).concat([{ pattern: "", rule: "", examples: [], trackedId: undefined }]),
+    };
+    const r = parseReport(JSON.stringify(withMistakes), [0, 1]);
+    expect(r.recurringMistakes).toHaveLength(3);
+    expect(r.recurringMistakes?.[0]).toEqual({ pattern: "p1", rule: "r", examples: [{ said: "a", better: "b" }], trackedId: "m1" });
+    expect("recurringMistakes" in parseReport(JSON.stringify(GOOD), [0, 1])).toBe(false);
+  });
   it("clamps and rounds scores, caps lists, drops unknown mainIndexes", () => {
     const r = parseReport(JSON.stringify(GOOD), [0, 1]);
     expect(r.overall).toBe(7.2);

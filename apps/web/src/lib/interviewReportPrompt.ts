@@ -9,6 +9,7 @@ import {
   type InterviewSetup,
   type InterviewTurn,
 } from "./interviewTypes";
+import { parseFoundMistakes, reportMemorySection, type ReportMemoryInput } from "./learnerMemoryPrompt";
 import { InterviewAiError, describeCandidate, parseJson, str } from "./interviewPrompts";
 
 export function answeredMainIndexes(turns: InterviewTurn[]): number[] {
@@ -19,7 +20,7 @@ export function answeredMainIndexes(turns: InterviewTurn[]): number[] {
   return [...set].sort((a, b) => a - b);
 }
 
-export function buildReportPrompt(setup: InterviewSetup, plan: InterviewPlanItem[], turns: InterviewTurn[]): string {
+export function buildReportPrompt(setup: InterviewSetup, plan: InterviewPlanItem[], turns: InterviewTurn[], memory?: ReportMemoryInput): string {
   const blocks = answeredMainIndexes(turns).map((i) => {
     const lines = turns
       .filter((t) => t.mainIndex === i && !t.skipped)
@@ -27,6 +28,7 @@ export function buildReportPrompt(setup: InterviewSetup, plan: InterviewPlanItem
       .join("\n");
     return `### mainIndex ${i}\nPlanned question: ${plan[i]?.en ?? ""}\n${lines}\nCombined candidate answer: ${combinedAnswer(turns, i)}`;
   });
+  const memorySection = memory ? reportMemorySection(memory, "interview") : "";
   return `You are an expert English interview coach for Vietnamese learners. Evaluate this spoken mock interview. Candidate answers are speech-to-text transcripts: judge grammar and word choice, but ignore punctuation/capitalization and do NOT judge pronunciation.
 
 ${describeCandidate(setup)}
@@ -39,6 +41,7 @@ Return ONLY a JSON object, no prose:
   "criteria": {"content": n, "structure": n, "grammar": n, "vocabulary": n, "fluency": n},
   "criteriaNotes": {"content": "...", "structure": "...", "grammar": "...", "vocabulary": "...", "fluency": "..."},
   "improvements": [{"title": "...", "detail": "..."}],
+  "recurringMistakes": [{"pattern": "...", "rule": "...", "examples": [{"said": "...", "better": "..."}]}],
   "questions": [{"mainIndex": n, "score": n, "corrected": "...", "strengths": "...", "gaps": "...", "modelAnswer": "...", "phrases": [{"text": "...", "meaning": "..."}]}]
 }
 
@@ -48,7 +51,8 @@ Rules:
 - One "questions" item per mainIndex above, using the SAME mainIndex values.
 - "corrected": the Combined candidate answer with only the minimal grammar and word-choice fixes, keeping their words, meaning and order wherever possible (do not rewrite or improve content).
 - "modelAnswer": a strong English answer (60–120 words) in the candidate's situation, reusing their facts.
-- "phrases": 2–4 items; "text" is a useful English phrase taken verbatim from modelAnswer, "meaning" its short Vietnamese meaning.`;
+- "phrases": 2–4 items; "text" is a useful English phrase taken verbatim from modelAnswer, "meaning" its short Vietnamese meaning.
+- "recurringMistakes": at most 3 grammar or word-choice patterns the candidate repeats (empty array if none); "said"/"better" are exact English quotes from the answers. "pattern" and "rule" are in VIETNAMESE, "rule" ONE short sentence stating the English rule to remember. Ignore speech-transcription errors (words that sound like the intended word).${memorySection ? `\n\n${memorySection}` : ""}`;
 }
 
 function parsePhrases(value: unknown): InterviewPhrase[] {
@@ -111,5 +115,15 @@ export function parseReport(raw: string, answered: number[]): InterviewReport {
   }
   questions.sort((a, b) => a.mainIndex - b.mainIndex);
 
-  return { overall, criteria, criteriaNotes, improvements, questions };
+  const report: InterviewReport = { overall, criteria, criteriaNotes, improvements, questions };
+  const mistakes = parseFoundMistakes(json.recurringMistakes);
+  if (mistakes.length > 0) {
+    report.recurringMistakes = mistakes.map((m) => ({
+      pattern: m.pattern,
+      rule: m.rule,
+      examples: [m.example],
+      ...(m.trackedId ? { trackedId: m.trackedId } : {}),
+    }));
+  }
+  return report;
 }

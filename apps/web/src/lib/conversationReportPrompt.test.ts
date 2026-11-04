@@ -33,6 +33,23 @@ describe("buildConversationReportPrompt", () => {
     expect(p).toContain("1. Xin thanh toán (not done)");
     expect(p).toContain("Earlier they ordered.");
   });
+  it("adds memory instructions only when memory is given", () => {
+    const base = buildConversationReportPrompt(SETUP, "", MESSAGES, []);
+    expect(base).not.toContain("mistakeChecks");
+    const tracked = [{ id: "m1", pattern: "past tense", rule: "Use past." }];
+    const withFacts = buildConversationReportPrompt(SETUP, "", MESSAGES, [], {
+      tracked,
+      facts: [{ id: "f", fact: "Visited Da Lat", asked: [], updatedAt: "" }],
+    });
+    expect(withFacts).toContain("m1");
+    expect(withFacts).toContain('"mistakeChecks"');
+    expect(withFacts).toContain('"trackedId"');
+    expect(withFacts).toContain('"topicFacts"');
+    expect(withFacts).toContain("Visited Da Lat");
+    const noFacts = buildConversationReportPrompt(SETUP, "", MESSAGES, [], { tracked, facts: null });
+    expect(noFacts).toContain('"mistakeChecks"');
+    expect(noFacts).not.toContain("topicFacts");
+  });
   it("omits the goals block in topic mode", () => {
     const p = buildConversationReportPrompt({ ...SETUP, mode: "topic", persona: null, goals: [] }, "", MESSAGES, []);
     expect(p).not.toContain("not done");
@@ -53,6 +70,20 @@ const VALID = {
 };
 
 describe("parseConversationReport", () => {
+  it("keeps a string trackedId on mistakes and omits it otherwise; old output still parses", () => {
+    const raw = {
+      ...VALID,
+      recurringMistakes: [
+        { pattern: "a", examples: [], trackedId: "m1" },
+        { pattern: "b", examples: [], trackedId: 5 },
+      ],
+    };
+    const r = parseConversationReport(JSON.stringify(raw), [1], true);
+    expect(r.recurringMistakes[0].trackedId).toBe("m1");
+    expect("trackedId" in r.recurringMistakes[1]).toBe(false);
+    const old = parseConversationReport(JSON.stringify(VALID), [1], true);
+    expect("trackedId" in old.recurringMistakes[0]).toBe(false);
+  });
   it("parses the mistake rule and correction why points", () => {
     const raw = {
       ...VALID,

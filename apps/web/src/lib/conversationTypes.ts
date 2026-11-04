@@ -90,6 +90,8 @@ export interface ConversationMistake {
   /** One-sentence Vietnamese rule to remember; absent on older reports. */
   rule?: string;
   examples: { said: string; better: string }[];
+  /** Id of the tracked memory mistake this is the same as, when the report says so. */
+  trackedId?: string;
 }
 
 export interface ConversationReport {

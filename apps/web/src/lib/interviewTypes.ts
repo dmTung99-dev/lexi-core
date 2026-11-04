@@ -1,3 +1,4 @@
+import type { ConversationMistake } from "./conversationTypes";
 import type { MistakeTarget } from "./learnerMemoryTypes";
 export type InterviewLevel = "intern" | "junior" | "mid" | "senior";
 export type InterviewType = "behavioral" | "technical" | "hr" | "mixed";
@@ -87,6 +88,8 @@ export interface InterviewReport {
   criteriaNotes: Record<CriterionKey, string>;
   improvements: { title: string; detail: string }[];
   questions: InterviewReportQuestion[];
+  /** Recurring mistakes for learner memory only; not displayed. */
+  recurringMistakes?: ConversationMistake[];
 }
 
 export interface InterviewSession {

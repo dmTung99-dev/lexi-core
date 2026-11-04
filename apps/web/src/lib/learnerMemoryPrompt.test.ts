@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { practiceTargetsSection, topicMemorySection } from "./learnerMemoryPrompt";
+import { parseMemoryUpdate, practiceTargetsSection, reportMemorySection, topicMemorySection } from "./learnerMemoryPrompt";
 import type { MistakeTarget, TopicFact } from "./learnerMemoryTypes";
 
 const FACT: TopicFact = { id: "f1", fact: "Went to Da Lat in March with family", asked: ["food", "weather"], updatedAt: "2026-11-01T00:00:00Z" };
@@ -50,5 +50,74 @@ describe("practiceTargetsSection", () => {
     expect(s).toContain("Practice targets");
     expect(s).toContain("up to 2 questions");
     expect(s).toContain(TARGET.rule);
+  });
+});
+
+describe("reportMemorySection", () => {
+  const tracked = [{ id: "m1", pattern: "past tense", rule: "Use the simple past." }];
+  it("is empty with nothing tracked and no facts", () => {
+    expect(reportMemorySection({ tracked: [], facts: null }, "conversation")).toBe("");
+  });
+  it("lists tracked ids and asks for mistakeChecks and trackedId", () => {
+    const s = reportMemorySection({ tracked, facts: null }, "interview");
+    expect(s).toContain("m1");
+    expect(s).toContain('"mistakeChecks"');
+    expect(s).toContain('"trackedId"');
+    expect(s).not.toContain("topicFacts");
+  });
+  it("asks for topicFacts with previous facts for conversations", () => {
+    const s = reportMemorySection({ tracked, facts: [FACT] }, "conversation");
+    expect(s).toContain('"topicFacts"');
+    expect(s).toContain(FACT.fact);
+  });
+  it("asks for topicFacts even with no previous facts (empty list)", () => {
+    expect(reportMemorySection({ tracked: [], facts: [] }, "conversation")).toContain('"topicFacts"');
+  });
+  it("omits topicFacts when facts is null", () => {
+    expect(reportMemorySection({ tracked, facts: null }, "conversation")).not.toContain("topicFacts");
+  });
+});
+
+describe("parseMemoryUpdate", () => {
+  const raw = JSON.stringify({
+    mistakeChecks: [
+      { id: "m1", result: "correct" },
+      { id: "zzz", result: "wrong" },
+      { id: "m2", result: "maybe" },
+    ],
+    recurringMistakes: [
+      { pattern: "tense", rule: "r", examples: [{ said: "I go", better: "I went" }], trackedId: "m1" },
+      { pattern: "art", examples: [{ said: "a", better: "the" }], trackedId: "nope" },
+      { pattern: "", examples: [{ said: "a", better: "b" }] },
+      { pattern: "noex", rule: "r", examples: [] },
+      { pattern: "badex", examples: [{ said: "", better: "x" }, { said: "s", better: "b" }] },
+    ],
+    topicFacts: [{ fact: " Went to Da Lat ", asked: ["food", 3, null] }, { fact: "" }, { fact: "Likes tea" }, "x"],
+  });
+  it("parses valid output and drops malformed items", () => {
+    expect(parseMemoryUpdate(raw, ["m1", "m2"], "conversation")).toEqual({
+      checks: [{ id: "m1", result: "correct" }],
+      found: [
+        { pattern: "tense", rule: "r", example: { said: "I go", better: "I went" }, trackedId: "m1" },
+        { pattern: "art", rule: "", example: { said: "a", better: "the" } },
+        { pattern: "badex", rule: "", example: { said: "s", better: "b" } },
+      ],
+      topicFacts: [{ fact: "Went to Da Lat", asked: ["food"] }, { fact: "Likes tea", asked: [] }],
+    });
+  });
+  it("drops trackedId not in the list", () => {
+    expect(parseMemoryUpdate(raw, [], "conversation").found.every((f) => f.trackedId === undefined)).toBe(true);
+  });
+  it("topicFacts is null for interviews and when missing or not an array", () => {
+    expect(parseMemoryUpdate(raw, ["m1"], "interview").topicFacts).toBeNull();
+    expect(parseMemoryUpdate('{"topicFacts":"x"}', [], "conversation").topicFacts).toBeNull();
+    expect(parseMemoryUpdate("{}", [], "conversation").topicFacts).toBeNull();
+  });
+  it("never throws on garbage", () => {
+    expect(parseMemoryUpdate("not json at all", ["m1"], "conversation")).toEqual({ checks: [], found: [], topicFacts: null });
+  });
+  it("caps found at 3", () => {
+    const many = JSON.stringify({ recurringMistakes: [1, 2, 3, 4].map((n) => ({ pattern: `p${n}`, examples: [{ said: "a", better: "b" }] })) });
+    expect(parseMemoryUpdate(many, [], "interview").found).toHaveLength(3);
   });
 });
