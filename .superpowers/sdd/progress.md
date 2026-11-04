@@ -2467,3 +2467,11 @@ Plan: docs/superpowers/plans/2026-11-03-conversation-prep.md. Branch base ba3ea9
 - Deploy: web only (App Hosting push). Check Firestore rules allow `users/{uid}/conversation_preps/**` before pushing.
 - Task 11: complete (commits 62055c7..dacf7d0, controller-checked docs diff).
 - Final review: Important fixed in 6172e3b (delete error no longer offers create retry) + kit load-error state, saved-set merge, a11y; re-review approved.
+
+## 2026-11-04 — Trí nhớ người học (learner memory, web) — feat/learner-memory
+
+- Spec: `docs/superpowers/specs/2026-11-04-learner-memory-design.md`; plan: `docs/superpowers/plans/2026-11-04-learner-memory.md`. Branch base 946998c.
+- Tasks 1-7 (commits 946998c..cf7ec7f): types + merge logic (bc8f8b2); Firestore layer (70ab407); snapshot onto new sessions, presetId stored, stale prepId dropped (d9a21e2); chat/interview prompts use the snapshot (8755ad9); report prompts return mistake checks + topic facts (d0b35e5, fix c32569a: parseMemoryUpdate never throws); grading updates memory once per session incl. regrade (4e1c25a); "AI nhớ gì về bạn" page `/conversation/memory` with per-item delete (cf7ec7f).
+- Task 8: docs (README, spec status, this ledger).
+- New: Firestore `users/{uid}/learner_memory/mistakes`, `users/{uid}/conversation_memory/{groupKey}`. Lưu & thoát does not update memory.
+- Deploy: web only (App Hosting push); no backend/functions change. PENDING owner: manual run with a real AI key and iPhone check of the memory page (see README checklist).

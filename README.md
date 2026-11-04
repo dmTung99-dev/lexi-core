@@ -97,6 +97,7 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
 - Chỉ trên web (React) không có trên app Flutter
 - **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu (kèm giải thích "Tại sao?" bằng tiếng Việt cho thì, giới từ, trật tự từ, cụm cố định — ở gợi ý cách nói thì bấm mới mở), báo cáo cuối buổi với lỗi lặp lại (kèm một câu quy tắc dễ nhớ), câu đáng sửa (kèm "Tại sao?" cho từng chỗ sửa) và cụm từ lưu vào Ngân hàng từ vựng; chỗ nhận dạng giọng nói nghe nhầm (từ phát âm gần giống nhưng vô nghĩa trong ngữ cảnh) không bị tính là lỗi. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
 - **Chuẩn bị tình huống (web):** gõ tình huống sắp gặp bằng tiếng Việt (VD: "Tôi chuẩn bị báo cáo với khách hàng về task A"), chọn trình độ, AI tạo một bộ tài liệu được lưu lại: kịch bản hội thoại mẫu (nghe từng câu, bấm Dịch), 5–8 mẫu câu hay dùng (tô sáng trong kịch bản, kèm "Tại sao?" bằng tiếng Việt) và 6–10 từ/cụm từ mới lưu được vào Ngân hàng từ vựng. Nút **Luyện nhập vai tình huống này** mở Hội thoại với persona/mục tiêu điền sẵn.
+- **Trí nhớ người học (web, Hội thoại + Phỏng vấn):** AI nhớ những gì bạn đã chia sẻ theo từng chủ đề nên buổi Hội thoại sau về cùng chủ đề (VD: cùng một địa điểm du lịch) hỏi khía cạnh khác thay vì lặp lại; một danh sách lỗi hay mắc dùng chung cho cả hai tính năng, ôn kiểu SM-2 ("Đang luyện" -> "Đã quen" sau 3 lần dùng đúng) và được đưa vào buổi sau làm mục tiêu luyện (Hội thoại tối đa 3, Phỏng vấn tối đa 2). Trang **AI nhớ gì về bạn** tại `/conversation/memory` cho xem và xoá từng mục. Trí nhớ chỉ cập nhật một lần mỗi buổi, lúc chấm điểm (kể cả **Chấm lại**); **Lưu & thoát** không cập nhật trí nhớ.
 
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).
@@ -557,6 +558,12 @@ users/
         dialogue[{speaker (you|partner), partnerRole?, en, vi}],
         patterns[{pattern, meaning, example, why[{part, reason}]}],
         vocab[{text, meaning, example}]
+    learner_memory/            # Trí nhớ người học (chỉ web)
+      mistakes                 # 1 document: items[{id, pattern, rule, example{said,better}, source (conversation|interview),
+                               #   createdAt, lastSeenAt, sm2Repetitions, sm2EaseFactor, sm2Interval, nextReviewAt}] (tối đa 20), updatedAt
+    conversation_memory/       # Trí nhớ theo chủ đề Hội thoại (chỉ web)
+      {groupKey}/
+        key, label, facts[{id, fact, asked[], updatedAt}] (tối đa 12), updatedAt
 ```
 
 ---
@@ -575,6 +582,7 @@ users/
 - [x] **Kiến thức** — thư viện ghi chú ngữ pháp/cấu trúc câu theo ngôn ngữ, tự viết hoặc AI soạn, có bộ mẫu tiếng Anh (cả app Flutter lẫn app React web)
 - [x] **Hội thoại tiếng Anh** (web) — trò chuyện chủ đề tự do hoặc nhập vai tình huống có mục tiêu với AI đóng vai đối phương, chấm điểm cuối buổi; gợi ý và báo cáo có giải thích "Tại sao?"
 - [x] **Chuẩn bị tình huống** (web) — kịch bản mẫu + mẫu câu + từ mới từ một câu mô tả tình huống, nối sang nhập vai Hội thoại
+- [x] **Trí nhớ người học** (web) — nhớ chủ đề đã nói + danh sách lỗi hay mắc ôn kiểu SM-2, dùng cho Hội thoại và Phỏng vấn; trang `/conversation/memory`
 
 **Việc cần làm tiếp (kiểm tra sau khi deploy Chuẩn bị tình huống, 2026-11-04):**
 
@@ -583,6 +591,11 @@ users/
 - [ ] **Chạy thật với AI key** — tạo một bộ tài liệu → nghe/Dịch vài câu → bấm chỗ tô sáng xem có nhảy tới đúng thẻ mẫu câu → lưu 2 từ (kiểm tra trong Ngân hàng từ vựng) → Luyện nhập vai (persona/mục tiêu điền sẵn) → hoàn thành buổi hội thoại.
 - [ ] **Hội thoại "Tại sao?"** — vẫn chưa thử thủ công với AI key thật (xem `.superpowers/sdd/progress.md`, mục 2026-10-19).
 - [ ] *(Tuỳ chọn)* Các góp ý nhỏ còn lại từ review của Chuẩn bị tình huống (không chặn dùng) ghi trong `.superpowers/sdd/progress.md`, mục "Conversation prep — SDD ledger": ví dụ `prepId` vẫn giữ nếu đổi sang tình huống khác sau khi điền sẵn, thanh mục lục không dính trên desktop, chưa kiểm tra kịch bản có ít nhất một lượt "Bạn".
+
+**Việc cần làm tiếp (kiểm tra sau khi làm Trí nhớ người học, 2026-11-04; chỉ web, không cần deploy backend):**
+
+- [ ] **Chạy thật với AI key** — làm hai buổi Hội thoại chủ đề Du lịch về cùng một địa điểm: buổi thứ hai phải hỏi khác buổi đầu; đặt mục tiêu là một lỗi thì quá khứ thì AI nên hỏi tự nhiên về một sự kiện đã xảy ra; kế hoạch Phỏng vấn có một câu hỏi bám theo mục tiêu; trang `/conversation/memory` hiện đúng các mục và xoá từng mục được.
+- [ ] **iPhone, trang AI nhớ gì về bạn** — mở `/conversation/memory` với văn bản dài (mẫu lỗi, ví dụ, câu chia sẻ): không tràn ngang, nút xoá bấm được (>= 44px).
 
 **Ý tưởng khác đã brainstorm (chưa xếp lịch):**
 

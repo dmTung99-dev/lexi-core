@@ -1,7 +1,7 @@
 # LexiCore — Learner memory for Hội thoại and Phỏng vấn (web)
 
 **Date:** 2026-11-04
-**Status:** Design agreed in brainstorming; spec awaiting owner review.
+**Status:** Implemented (branch feat/learner-memory, 2026-11-04).
 **Covers:** Cross-session memory so a new Hội thoại doesn't repeat what earlier ones on the same topic already covered, and a shared list of the learner's recurring English mistakes that both Hội thoại and Phỏng vấn practise with spaced repetition.
 **Builds on:** `2026-10-09-conversation-practice-design.md` (Hội thoại), the interview practice spec, `2026-11-03-conversation-prep-design.md` (`prepId`), and the "Lưu & thoát / Đang dở" change (commit `ab73229`).
 
