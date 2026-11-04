@@ -578,7 +578,7 @@ users/
 
 **Việc cần làm tiếp (kiểm tra sau khi deploy Chuẩn bị tình huống, 2026-11-04):**
 
-- [ ] **Rules Firestore** — xác nhận rules đang deploy cho phép chủ tài khoản đọc/ghi `users/{uid}/conversation_preps/**` (rules không nằm trong repo). Thiếu rules thì bấm Tạo sẽ báo "Không lưu được bộ tài liệu", mở bộ đã lưu báo "Không tải được bộ tài liệu".
+- [x] **Rules Firestore** (đã xác nhận 2026-11-04: rule `users/{uid}/{document=**}` cho chủ tài khoản) — xác nhận rules đang deploy cho phép chủ tài khoản đọc/ghi `users/{uid}/conversation_preps/**` (rules không nằm trong repo). Thiếu rules thì bấm Tạo sẽ báo "Không lưu được bộ tài liệu", mở bộ đã lưu báo "Không tải được bộ tài liệu".
 - [ ] **iPhone 11, đã đăng nhập** — mở một bộ tài liệu ở `/conversation/prep/[id]`: nút "Luyện nhập vai tình huống này" nằm sát ngay trên tab bar; dòng từ mới cuối cùng không bị che; thanh Kịch bản / Mẫu câu / Từ mới dính dưới tai thỏ khi cuộn; mở sheet "Thêm" thì sheet che được nút luyện nhập vai.
 - [ ] **Chạy thật với AI key** — tạo một bộ tài liệu → nghe/Dịch vài câu → bấm chỗ tô sáng xem có nhảy tới đúng thẻ mẫu câu → lưu 2 từ (kiểm tra trong Ngân hàng từ vựng) → Luyện nhập vai (persona/mục tiêu điền sẵn) → hoàn thành buổi hội thoại.
 - [ ] **Hội thoại "Tại sao?"** — vẫn chưa thử thủ công với AI key thật (xem `.superpowers/sdd/progress.md`, mục 2026-10-19).
