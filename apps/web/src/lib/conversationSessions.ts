@@ -56,12 +56,24 @@ export async function deleteConversationSession(uid: string, id: string): Promis
   await deleteDoc(sessionRef(uid, id));
 }
 
+/** In-progress sessions older than this are left out of the "Đang dở" list. */
+export const UNFINISHED_MAX_AGE_DAYS = 14;
+
 // Over-fetch then filter client-side: a single-field orderBy needs no
-// composite index, and abandoned in_progress sessions are rare.
-export async function listRecentConversationSessions(uid: string, max = 5): Promise<ConversationSession[]> {
+// composite index.
+async function listLatest(uid: string): Promise<ConversationSession[]> {
   const snap = await getDocs(query(sessionsCol(uid), orderBy("createdAt", "desc"), limit(20)));
-  return snap.docs
-    .map((d) => ({ ...(d.data() as ConversationSession), id: d.id }))
-    .filter((s) => s.status === "completed")
+  return snap.docs.map((d) => ({ ...(d.data() as ConversationSession), id: d.id }));
+}
+
+export async function listRecentConversationSessions(uid: string, max = 5): Promise<ConversationSession[]> {
+  return (await listLatest(uid)).filter((s) => s.status === "completed").slice(0, max);
+}
+
+/** Sessions left mid-way (closed tab, "Lưu & thoát"), newest first. */
+export async function listUnfinishedConversationSessions(uid: string, max = 3, now = Date.now()): Promise<ConversationSession[]> {
+  const cutoff = now - UNFINISHED_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return (await listLatest(uid))
+    .filter((s) => s.status === "in_progress" && Date.parse(s.createdAt) >= cutoff)
     .slice(0, max);
 }

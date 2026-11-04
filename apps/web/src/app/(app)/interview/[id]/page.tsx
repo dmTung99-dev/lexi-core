@@ -85,6 +85,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   const [translation, setTranslation] = useState<{ question: string; vi: string } | null>(null);
   const [translating, setTranslating] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [state, dispatch] = useReducer(interviewReducer, initialInterviewState);
   const turnsRef = useRef<InterviewTurn[]>([]);
   const recordingRef = useRef<RecordedAudio | null>(null);
@@ -394,7 +395,9 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
     dispatch({ type: "SKIP" });
   }
 
-  function handleEnd() {
+  // Stops audio/mic and keeps a reviewed-but-unsent answer as a turn, so
+  // neither ending nor leaving loses it.
+  function flushDraft() {
     audio.stop();
     cancelRecorder();
     if (state.phase === "review" && state.draft.trim()) {
@@ -410,7 +413,22 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         answerSeconds: recordingRef.current?.seconds ?? 0,
       });
     }
+  }
+
+  function handleEnd() {
+    flushDraft();
     dispatch({ type: "END_EARLY" });
+  }
+
+  // Turns are already saved after every answer; this flushes the draft,
+  // waits for the write, and leaves. Reopening resumes at the next main
+  // question not yet answered.
+  async function handleSaveExit() {
+    if (!user || !id || leaving) return;
+    setLeaving(true);
+    flushDraft();
+    await saveInterviewTurns(user.uid, id, turnsRef.current).catch(() => {});
+    router.push("/interview");
   }
 
   async function handleTranslate() {
@@ -442,7 +460,14 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
   return (
     <div className="iv-session">
       <header className="iv-session-head">
-        <button type="button" className="btn-secondary" onClick={handleEnd} disabled={state.phase === "transcribing"}>Kết thúc buổi</button>
+        <div className="iv-session-actions">
+          <button type="button" className="btn-secondary" onClick={() => void handleSaveExit()} disabled={state.phase === "transcribing" || leaving}>
+            Lưu &amp; thoát
+          </button>
+          <button type="button" className="btn-secondary" onClick={handleEnd} disabled={state.phase === "transcribing" || leaving}>
+            Kết thúc buổi
+          </button>
+        </div>
         <div className="iv-session-title">
           <strong>{`${session.setup.role} · ${typeLabel} · ${levelLabel}`}</strong>
           <span className="iv-muted">{`Câu ${Math.min(state.mainIndex + 1, total)} / ${total}`}</span>

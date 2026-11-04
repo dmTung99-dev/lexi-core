@@ -7,14 +7,19 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi, hasAiKey } from "@/lib/interviewAi";
-import { createConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
+import {
+  createConversationSession,
+  deleteConversationSession,
+  listRecentConversationSessions,
+  listUnfinishedConversationSessions,
+} from "@/lib/conversationSessions";
 import { buildScenarioPrompt, parseScenario } from "@/lib/conversationPrompts";
 import { getConversationPrep } from "@/lib/conversationPreps";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import type { InterviewVoice } from "@/lib/interviewTypes";
-import type { ConversationSession } from "@/lib/conversationTypes";
+import { MAX_USER_TURNS, userTurnCount, type ConversationSession } from "@/lib/conversationTypes";
 import {
   ConversationSetupForm,
   DEFAULT_CONVERSATION_DRAFT,
@@ -25,6 +30,7 @@ import {
 import { CUSTOM_PRESET_ID } from "@/components/conversation/ScenarioCards";
 import { RecentConversations } from "@/components/conversation/RecentConversations";
 import { ReadinessCard } from "@/components/interview/ReadinessCard";
+import { UnfinishedSessions, shortDate } from "@/components/interview/UnfinishedSessions";
 
 const VOICE_SAMPLE = "Hi! Let's have a chat.";
 
@@ -34,6 +40,7 @@ function ConversationSetupContent() {
   const { settings } = useSettingsContext();
   const [draft, setDraft] = useState<ConversationDraft>(DEFAULT_CONVERSATION_DRAFT);
   const [recent, setRecent] = useState<ConversationSession[]>([]);
+  const [unfinished, setUnfinished] = useState<ConversationSession[]>([]);
   const [mic, setMic] = useState<MicPermission>("prompt");
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
@@ -73,6 +80,7 @@ function ConversationSetupContent() {
     if (!user) return;
     void warmUpSpeech();
     listRecentConversationSessions(user.uid).then(setRecent).catch(() => {});
+    listUnfinishedConversationSessions(user.uid).then(setUnfinished).catch(() => {});
     void getMicPermission().then(setMic);
   }, [user]);
 
@@ -119,6 +127,12 @@ function ConversationSetupContent() {
     setBuilding(false);
   }
 
+  function handleDiscard(id: string) {
+    if (!user) return;
+    setUnfinished((list) => list.filter((s) => s.id !== id));
+    void deleteConversationSession(user.uid, id).catch(() => {});
+  }
+
   async function handleStart() {
     if (!user || !canStart) return;
     setStarting(true);
@@ -142,6 +156,15 @@ function ConversationSetupContent() {
       <p className="scr-sub">
         Trò chuyện với AI về một chủ đề hoặc nhập vai một tình huống. Nói hoặc gõ đều được; lỗi sẽ được nhận xét ở cuối buổi.
       </p>
+      <UnfinishedSessions
+        items={unfinished.map((s) => ({
+          id: s.id,
+          title: `${s.setup.topic} · ${s.setup.level}`,
+          detail: `${shortDate(s.createdAt)} · ${s.setup.mode === "roleplay" ? "Nhập vai" : "Chủ đề tự do"} · Lượt ${userTurnCount(s.messages)} / ${MAX_USER_TURNS}`,
+          href: `/conversation/${s.id}`,
+        }))}
+        onDiscard={handleDiscard}
+      />
       <div className="iv-setup-layout">
         <section className="iv-card iv-setup-main" aria-label="Thiết lập">
           <ConversationSetupForm

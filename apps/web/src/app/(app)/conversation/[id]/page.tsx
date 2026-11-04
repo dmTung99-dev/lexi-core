@@ -71,6 +71,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   const [suggestions, setSuggestions] = useState<ConversationSuggestion[] | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [openingError, setOpeningError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [state, dispatch] = useReducer(conversationReducer, initialConversationState);
   const messagesRef = useRef<ConversationMessage[]>([]);
   const goalsDoneRef = useRef<number[]>([]);
@@ -427,7 +428,9 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     dispatch({ type: "SEND" });
   }
 
-  function handleEnd() {
+  // Stops audio/mic and appends any unsent draft as a user message, so neither
+  // ending nor leaving loses what the learner already said or typed.
+  function flushDraft() {
     audio.stop();
     cancelRecorder();
     stoppingRef.current = false;
@@ -445,7 +448,22 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
     pendingBlobsRef.current = [];
     recordingRef.current = null;
     setSuggestions(null);
+  }
+
+  function handleEnd() {
+    flushDraft();
     dispatch({ type: "END" });
+  }
+
+  // Progress is already saved after every message; this flushes the draft,
+  // waits for the write, and leaves. Reopening the session resumes it (an
+  // unanswered last user message gets its AI reply then).
+  async function handleSaveExit() {
+    if (!user || !id || leaving) return;
+    setLeaving(true);
+    flushDraft();
+    await saveConversationProgress(user.uid, id, { messages: messagesRef.current, goalsDone: goalsDoneRef.current }).catch(() => {});
+    router.push("/conversation");
   }
 
   function handleReplay(index: number) {
@@ -532,9 +550,14 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   return (
     <div className="iv-session">
       <header className="iv-session-head">
-        <button type="button" className="btn-secondary" onClick={handleEnd} disabled={state.phase === "transcribing"}>
-          Kết thúc &amp; xem báo cáo
-        </button>
+        <div className="iv-session-actions">
+          <button type="button" className="btn-secondary" onClick={() => void handleSaveExit()} disabled={state.phase === "transcribing" || leaving}>
+            Lưu &amp; thoát
+          </button>
+          <button type="button" className="btn-secondary" onClick={handleEnd} disabled={state.phase === "transcribing" || leaving}>
+            Kết thúc &amp; xem báo cáo
+          </button>
+        </div>
         <div className="iv-session-title">
           <strong>{`${setup.topic} · ${setup.level}`}</strong>
           <span className="iv-muted">{`${roleplay ? "Nhập vai" : "Chủ đề tự do"} · Lượt ${state.userTurns} / ${MAX_USER_TURNS}`}</span>

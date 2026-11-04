@@ -6,6 +6,7 @@ import {
   deleteInterviewSession,
   getInterviewSession,
   listRecentInterviewSessions,
+  listUnfinishedInterviewSessions,
   saveInterviewPlan,
   saveInterviewTurns,
 } from "./interviewSessions";
@@ -108,5 +109,20 @@ describe("interviewSessions", () => {
     expect(orderBy).toHaveBeenCalledWith("createdAt", "desc");
     expect(limit).toHaveBeenCalledWith(20);
     expect(query).toHaveBeenCalled();
+  });
+  it("lists unfinished sessions from the last 14 days, newest first, capped at max", async () => {
+    vi.mocked(getDocs).mockResolvedValue({
+      docs: [
+        { id: "a", data: () => ({ status: "in_progress", createdAt: "2026-11-02T10:00:00.000Z" }) },
+        { id: "b", data: () => ({ status: "completed", createdAt: "2026-11-01T10:00:00.000Z" }) },
+        { id: "c", data: () => ({ status: "in_progress", createdAt: "2026-10-25T10:00:00.000Z" }) },
+        { id: "d", data: () => ({ status: "in_progress", createdAt: "2026-10-01T10:00:00.000Z" }) },
+      ],
+    } as never);
+    const now = Date.parse("2026-11-03T10:00:00.000Z");
+    const out = await listUnfinishedInterviewSessions("u1", 3, now);
+    expect(out.map((s) => s.id)).toEqual(["a", "c"]);
+    const capped = await listUnfinishedInterviewSessions("u1", 1, now);
+    expect(capped.map((s) => s.id)).toEqual(["a"]);
   });
 });

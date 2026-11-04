@@ -243,6 +243,20 @@ describe("InterviewSessionPage", () => {
     await waitFor(() => expect(completeInterviewSession).toHaveBeenCalledWith("u1", "s1", null));
   });
 
+  it("Lưu & thoát keeps the reviewed answer and leaves without grading", async () => {
+    renderPage(makeSession({ plan: PLAN }));
+    fireEvent.click(await screen.findByRole("button", { name: "Bắt đầu trả lời" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dừng ghi âm" }));
+    expect(await screen.findByLabelText(/Bản chép lời/)).toHaveValue("My answer");
+    fireEvent.click(screen.getByRole("button", { name: "Lưu & thoát" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview"));
+    expect(saveInterviewTurns).toHaveBeenLastCalledWith("u1", "s1", [
+      expect.objectContaining({ mainIndex: 0, kind: "main", question: "Q1?", answer: "My answer", skipped: false }),
+    ]);
+    expect(completeInterviewSession).not.toHaveBeenCalled();
+    expect(deleteInterviewSession).not.toHaveBeenCalled();
+  });
+
   it("redirects a completed session to its report", async () => {
     renderPage(makeSession({ status: "completed", plan: PLAN }));
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/interview/s1/report"));
