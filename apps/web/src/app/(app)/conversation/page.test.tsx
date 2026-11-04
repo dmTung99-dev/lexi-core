@@ -120,6 +120,38 @@ describe("ConversationSetupPage", () => {
     expect(setup).not.toHaveProperty("prepId");
   });
 
+  it("drops the stale prepId after editing the description of a prefilled prep", async () => {
+    searchParams = new URLSearchParams("prep=p1");
+    vi.mocked(getConversationPrep).mockResolvedValueOnce(PREP);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    await screen.findByDisplayValue(PREP.persona);
+    fireEvent.change(screen.getByDisplayValue(PREP.title), { target: { value: "Một tình huống khác" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu nhập vai" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    const setup = vi.mocked(createConversationSession).mock.calls[0][1];
+    expect(setup).toMatchObject({ topic: "Một tình huống khác" });
+    expect(setup).not.toHaveProperty("prepId");
+  });
+
+  it("drops the stale prepId after re-picking the custom card", async () => {
+    searchParams = new URLSearchParams("prep=p1");
+    vi.mocked(getConversationPrep).mockResolvedValueOnce(PREP);
+    vi.mocked(callInterviewAi).mockResolvedValueOnce('{"persona":"A landlord.","goals":["Chào","Hỏi giá","Chốt"]}');
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    await screen.findByDisplayValue(PREP.persona);
+    fireEvent.click(screen.getByRole("button", { name: /Tự mô tả tình huống/ }));
+    fireEvent.change(screen.getByLabelText(/Mô tả tình huống/), { target: { value: "Thuê nhà" } });
+    fireEvent.click(screen.getByRole("button", { name: "Dựng tình huống" }));
+    await screen.findByDisplayValue("A landlord.");
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu nhập vai" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    const setup = vi.mocked(createConversationSession).mock.calls[0][1];
+    expect(setup).toMatchObject({ topic: "Thuê nhà" });
+    expect(setup).not.toHaveProperty("prepId");
+  });
+
   it("ignores a bad ?prep= id", async () => {
     searchParams = new URLSearchParams("prep=nope");
     vi.mocked(getConversationPrep).mockResolvedValueOnce(null);

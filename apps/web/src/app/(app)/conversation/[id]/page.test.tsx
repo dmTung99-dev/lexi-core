@@ -337,4 +337,13 @@ describe("ConversationSessionPage — grading updates learner memory", () => {
     expect(saveMistakeMemory).not.toHaveBeenCalled();
     expect(markConversationMemoryApplied).not.toHaveBeenCalled();
   });
+
+  it("skips memory but still opens the report when completing the session fails", async () => {
+    vi.mocked(completeConversationSession).mockRejectedValue(new Error("offline"));
+    renderPage(gradedSession());
+    fireEvent.click(await screen.findByRole("button", { name: "Kết thúc & xem báo cáo" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1/report"));
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+    expect(markConversationMemoryApplied).not.toHaveBeenCalled();
+  });
 });

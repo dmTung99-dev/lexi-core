@@ -53,9 +53,9 @@ function ConversationSetupContent() {
   const [prepId, setPrepId] = useState<string | null>(null);
 
   // A prep kit only describes the custom role-play it prefilled; picking anything
-  // else (or switching mode) means it no longer applies.
+  // else, switching mode, or rewriting the description means it no longer applies.
   function handleDraftChange(next: ConversationDraft) {
-    if (next.mode !== draft.mode || next.presetId !== CUSTOM_PRESET_ID) setPrepId(null);
+    if (next.mode !== draft.mode || next.presetId !== CUSTOM_PRESET_ID || next.topic !== draft.topic) setPrepId(null);
     setDraft(next);
   }
 

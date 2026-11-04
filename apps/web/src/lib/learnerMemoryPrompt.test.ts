@@ -29,6 +29,14 @@ describe("topicMemorySection", () => {
   });
 });
 
+describe("topicMemorySection free bucket", () => {
+  it("notes facts come from various topics only for the free bucket", () => {
+    expect(topicMemorySection([FACT], true)).toContain("various topics");
+    expect(topicMemorySection([FACT], true)).toContain("only bring one up if it fits the current topic");
+    expect(topicMemorySection([FACT])).not.toContain("various topics");
+  });
+});
+
 describe("practiceTargetsSection", () => {
   it("is empty without targets", () => {
     expect(practiceTargetsSection([], "conversation")).toBe("");
@@ -72,6 +80,12 @@ describe("reportMemorySection", () => {
   });
   it("asks for topicFacts even with no previous facts (empty list)", () => {
     expect(reportMemorySection({ tracked: [], facts: [] }, "conversation")).toContain('"topicFacts"');
+  });
+  it("tells the model to keep facts from other topics for the free bucket", () => {
+    const s = reportMemorySection({ tracked, facts: [FACT], freeTopic: true }, "conversation");
+    expect(s).toContain("various typed-in topics");
+    expect(s).toContain("keep facts from other topics unless this session superseded them");
+    expect(reportMemorySection({ tracked, facts: [FACT] }, "conversation")).not.toContain("various typed-in topics");
   });
   it("omits topicFacts when facts is null", () => {
     expect(reportMemorySection({ tracked, facts: null }, "conversation")).not.toContain("topicFacts");

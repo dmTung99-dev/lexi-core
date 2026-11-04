@@ -123,7 +123,7 @@ describe("loadGradingMemory", () => {
     vi.mocked(getTopicMemory).mockResolvedValue(TOPIC);
     const gm = await loadGradingMemory("u1", { kind: "conversation", session: convSession() });
     expect(gm).toEqual({ kind: "conversation", mistakes: null, topic: { key: "free", label: "Tự do", prev: TOPIC } });
-    expect(toReportMemoryInput(gm)).toEqual({ tracked: [], facts: TOPIC.facts });
+    expect(toReportMemoryInput(gm)).toEqual({ tracked: [], facts: TOPIC.facts, freeTopic: true });
 
     vi.mocked(getMistakeMemory).mockResolvedValue({ items: [DUE], updatedAt: "x" });
     vi.mocked(getTopicMemory).mockRejectedValue(new Error("boom"));

@@ -635,4 +635,14 @@ describe("InterviewSessionPage — grading updates learner memory", () => {
     expect(completeInterviewSession).toHaveBeenCalledWith("u1", "s1", expect.objectContaining({ overall: 7 }));
     expect(saveMistakeMemory).not.toHaveBeenCalled();
   });
+
+  it("skips memory but still opens the report when completing the session fails", async () => {
+    vi.mocked(completeInterviewSession).mockRejectedValue(new Error("offline"));
+    renderPage(makeSession({ plan: PLAN, turns: ANSWERED }));
+    await screen.findByText("Q2?");
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/s1/report"));
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+    expect(markInterviewMemoryApplied).not.toHaveBeenCalled();
+  });
 });

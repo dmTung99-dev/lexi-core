@@ -28,7 +28,8 @@ export async function saveMistakeMemory(uid: string, items: TrackedMistake[]): P
 export async function getTopicMemory(uid: string, key: string): Promise<TopicMemory | null> {
   const snap = await getDoc(topicRef(uid, key));
   if (!snap.exists()) return null;
-  return snap.data() as TopicMemory;
+  const data = snap.data() as TopicMemory;
+  return { ...data, facts: data.facts ?? [] };
 }
 
 export async function saveTopicMemory(uid: string, memory: TopicMemory): Promise<void> {
@@ -37,7 +38,10 @@ export async function saveTopicMemory(uid: string, memory: TopicMemory): Promise
 
 export async function listTopicMemories(uid: string): Promise<TopicMemory[]> {
   const snap = await getDocs(query(topicsCol(uid), orderBy("updatedAt", "desc")));
-  return snap.docs.map((d) => d.data() as TopicMemory);
+  return snap.docs.map((d) => {
+    const data = d.data() as TopicMemory;
+    return { ...data, facts: data.facts ?? [] };
+  });
 }
 
 export async function deleteTrackedMistake(uid: string, id: string): Promise<void> {

@@ -313,9 +313,9 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             report = null;
           }
           await saveInterviewTurns(uid, id, finalTurns).catch(() => {});
-          await completeInterviewSession(uid, id, report).catch(() => {});
-          // A failed grading leaves memory untouched; applyGradingMemory never throws.
-          if (gm && report) {
+          const completed = await completeInterviewSession(uid, id, report).then(() => true, () => false);
+          // A failed grading or completion leaves memory untouched; applyGradingMemory never throws.
+          if (gm && report && completed) {
             await applyGradingMemory(uid, id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "interview"));
           }
           if (unmountedRef.current) return;

@@ -69,6 +69,14 @@ describe("learnerMemory", () => {
     expect(await getTopicMemory("u1", "free")).toEqual(topic(["a"]));
   });
 
+  it("defaults missing facts to an empty list", async () => {
+    const { facts: _facts, ...noFacts } = topic([]);
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => true, data: () => noFacts } as never);
+    expect((await getTopicMemory("u1", "free"))?.facts).toEqual([]);
+    vi.mocked(getDocs).mockResolvedValue({ docs: [{ data: () => noFacts }] } as never);
+    expect((await listTopicMemories("u1"))[0].facts).toEqual([]);
+  });
+
   it("saves a topic memory under its key", async () => {
     await saveTopicMemory("u1", topic(["a"]));
     expect(doc).toHaveBeenCalledWith("db", "users", "u1", "conversation_memory", "free");

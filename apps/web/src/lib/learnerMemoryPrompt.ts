@@ -2,12 +2,15 @@ import { parseAiJsonObject } from "./parseAiJson";
 import type { FoundMistake, MemoryUpdate, MistakeTarget, TopicFact } from "./learnerMemoryTypes";
 
 /** Prompt section: what the AI already knows about the learner on this topic. "" when there is nothing. */
-export function topicMemorySection(facts: TopicFact[]): string {
+export function topicMemorySection(facts: TopicFact[], freeTopic = false): string {
   if (facts.length === 0) return "";
   const lines = facts.map((f) =>
     f.asked.length > 0 ? `- ${f.fact} (angles already asked: ${f.asked.join(", ")})` : `- ${f.fact}`
   );
-  return `What you already know about this learner from earlier chats on this topic:
+  const scope = freeTopic
+    ? `What you already know about this learner from earlier chats (these facts come from various topics, so only bring one up if it fits the current topic):`
+    : `What you already know about this learner from earlier chats on this topic:`;
+  return `${scope}
 ${lines.join("\n")}
 
 How to use it (quietly, in the background):
@@ -34,13 +37,15 @@ Shape up to 2 questions so that answering them naturally needs these forms (e.g.
   return `Practice targets — forms this learner often gets wrong:
 ${targetLines(targets)}
 
-Create natural chances for the learner to use these forms (e.g. ask about a past event for a past-tense target), at most 2–3 in the whole chat. Weave them into ordinary questions; never correct the learner and never mention the targets.`;
+If it fits naturally, let your question this turn invite the learner to use one of these forms (e.g. ask about a past event for a past-tense target). Skip it if it would feel forced; never correct the learner and never mention the targets.`;
 }
 
 export interface ReportMemoryInput {
   tracked: { id: string; pattern: string; rule: string }[];
   /** null for interviews and when the topic read failed. */
   facts: TopicFact[] | null;
+  /** True when the facts belong to the shared "Tự do" bucket (mixed typed-in topics). */
+  freeTopic?: boolean;
 }
 
 /** Report-prompt section asking for mistake checks, trackedIds and (conversations) the updated topic facts. "" when there is nothing to ask. */
@@ -58,10 +63,16 @@ Add a top-level key "mistakeChecks": [{"id": "<tracked id>", "result": "correct"
       input.facts.length > 0
         ? input.facts.map((f) => (f.asked.length > 0 ? `- ${f.fact} (asked: ${f.asked.join(", ")})` : `- ${f.fact}`)).join("\n")
         : "(none yet)";
-    parts.push(`Facts already known about the learner on this topic:
+    const scope = input.freeTopic
+      ? `Facts already known about the learner (these come from various typed-in topics, not just this one):`
+      : `Facts already known about the learner on this topic:`;
+    const keep = input.freeTopic
+      ? ` Facts from other topics are still true: keep facts from other topics unless this session superseded them.`
+      : "";
+    parts.push(`${scope}
 ${prev}
 
-Add a top-level key "topicFacts": [{"fact": "...", "asked": ["..."]}] — the FULL updated list for this topic: the previous facts merged with what the learner revealed in this session, each rewritten short, in English, at most 12. "asked" lists the angles the AI has already covered for that fact (short English words). The transcription-error caveat above applies to facts too: do not record a fact built on a misheard word.`);
+Add a top-level key "topicFacts": [{"fact": "...", "asked": ["..."]}] — the FULL updated list for this topic: the previous facts merged with what the learner revealed in this session, each rewritten short, in English, at most 12.${keep} "asked" lists the angles the AI has already covered for that fact (short English words). The transcription-error caveat above applies to facts too: do not record a fact built on a misheard word.`);
   }
   return parts.join("\n\n");
 }

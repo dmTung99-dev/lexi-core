@@ -73,7 +73,7 @@ describe("opening", () => {
 });
 
 describe("reply", () => {
-  const base = { summary: "", window: [{ role: "user" as const, text: "I like Da Nang" }], goalsDone: [], offerEnd: false, mustClose: false };
+  const base = { summary: "", window: [{ role: "user" as const, text: "I like Da Nang" }], goalsDone: [], offerEnd: false, mustClose: false, userTurn: 1 };
   it("includes summary only when present and numbers the goals", () => {
     expect(buildReplyPrompt({ ...base, setup: ROLE })).toContain("0. Gọi đồ uống");
     expect(buildReplyPrompt({ ...base, setup: TOPIC })).not.toContain("Summary of the earlier");
@@ -189,7 +189,7 @@ describe("translate", () => {
 });
 
 describe("learner memory in conversation prompts", () => {
-  const base = { summary: "", window: [{ role: "user" as const, text: "I like Da Lat" }], goalsDone: [], offerEnd: false, mustClose: false };
+  const base = { summary: "", window: [{ role: "user" as const, text: "I like Da Lat" }], goalsDone: [], offerEnd: false, mustClose: false, userTurn: 2 };
   const FACTS = [{ id: "f1", fact: "Went to Da Lat in March with family", asked: ["food", "weather"], updatedAt: "2026-11-01T00:00:00Z" }];
   const TARGETS = [{ id: "m1", pattern: "past tense", rule: "Use the simple past for finished events.", example: { said: "I go there yesterday", better: "I went there yesterday" } }];
   const snap = (facts: typeof FACTS, targets: typeof TARGETS) => ({ groupKey: "free", groupLabel: "Tự do", facts, targets });
@@ -222,10 +222,30 @@ describe("learner memory in conversation prompts", () => {
     }
   });
 
-  it("reply prompt carries the practice targets with the never-correct wording", () => {
-    const p = buildReplyPrompt({ ...base, setup: TOPIC, memory: snap([], TARGETS) });
-    expect(p).toContain("Use the simple past for finished events.");
-    expect(p).toContain("never correct");
-    expect(p).toContain("never mention");
+  it("reply prompt carries the practice targets with the never-correct wording on offering turns", () => {
+    for (const userTurn of [2, 5, 8, 11]) {
+      const p = buildReplyPrompt({ ...base, userTurn, setup: TOPIC, memory: snap([], TARGETS) });
+      expect(p).toContain("Practice targets");
+      expect(p).toContain("Use the simple past for finished events.");
+      expect(p).toContain("If it fits naturally");
+      expect(p).toContain("never correct");
+      expect(p).toContain("never mention");
+      expect(p).not.toContain("whole chat");
+    }
+  });
+
+  it("omits the practice targets on every other turn and when there are none", () => {
+    for (const userTurn of [1, 3, 4, 6, 7, 14]) {
+      expect(buildReplyPrompt({ ...base, userTurn, setup: TOPIC, memory: snap([], TARGETS) })).not.toContain("Practice targets");
+    }
+    expect(buildReplyPrompt({ ...base, userTurn: 2, setup: TOPIC, memory: snap([], []) })).not.toContain("Practice targets");
+  });
+
+  it("tells the chat prompt that Tự do facts come from various topics", () => {
+    const free = buildReplyPrompt({ ...base, setup: TOPIC, memory: snap(FACTS, []) });
+    expect(free).toContain("various topics");
+    expect(free).toContain("only bring one up if it fits the current topic");
+    const other = buildReplyPrompt({ ...base, setup: TOPIC, memory: { ...snap(FACTS, []), groupKey: "topic_travel" } });
+    expect(other).not.toContain("various topics");
   });
 });

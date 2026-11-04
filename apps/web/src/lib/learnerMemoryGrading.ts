@@ -77,6 +77,7 @@ export function toReportMemoryInput(gm: GradingMemory | null): ReportMemoryInput
   return {
     tracked: (gm.mistakes ?? []).map(({ id, pattern, rule }) => ({ id, pattern, rule })),
     facts: gm.topic ? gm.topic.prev?.facts ?? [] : null,
+    ...(gm.topic?.key === "free" ? { freeTopic: true } : {}),
   };
 }
 

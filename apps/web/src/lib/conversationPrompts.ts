@@ -57,7 +57,7 @@ export function parseScenario(raw: string): { persona: string; goals: string[] }
 function memorySections(memory: SessionMemorySnapshot | undefined, withTargets: boolean): string[] {
   if (!memory) return [];
   return [
-    topicMemorySection(memory.facts),
+    topicMemorySection(memory.facts, memory.groupKey === "free"),
     withTargets ? practiceTargetsSection(memory.targets, "conversation") : "",
   ].filter(Boolean);
 }
@@ -85,6 +85,11 @@ export function parseOpening(raw: string): { say: string; vi: string } {
   return { say, vi: str(json.vi) };
 }
 
+/** Targets are offered on user turns 2, 5, 8 and 11 only, so the chat does not turn into a drill. */
+function offersTargets(userTurn: number): boolean {
+  return userTurn >= 2 && userTurn <= 11 && (userTurn - 2) % 3 === 0;
+}
+
 export interface ReplyInput {
   setup: ConversationSetup;
   summary: string;
@@ -92,6 +97,8 @@ export interface ReplyInput {
   goalsDone: number[];
   offerEnd: boolean;
   mustClose: boolean;
+  /** The learner's user-turn count; practice targets are only offered on some turns. */
+  userTurn: number;
   memory?: SessionMemorySnapshot;
 }
 
@@ -102,7 +109,7 @@ export function buildReplyPrompt(input: ReplyInput): string {
     describeSetup(setup),
   ];
   if (input.summary.trim()) parts.push(`Summary of the earlier conversation:\n${input.summary.trim()}`);
-  parts.push(...memorySections(input.memory, true));
+  parts.push(...memorySections(input.memory, offersTargets(input.userTurn)));
   parts.push(`Recent messages:\n${formatTranscript(input.window)}`);
 
   const rules = [

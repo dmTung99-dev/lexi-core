@@ -292,6 +292,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
                 window: unsummarizedWindow(messagesRef.current, summarizedRef.current),
                 goalsDone: goalsDoneRef.current,
                 memory: session.memory,
+                userTurn: state.userTurns,
                 ...flags,
               })
             );
@@ -336,9 +337,9 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             report = null;
           }
           await saveConversationProgress(uid, id, { messages: finalMessages, goalsDone: goalsDoneRef.current }).catch(() => {});
-          await completeConversationSession(uid, id, report).catch(() => {});
-          // A failed grading leaves memory untouched; applyGradingMemory never throws.
-          if (gm && report) {
+          const completed = await completeConversationSession(uid, id, report).then(() => true, () => false);
+          // A failed grading or completion leaves memory untouched; applyGradingMemory never throws.
+          if (gm && report && completed) {
             await applyGradingMemory(uid, id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "conversation"));
           }
           if (unmountedRef.current) return;
