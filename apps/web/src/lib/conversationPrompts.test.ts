@@ -187,3 +187,45 @@ describe("translate", () => {
     expect(() => parseConversationTranslation('{"vi":""}')).toThrow();
   });
 });
+
+describe("learner memory in conversation prompts", () => {
+  const base = { summary: "", window: [{ role: "user" as const, text: "I like Da Lat" }], goalsDone: [], offerEnd: false, mustClose: false };
+  const FACTS = [{ id: "f1", fact: "Went to Da Lat in March with family", asked: ["food", "weather"], updatedAt: "2026-11-01T00:00:00Z" }];
+  const TARGETS = [{ id: "m1", pattern: "past tense", rule: "Use the simple past for finished events.", example: { said: "I go there yesterday", better: "I went there yesterday" } }];
+  const snap = (facts: typeof FACTS, targets: typeof TARGETS) => ({ groupKey: "free", groupLabel: "Tự do", facts, targets });
+  const HEADINGS = ["What you already know about this learner", "Practice targets"];
+
+  it("adds no memory headings without memory or with an empty snapshot", () => {
+    for (const setup of [TOPIC, ROLE]) {
+      for (const memory of [undefined, snap([], [])]) {
+        const opening = buildOpeningPrompt(setup, memory);
+        const reply = buildReplyPrompt({ ...base, setup, memory });
+        for (const h of HEADINGS) {
+          expect(opening).not.toContain(h);
+          expect(reply).not.toContain(h);
+        }
+        expect(reply).toContain("NEVER correct the learner's mistakes");
+      }
+    }
+  });
+
+  it("opening and reply prompts carry the facts and the pacing rules", () => {
+    const memory = snap(FACTS, []);
+    for (const p of [buildOpeningPrompt(TOPIC, memory), buildReplyPrompt({ ...base, setup: TOPIC, memory })]) {
+      expect(p).toContain("Went to Da Lat in March with family");
+      expect(p).toContain("food, weather");
+      expect(p).toContain("Do not ask again about angles already covered");
+      expect(p).toContain("never press for small details or private matters");
+      expect(p).toContain("move to a different angle");
+      expect(p).toContain("Do not open by saying you remember");
+      expect(p).not.toContain("Practice targets");
+    }
+  });
+
+  it("reply prompt carries the practice targets with the never-correct wording", () => {
+    const p = buildReplyPrompt({ ...base, setup: TOPIC, memory: snap([], TARGETS) });
+    expect(p).toContain("Use the simple past for finished events.");
+    expect(p).toContain("never correct");
+    expect(p).toContain("never mention");
+  });
+});

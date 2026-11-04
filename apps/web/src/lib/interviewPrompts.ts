@@ -1,3 +1,5 @@
+import { practiceTargetsSection } from "./learnerMemoryPrompt";
+import type { MistakeTarget } from "./learnerMemoryTypes";
 import { parseAiJsonObject } from "./parseAiJson";
 import type { InterviewPlanItem, InterviewSetup } from "./interviewTypes";
 
@@ -71,8 +73,8 @@ export function parseCvSummary(raw: string): { summary: string; topics: string[]
   return { summary, topics: strList(json.topics).slice(0, 10) };
 }
 
-export function buildQuestionPlanPrompt(setup: InterviewSetup): string {
-  const context = contextSections(setup);
+export function buildQuestionPlanPrompt(setup: InterviewSetup, targets: MistakeTarget[] = []): string {
+  const context = [contextSections(setup), practiceTargetsSection(targets, "interview")].filter(Boolean).join("\n\n");
   return `You are an experienced interviewer preparing a spoken English job interview.
 
 ${describeCandidate(setup)}

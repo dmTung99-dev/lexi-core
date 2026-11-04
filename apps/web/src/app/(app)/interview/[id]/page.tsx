@@ -173,7 +173,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         void (async () => {
           const greeting = audio.speak(INTERVIEW_GREETING);
           try {
-            const raw = await callInterviewAi(settings, buildQuestionPlanPrompt(session.setup));
+            const raw = await callInterviewAi(settings, buildQuestionPlanPrompt(session.setup, session.targets));
             const plan = parseQuestionPlan(raw, session.setup.questionCount);
             await saveInterviewPlan(uid, id, plan);
             if (handledRef.current !== state) return;

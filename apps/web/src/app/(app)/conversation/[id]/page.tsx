@@ -212,7 +212,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
         }
         void (async () => {
           try {
-            const { say, vi } = parseOpening(await callInterviewAi(settings, buildOpeningPrompt(session.setup)));
+            const { say, vi } = parseOpening(await callInterviewAi(settings, buildOpeningPrompt(session.setup, session.memory)));
             if (handledRef.current !== state) return;
             appendMessage({ role: "ai", text: say, ...(vi ? { vi } : {}) });
             dispatch({ type: "OPENING_READY" });
@@ -289,6 +289,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
                 summary: summaryRef.current,
                 window: unsummarizedWindow(messagesRef.current, summarizedRef.current),
                 goalsDone: goalsDoneRef.current,
+                memory: session.memory,
                 ...flags,
               })
             );

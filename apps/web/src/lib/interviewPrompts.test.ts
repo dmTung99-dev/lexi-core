@@ -146,3 +146,18 @@ describe("translate", () => {
     expect(() => parseTranslation("{}")).toThrow(InterviewAiError);
   });
 });
+
+describe("practice targets in the question plan", () => {
+  const TARGETS = [{ id: "m1", pattern: "past tense", rule: "Use the simple past for finished events.", example: { said: "I go there yesterday", better: "I went there yesterday" } }];
+
+  it("shapes up to 2 questions around the targets", () => {
+    const p = buildQuestionPlanPrompt(SETUP, TARGETS);
+    expect(p).toContain("up to 2 questions");
+    expect(p).toContain("Use the simple past for finished events.");
+  });
+
+  it("adds no targets section without targets or with an empty list", () => {
+    expect(buildQuestionPlanPrompt(SETUP)).not.toContain("Practice targets");
+    expect(buildQuestionPlanPrompt(SETUP, [])).not.toContain("Practice targets");
+  });
+});

@@ -1,4 +1,6 @@
 import { InterviewAiError, parseJson, str, strList } from "./interviewPrompts";
+import { practiceTargetsSection, topicMemorySection } from "./learnerMemoryPrompt";
+import type { SessionMemorySnapshot } from "./learnerMemoryTypes";
 import type {
   ConversationHint,
   ConversationLevel,
@@ -52,15 +54,24 @@ export function parseScenario(raw: string): { persona: string; goals: string[] }
   return { persona, goals };
 }
 
-export function buildOpeningPrompt(setup: ConversationSetup): string {
+function memorySections(memory: SessionMemorySnapshot | undefined, withTargets: boolean): string[] {
+  if (!memory) return [];
+  return [
+    topicMemorySection(memory.facts),
+    withTargets ? practiceTargetsSection(memory.targets, "conversation") : "",
+  ].filter(Boolean);
+}
+
+export function buildOpeningPrompt(setup: ConversationSetup, memory?: SessionMemorySnapshot): string {
   const how =
     setup.mode === "roleplay"
       ? "Stay fully in character and start the scene naturally (a greeting plus a first question or prompt)."
       : "Give a short friendly greeting plus ONE open question about the topic.";
+  const memoryText = memorySections(memory, false).join("\n\n");
   return `You are a friendly English conversation partner.
 
 ${describeSetup(setup)}
-
+${memoryText ? `\n${memoryText}\n` : ""}
 Write the FIRST thing you say to start the conversation. ${how} 1–2 short sentences, at the learner's level.
 
 Return ONLY a JSON object: {"say": "...", "vi": "..."}
@@ -81,6 +92,7 @@ export interface ReplyInput {
   goalsDone: number[];
   offerEnd: boolean;
   mustClose: boolean;
+  memory?: SessionMemorySnapshot;
 }
 
 export function buildReplyPrompt(input: ReplyInput): string {
@@ -90,6 +102,7 @@ export function buildReplyPrompt(input: ReplyInput): string {
     describeSetup(setup),
   ];
   if (input.summary.trim()) parts.push(`Summary of the earlier conversation:\n${input.summary.trim()}`);
+  parts.push(...memorySections(input.memory, true));
   parts.push(`Recent messages:\n${formatTranscript(input.window)}`);
 
   const rules = [
