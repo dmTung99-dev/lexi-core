@@ -28,6 +28,8 @@ export interface ConversationSetup {
   goals: string[];
   /** Set when the role-play was started from a Chuẩn bị tình huống kit (reference only). */
   prepId?: string;
+  /** Built-in topic card / role-play preset id (or "custom") the session was started from; drives the learner-memory group. */
+  presetId?: string;
 }
 
 /** One "Tại sao?" point: a fragment of an English sentence and why it is said that way. */
