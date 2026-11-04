@@ -2465,3 +2465,5 @@ Plan: docs/superpowers/plans/2026-11-03-conversation-prep.md. Branch base ba3ea9
 - New: `/conversation/prep` (create + recent), `/conversation/prep/[id]` (kit), Firestore `users/{uid}/conversation_preps`, Hội thoại Setup `?prep=` prefill.
 - `savePhraseToVocab` extracted; the Hội thoại report now saves phrases at the session's CEFR level (was hard-coded b1).
 - Deploy: web only (App Hosting push). Check Firestore rules allow `users/{uid}/conversation_preps/**` before pushing.
+- Task 11: complete (commits 62055c7..dacf7d0, controller-checked docs diff).
+- Final review: Important fixed in 6172e3b (delete error no longer offers create retry) + kit load-error state, saved-set merge, a11y; re-review approved.
