@@ -551,6 +551,12 @@ users/
     knowledge_meta/
       seed/
         english: bool          # cờ chặn seed bộ mẫu theo từng ngôn ngữ
+    conversation_preps/        # Chuẩn bị tình huống (chỉ web)
+      {id}/
+        id, createdAt (ISO), situation, level (A2|B1|B2|C1), title, persona, goals[],
+        dialogue[{speaker (you|partner), partnerRole?, en, vi}],
+        patterns[{pattern, meaning, example, why[{part, reason}]}],
+        vocab[{text, meaning, example}]
 ```
 
 ---
@@ -569,6 +575,14 @@ users/
 - [x] **Kiến thức** — thư viện ghi chú ngữ pháp/cấu trúc câu theo ngôn ngữ, tự viết hoặc AI soạn, có bộ mẫu tiếng Anh (cả app Flutter lẫn app React web)
 - [x] **Hội thoại tiếng Anh** (web) — trò chuyện chủ đề tự do hoặc nhập vai tình huống có mục tiêu với AI đóng vai đối phương, chấm điểm cuối buổi; gợi ý và báo cáo có giải thích "Tại sao?"
 - [x] **Chuẩn bị tình huống** (web) — kịch bản mẫu + mẫu câu + từ mới từ một câu mô tả tình huống, nối sang nhập vai Hội thoại
+
+**Việc cần làm tiếp (kiểm tra sau khi deploy Chuẩn bị tình huống, 2026-11-04):**
+
+- [ ] **Rules Firestore** — xác nhận rules đang deploy cho phép chủ tài khoản đọc/ghi `users/{uid}/conversation_preps/**` (rules không nằm trong repo). Thiếu rules thì bấm Tạo sẽ báo "Không lưu được bộ tài liệu", mở bộ đã lưu báo "Không tải được bộ tài liệu".
+- [ ] **iPhone 11, đã đăng nhập** — mở một bộ tài liệu ở `/conversation/prep/[id]`: nút "Luyện nhập vai tình huống này" nằm sát ngay trên tab bar; dòng từ mới cuối cùng không bị che; thanh Kịch bản / Mẫu câu / Từ mới dính dưới tai thỏ khi cuộn; mở sheet "Thêm" thì sheet che được nút luyện nhập vai.
+- [ ] **Chạy thật với AI key** — tạo một bộ tài liệu → nghe/Dịch vài câu → bấm chỗ tô sáng xem có nhảy tới đúng thẻ mẫu câu → lưu 2 từ (kiểm tra trong Ngân hàng từ vựng) → Luyện nhập vai (persona/mục tiêu điền sẵn) → hoàn thành buổi hội thoại.
+- [ ] **Hội thoại "Tại sao?"** — vẫn chưa thử thủ công với AI key thật (xem `.superpowers/sdd/progress.md`, mục 2026-10-19).
+- [ ] *(Tuỳ chọn)* Các góp ý nhỏ còn lại từ review của Chuẩn bị tình huống (không chặn dùng) ghi trong `.superpowers/sdd/progress.md`, mục "Conversation prep — SDD ledger": ví dụ `prepId` vẫn giữ nếu đổi sang tình huống khác sau khi điền sẵn, thanh mục lục không dính trên desktop, chưa kiểm tra kịch bản có ít nhất một lượt "Bạn".
 
 **Ý tưởng khác đã brainstorm (chưa xếp lịch):**
 
