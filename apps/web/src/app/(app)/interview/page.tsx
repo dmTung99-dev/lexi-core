@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
@@ -141,6 +142,10 @@ export default function InterviewSetupPage() {
           </div>
         </section>
         <aside className="iv-setup-side">
+          <Link href="/conversation/memory" className="iv-card prep-entry-card">
+            <span className="iv-card-title">AI nhớ gì về bạn</span>
+            <span className="iv-muted">Xem và xoá những gì AI đã ghi nhớ.</span>
+          </Link>
           <ReadinessCard aiReady={aiReady} mic={mic} onRequestMic={() => void handleRequestMic()} />
           <RecentSessions sessions={recent} />
         </aside>

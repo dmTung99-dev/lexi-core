@@ -57,6 +57,11 @@ beforeEach(() => {
 });
 
 describe("InterviewSetupPage", () => {
+  it("links to the memory page", async () => {
+    setup();
+    expect(await screen.findByRole("link", { name: /AI nhớ gì về bạn/ })).toHaveAttribute("href", "/conversation/memory");
+  });
+
   it("warms up speech services on mount", async () => {
     setup();
     await waitFor(() => expect(warmUpSpeech).toHaveBeenCalled());

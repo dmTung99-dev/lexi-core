@@ -4280,3 +4280,14 @@ html {
     font-size: calc(22px * var(--type-scale));
   }
 }
+
+/* Learner memory page ("AI nhớ gì về bạn"). */
+.memory-page { display: flex; flex-direction: column; gap: 14px; }
+.memory-section { display: flex; flex-direction: column; }
+.memory-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.memory-example { font-size: max(var(--type-min), calc(14px * var(--type-scale))); color: var(--ink); }
+.memory-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.memory-group { display: flex; flex-direction: column; margin-top: 8px; }
+.memory-group-head { justify-content: space-between; }
+.memory-group-title { margin: 0; font-size: calc(16px * var(--type-scale)); }
+.memory-delete { min-height: 44px; min-width: 44px; flex-shrink: 0; }

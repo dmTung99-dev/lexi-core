@@ -49,6 +49,11 @@ beforeEach(() => {
 });
 
 describe("ConversationSetupPage", () => {
+  it("links to the memory page", async () => {
+    render(<ConversationSetupPage />);
+    expect(await screen.findByRole("link", { name: /AI nhớ gì về bạn/ })).toHaveAttribute("href", "/conversation/memory");
+  });
+
   it("links to Chuẩn bị tình huống", async () => {
     render(<ConversationSetupPage />);
     expect(await screen.findByRole("link", { name: /Chuẩn bị tình huống/ })).toHaveAttribute("href", "/conversation/prep");

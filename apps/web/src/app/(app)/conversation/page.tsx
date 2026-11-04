@@ -194,6 +194,10 @@ function ConversationSetupContent() {
             <span className="iv-card-title">Chuẩn bị tình huống</span>
             <span className="iv-muted">Mô tả tình huống sắp tới, AI viết kịch bản mẫu, mẫu câu và từ mới.</span>
           </Link>
+          <Link href="/conversation/memory" className="iv-card prep-entry-card">
+            <span className="iv-card-title">AI nhớ gì về bạn</span>
+            <span className="iv-muted">Xem và xoá những lỗi hay mắc và nội dung bạn đã kể.</span>
+          </Link>
           <ReadinessCard aiReady={aiReady} mic={mic} onRequestMic={() => void requestMicPermission().then((ok) => setMic(ok ? "granted" : "denied"))} />
           <RecentConversations sessions={recent} />
         </aside>
