@@ -3,7 +3,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ConversationSessionPage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
-import { getConversationSession, saveConversationProgress } from "@/lib/conversationSessions";
+import {
+  completeConversationSession,
+  getConversationSession,
+  markConversationMemoryApplied,
+  saveConversationProgress,
+} from "@/lib/conversationSessions";
+import { getMistakeMemory, getTopicMemory, saveMistakeMemory, saveTopicMemory } from "@/lib/learnerMemory";
 import { callInterviewAi } from "@/lib/interviewAi";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
 import { DEFAULT_SETTINGS, type UserSettings } from "@/lib/settings";
@@ -19,6 +25,13 @@ vi.mock("@/lib/conversationSessions", () => ({
   saveConversationProgress: vi.fn(),
   completeConversationSession: vi.fn(),
   deleteConversationSession: vi.fn(),
+  markConversationMemoryApplied: vi.fn(),
+}));
+vi.mock("@/lib/learnerMemory", () => ({
+  getMistakeMemory: vi.fn(),
+  getTopicMemory: vi.fn(),
+  saveMistakeMemory: vi.fn(),
+  saveTopicMemory: vi.fn(),
 }));
 vi.mock("@/lib/interviewAi", () => ({ callInterviewAi: vi.fn(), hasAiKey: () => true }));
 vi.mock("@/lib/transcribeAudioClient", () => ({ transcribeAudio: vi.fn() }));
@@ -77,6 +90,12 @@ beforeEach(() => {
   vi.mocked(useSettingsContext).mockReturnValue({ settings: SETTINGS, loading: false, error: null, save: vi.fn() });
   vi.mocked(saveConversationProgress).mockResolvedValue(undefined);
   vi.mocked(callInterviewAi).mockResolvedValue('{"say":"Nice!","vi":"Hay!","goalsDone":[]}');
+  vi.mocked(completeConversationSession).mockResolvedValue(undefined);
+  vi.mocked(markConversationMemoryApplied).mockResolvedValue(undefined);
+  vi.mocked(getMistakeMemory).mockResolvedValue({ items: [], updatedAt: "" });
+  vi.mocked(getTopicMemory).mockResolvedValue(null);
+  vi.mocked(saveMistakeMemory).mockResolvedValue(undefined);
+  vi.mocked(saveTopicMemory).mockResolvedValue(undefined);
 });
 
 describe("ConversationSessionPage — STT prompt", () => {
@@ -256,5 +275,66 @@ describe("ConversationSessionPage — Lưu & thoát", () => {
     session.messages = [...session.messages, { role: "user", text: "I went to Hue" }];
     renderPage(session);
     expect(await screen.findByText("Nice!")).toBeInTheDocument();
+  });
+});
+
+describe("ConversationSessionPage — grading updates learner memory", () => {
+  const REPORT_JSON = JSON.stringify({
+    overall: 7,
+    criteria: { grammar: 7, vocabulary: 7, fluency: 7, coherence: 7 },
+    criteriaNotes: {},
+    recurringMistakes: [{ pattern: "Quên quá khứ", rule: "Dùng quá khứ", examples: [{ said: "I go", better: "I went" }] }],
+    corrections: [],
+    phrases: [],
+    topicFacts: [{ fact: "Went to Hue", asked: [] }],
+  });
+
+  function gradedSession(): ConversationSession {
+    const session = makeSession(true);
+    session.messages = [...session.messages, { role: "user", text: "I go to Hue" }, { role: "ai", text: "Lovely!" }];
+    return session;
+  }
+
+  beforeEach(() => {
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) =>
+      prompt.includes("English speaking coach reviewing") ? REPORT_JSON : '{"say":"Nice!","vi":"Hay!","goalsDone":[]}'
+    );
+  });
+
+  it("writes memory once, after the session is completed", async () => {
+    renderPage(gradedSession());
+    fireEvent.click(await screen.findByRole("button", { name: "Kết thúc & xem báo cáo" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1/report"));
+    expect(saveMistakeMemory).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(saveMistakeMemory).mock.calls[0][1]).toEqual([
+      expect.objectContaining({ pattern: "Quên quá khứ", source: "conversation" }),
+    ]);
+    expect(saveTopicMemory).toHaveBeenCalledWith("u1", expect.objectContaining({ key: "free" }));
+    expect(markConversationMemoryApplied).toHaveBeenCalledWith("u1", "s1");
+    const completedAt = vi.mocked(completeConversationSession).mock.invocationCallOrder[0];
+    expect(vi.mocked(saveMistakeMemory).mock.invocationCallOrder[0]).toBeGreaterThan(completedAt);
+    expect(vi.mocked(markConversationMemoryApplied).mock.invocationCallOrder[0]).toBeGreaterThan(completedAt);
+  });
+
+  it("still opens the report when the memory read fails", async () => {
+    vi.mocked(getMistakeMemory).mockRejectedValue(new Error("offline"));
+    renderPage(gradedSession());
+    fireEvent.click(await screen.findByRole("button", { name: "Kết thúc & xem báo cáo" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1/report"));
+    expect(completeConversationSession).toHaveBeenCalledWith("u1", "s1", expect.objectContaining({ overall: 7 }));
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+  });
+
+  it("leaves memory untouched when grading fails", async () => {
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
+      if (prompt.includes("English speaking coach reviewing")) throw new Error("quota");
+      return '{"say":"Nice!","vi":"Hay!","goalsDone":[]}';
+    });
+    renderPage(gradedSession());
+    fireEvent.click(await screen.findByRole("button", { name: "Kết thúc & xem báo cáo" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1/report"));
+    expect(completeConversationSession).toHaveBeenCalledWith("u1", "s1", null);
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+    expect(markConversationMemoryApplied).not.toHaveBeenCalled();
   });
 });

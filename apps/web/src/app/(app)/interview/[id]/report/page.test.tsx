@@ -4,7 +4,13 @@ import { clearRecordings, saveRecordings } from "@/lib/recordedAudioStore";
 import InterviewReportPage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
-import { completeInterviewSession, getInterviewSession, listRecentInterviewSessions } from "@/lib/interviewSessions";
+import {
+  completeInterviewSession,
+  getInterviewSession,
+  listRecentInterviewSessions,
+  markInterviewMemoryApplied,
+} from "@/lib/interviewSessions";
+import { getMistakeMemory, saveMistakeMemory } from "@/lib/learnerMemory";
 import { callInterviewAi } from "@/lib/interviewAi";
 import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
 import { DEFAULT_SETTINGS, type UserSettings } from "@/lib/settings";
@@ -19,6 +25,13 @@ vi.mock("@/lib/interviewSessions", () => ({
   getInterviewSession: vi.fn(),
   listRecentInterviewSessions: vi.fn(),
   completeInterviewSession: vi.fn(),
+  markInterviewMemoryApplied: vi.fn(),
+}));
+vi.mock("@/lib/learnerMemory", () => ({
+  getMistakeMemory: vi.fn(),
+  getTopicMemory: vi.fn(),
+  saveMistakeMemory: vi.fn(),
+  saveTopicMemory: vi.fn(),
 }));
 vi.mock("@/lib/interviewAi", () => ({ callInterviewAi: vi.fn(), hasAiKey: () => true }));
 vi.mock("@/lib/vocabRecords", () => ({ getVocabRecordByHeadword: vi.fn(), saveVocabRecord: vi.fn() }));
@@ -82,6 +95,9 @@ beforeEach(() => {
   vi.mocked(completeInterviewSession).mockResolvedValue(undefined);
   vi.mocked(getVocabRecordByHeadword).mockResolvedValue(null);
   vi.mocked(saveVocabRecord).mockResolvedValue("v1");
+  vi.mocked(markInterviewMemoryApplied).mockResolvedValue(undefined);
+  vi.mocked(getMistakeMemory).mockResolvedValue({ items: [], updatedAt: "" });
+  vi.mocked(saveMistakeMemory).mockResolvedValue(undefined);
 });
 
 describe("InterviewReportPage — own-voice replay", () => {
@@ -216,6 +232,41 @@ describe("InterviewReportPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Chấm lại" }));
     await waitFor(() => expect(completeInterviewSession).toHaveBeenCalledWith("u1", "s1", expect.objectContaining({ overall: 7.2 })));
     expect(await screen.findByText("7.2")).toBeInTheDocument();
+  });
+
+  it("Chấm lại updates learner memory once for a session that never applied it", async () => {
+    vi.mocked(callInterviewAi).mockResolvedValue(
+      JSON.stringify({ ...REPORT, recurringMistakes: [{ pattern: "Quên quá khứ", rule: "r", examples: [{ said: "I go", better: "I went" }] }] })
+    );
+    renderPage(makeSession({ report: null, reportError: true }));
+    const button = await screen.findByRole("button", { name: "Chấm lại" });
+    fireEvent.click(button);
+    expect(await screen.findByText("7.2")).toBeInTheDocument();
+    await waitFor(() => expect(markInterviewMemoryApplied).toHaveBeenCalledWith("u1", "s1"));
+    expect(saveMistakeMemory).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(saveMistakeMemory).mock.calls[0][1]).toEqual([expect.objectContaining({ source: "interview" })]);
+    expect(vi.mocked(saveMistakeMemory).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(completeInterviewSession).mock.invocationCallOrder[0]
+    );
+  });
+
+  it("Chấm lại never touches memory on a session that already applied it", async () => {
+    vi.mocked(callInterviewAi).mockResolvedValue(JSON.stringify(REPORT));
+    renderPage(makeSession({ report: null, reportError: true, memoryApplied: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "Chấm lại" }));
+    expect(await screen.findByText("7.2")).toBeInTheDocument();
+    expect(getMistakeMemory).not.toHaveBeenCalled();
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+    expect(markInterviewMemoryApplied).not.toHaveBeenCalled();
+  });
+
+  it("Chấm lại leaves memory untouched when the regrade fails", async () => {
+    vi.mocked(callInterviewAi).mockRejectedValue(new Error("quota"));
+    renderPage(makeSession({ report: null, reportError: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "Chấm lại" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("quota");
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
+    expect(markInterviewMemoryApplied).not.toHaveBeenCalled();
   });
 
   it("sends an in-progress session back to the session page", async () => {

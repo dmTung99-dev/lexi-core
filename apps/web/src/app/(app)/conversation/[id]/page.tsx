@@ -24,6 +24,8 @@ import {
 import { InterviewAiError } from "@/lib/interviewPrompts";
 import { buildConversationReportPrompt, parseConversationReport, userMessageIndexes } from "@/lib/conversationReportPrompt";
 import { planCondense, unsummarizedWindow } from "@/lib/conversationHistory";
+import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
+import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
 import {
   completeConversationSession,
   deleteConversationSession,
@@ -320,21 +322,25 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             router.push("/conversation");
             return;
           }
+          // Fresh memory read as the merge base; null = already applied (or read failed).
+          const gm = await loadGradingMemory(uid, { kind: "conversation", session }).catch(() => null);
           let report: ConversationReport | null = null;
+          let raw = "";
           try {
-            report = parseConversationReport(
-              await callInterviewAi(
-                settings,
-                buildConversationReportPrompt(session.setup, summaryRef.current, finalMessages, goalsDoneRef.current)
-              ),
-              userIndexes,
-              session.setup.mode === "roleplay"
+            raw = await callInterviewAi(
+              settings,
+              buildConversationReportPrompt(session.setup, summaryRef.current, finalMessages, goalsDoneRef.current, toReportMemoryInput(gm))
             );
+            report = parseConversationReport(raw, userIndexes, session.setup.mode === "roleplay");
           } catch {
             report = null;
           }
           await saveConversationProgress(uid, id, { messages: finalMessages, goalsDone: goalsDoneRef.current }).catch(() => {});
           await completeConversationSession(uid, id, report).catch(() => {});
+          // A failed grading leaves memory untouched; applyGradingMemory never throws.
+          if (gm && report) {
+            await applyGradingMemory(uid, id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "conversation"));
+          }
           if (unmountedRef.current) return;
           router.push(`/conversation/${id}/report`);
         })();

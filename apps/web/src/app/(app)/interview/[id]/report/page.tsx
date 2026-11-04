@@ -10,6 +10,8 @@ import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi, hasAiKey } from "@/lib/interviewAi";
 import { answeredMainIndexes, buildReportPrompt, parseReport } from "@/lib/interviewReportPrompt";
 import { completeInterviewSession, getInterviewSession, listRecentInterviewSessions } from "@/lib/interviewSessions";
+import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
+import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
 import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
 import { capitalizeHeadword } from "@/lib/vocabDisplay";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
@@ -107,12 +109,15 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
     setRegrading(true);
     setRegradeError(null);
     try {
-      const next = parseReport(
-        await callInterviewAi(settings, buildReportPrompt(session.setup, session.plan, session.turns)),
-        answeredMainIndexes(session.turns)
-      );
+      // Same once-per-session memory update as the session page's grading step.
+      const gm = await loadGradingMemory(user.uid, { kind: "interview", session }).catch(() => null);
+      const raw = await callInterviewAi(settings, buildReportPrompt(session.setup, session.plan, session.turns, toReportMemoryInput(gm)));
+      const next = parseReport(raw, answeredMainIndexes(session.turns));
       await completeInterviewSession(user.uid, session.id, next);
-      setSession({ ...session, report: next, reportError: false });
+      if (gm) {
+        await applyGradingMemory(user.uid, session.id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "interview"));
+      }
+      setSession({ ...session, report: next, reportError: false, ...(gm ? { memoryApplied: true } : {}) });
     } catch (err) {
       setRegradeError(err instanceof Error ? err.message : "Chấm lại thất bại.");
     }

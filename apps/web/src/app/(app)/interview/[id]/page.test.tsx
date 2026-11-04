@@ -8,9 +8,11 @@ import {
   completeInterviewSession,
   deleteInterviewSession,
   getInterviewSession,
+  markInterviewMemoryApplied,
   saveInterviewPlan,
   saveInterviewTurns,
 } from "@/lib/interviewSessions";
+import { getMistakeMemory, saveMistakeMemory } from "@/lib/learnerMemory";
 import { callInterviewAi } from "@/lib/interviewAi";
 import { InterviewAiError } from "@/lib/interviewPrompts";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
@@ -30,6 +32,13 @@ vi.mock("@/lib/interviewSessions", () => ({
   saveInterviewTurns: vi.fn(),
   completeInterviewSession: vi.fn(),
   deleteInterviewSession: vi.fn(),
+  markInterviewMemoryApplied: vi.fn(),
+}));
+vi.mock("@/lib/learnerMemory", () => ({
+  getMistakeMemory: vi.fn(),
+  getTopicMemory: vi.fn(),
+  saveMistakeMemory: vi.fn(),
+  saveTopicMemory: vi.fn(),
 }));
 vi.mock("@/lib/interviewAi", () => ({ callInterviewAi: vi.fn(), hasAiKey: () => true }));
 vi.mock("@/lib/transcribeAudioClient", () => ({ transcribeAudio: vi.fn() }));
@@ -108,6 +117,9 @@ beforeEach(() => {
   vi.mocked(saveInterviewTurns).mockResolvedValue(undefined);
   vi.mocked(completeInterviewSession).mockResolvedValue(undefined);
   vi.mocked(deleteInterviewSession).mockResolvedValue(undefined);
+  vi.mocked(markInterviewMemoryApplied).mockResolvedValue(undefined);
+  vi.mocked(getMistakeMemory).mockResolvedValue({ items: [], updatedAt: "" });
+  vi.mocked(saveMistakeMemory).mockResolvedValue(undefined);
   vi.mocked(transcribeAudio).mockResolvedValue("My answer");
   vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
     if (prompt.includes("Write exactly")) return JSON.stringify({ questions: PLAN });
@@ -581,5 +593,46 @@ describe("InterviewSessionPage", () => {
         vi.unstubAllGlobals();
       }
     });
+  });
+});
+
+describe("InterviewSessionPage — grading updates learner memory", () => {
+  const ANSWERED = [{ mainIndex: 0, kind: "main" as const, question: "Q1?", answer: "a", skipped: false, answerSeconds: 3 }];
+  const WITH_MISTAKE = JSON.stringify({
+    ...JSON.parse(REPORT_JSON),
+    recurringMistakes: [{ pattern: "Quên quá khứ", rule: "Dùng quá khứ", examples: [{ said: "I go", better: "I went" }] }],
+  });
+
+  beforeEach(() => {
+    vi.mocked(callInterviewAi).mockImplementation(async (_s, prompt: string) => {
+      if (prompt.includes("Write exactly")) return JSON.stringify({ questions: PLAN });
+      if (prompt.includes("Decide ONE of")) return nextTurnReply;
+      if (prompt.includes("expert English interview coach")) return WITH_MISTAKE;
+      throw new Error("unexpected prompt");
+    });
+  });
+
+  it("writes interview mistakes once, after the session is completed", async () => {
+    renderPage(makeSession({ plan: PLAN, turns: ANSWERED }));
+    await screen.findByText("Q2?");
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/s1/report"));
+    expect(saveMistakeMemory).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(saveMistakeMemory).mock.calls[0][1]).toEqual([
+      expect.objectContaining({ pattern: "Quên quá khứ", source: "interview" }),
+    ]);
+    expect(markInterviewMemoryApplied).toHaveBeenCalledWith("u1", "s1");
+    const completedAt = vi.mocked(completeInterviewSession).mock.invocationCallOrder[0];
+    expect(vi.mocked(saveMistakeMemory).mock.invocationCallOrder[0]).toBeGreaterThan(completedAt);
+  });
+
+  it("still opens the report when the memory read fails", async () => {
+    vi.mocked(getMistakeMemory).mockRejectedValue(new Error("offline"));
+    renderPage(makeSession({ plan: PLAN, turns: ANSWERED }));
+    await screen.findByText("Q2?");
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc buổi" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/s1/report"));
+    expect(completeInterviewSession).toHaveBeenCalledWith("u1", "s1", expect.objectContaining({ overall: 7 }));
+    expect(saveMistakeMemory).not.toHaveBeenCalled();
   });
 });

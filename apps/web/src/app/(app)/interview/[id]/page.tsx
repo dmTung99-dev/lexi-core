@@ -17,6 +17,8 @@ import {
   parseTranslation,
 } from "@/lib/interviewPrompts";
 import { answeredMainIndexes, buildReportPrompt, parseReport } from "@/lib/interviewReportPrompt";
+import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
+import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
 import {
   completeInterviewSession,
   deleteInterviewSession,
@@ -300,17 +302,22 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             router.push("/interview");
             return;
           }
+          // Fresh memory read as the merge base; null = already applied (or read failed).
+          const gm = await loadGradingMemory(uid, { kind: "interview", session }).catch(() => null);
           let report: InterviewReport | null = null;
+          let raw = "";
           try {
-            report = parseReport(
-              await callInterviewAi(settings, buildReportPrompt(session.setup, state.plan, finalTurns)),
-              answered
-            );
+            raw = await callInterviewAi(settings, buildReportPrompt(session.setup, state.plan, finalTurns, toReportMemoryInput(gm)));
+            report = parseReport(raw, answered);
           } catch {
             report = null;
           }
           await saveInterviewTurns(uid, id, finalTurns).catch(() => {});
           await completeInterviewSession(uid, id, report).catch(() => {});
+          // A failed grading leaves memory untouched; applyGradingMemory never throws.
+          if (gm && report) {
+            await applyGradingMemory(uid, id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "interview"));
+          }
           if (unmountedRef.current) return;
           router.push(`/interview/${id}/report`);
         })();

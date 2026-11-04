@@ -10,6 +10,8 @@ import { SignInButton } from "@/components/SignInButton";
 import { callInterviewAi, hasAiKey } from "@/lib/interviewAi";
 import { buildConversationReportPrompt, parseConversationReport, userMessageIndexes } from "@/lib/conversationReportPrompt";
 import { completeConversationSession, getConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
+import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
+import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
 import { savePhraseToVocab } from "@/lib/savePhraseToVocab";
 import { conversationRecordingKey } from "@/lib/recordedAudioStore";
 import type { ConversationPhrase, ConversationSession } from "@/lib/conversationTypes";
@@ -92,16 +94,18 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
     setRegrading(true);
     setRegradeError(null);
     try {
-      const next = parseConversationReport(
-        await callInterviewAi(
-          settings,
-          buildConversationReportPrompt(session.setup, session.summary, session.messages, session.goalsDone)
-        ),
-        userMessageIndexes(session.messages),
-        session.setup.mode === "roleplay"
+      // Same once-per-session memory update as the session page's grading step.
+      const gm = await loadGradingMemory(user.uid, { kind: "conversation", session }).catch(() => null);
+      const raw = await callInterviewAi(
+        settings,
+        buildConversationReportPrompt(session.setup, session.summary, session.messages, session.goalsDone, toReportMemoryInput(gm))
       );
+      const next = parseConversationReport(raw, userMessageIndexes(session.messages), session.setup.mode === "roleplay");
       await completeConversationSession(user.uid, session.id, next);
-      setSession({ ...session, report: next, reportError: false });
+      if (gm) {
+        await applyGradingMemory(user.uid, session.id, gm, parseMemoryUpdate(raw, gm.mistakes?.map((m) => m.id) ?? [], "conversation"));
+      }
+      setSession({ ...session, report: next, reportError: false, ...(gm ? { memoryApplied: true } : {}) });
     } catch (err) {
       setRegradeError(err instanceof Error ? err.message : "Chấm lại thất bại.");
     }
