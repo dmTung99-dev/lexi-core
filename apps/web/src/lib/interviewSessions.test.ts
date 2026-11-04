@@ -7,6 +7,7 @@ import {
   getInterviewSession,
   listRecentInterviewSessions,
   listUnfinishedInterviewSessions,
+  markInterviewMemoryApplied,
   saveInterviewPlan,
   saveInterviewTurns,
 } from "./interviewSessions";
@@ -57,6 +58,20 @@ describe("interviewSessions", () => {
         createdAt: expect.any(String),
       })
     );
+  });
+
+  it("writes targets only when given", async () => {
+    vi.mocked(doc).mockReturnValue({ id: "new-id" } as never);
+    const targets = [{ id: "m1", pattern: "p", rule: "r", example: { said: "w", better: "ok" } }];
+    await createInterviewSession("u1", SETUP, targets);
+    expect(setDoc).toHaveBeenLastCalledWith({ id: "new-id" }, expect.objectContaining({ targets }));
+    await createInterviewSession("u1", SETUP);
+    expect(vi.mocked(setDoc).mock.lastCall?.[1]).not.toHaveProperty("targets");
+  });
+
+  it("marks memory applied", async () => {
+    await markInterviewMemoryApplied("u1", "s1");
+    expect(updateDoc).toHaveBeenLastCalledWith(expect.anything(), { memoryApplied: true });
   });
 
   it("returns null for a missing session", async () => {

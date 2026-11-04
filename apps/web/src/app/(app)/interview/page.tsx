@@ -13,6 +13,7 @@ import {
   listUnfinishedInterviewSessions,
 } from "@/lib/interviewSessions";
 import { resumeIndex } from "@/lib/interviewMachine";
+import { loadInterviewTargets } from "@/lib/learnerMemoryGrading";
 import { getCvProfile } from "@/lib/cvProfile";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
@@ -92,12 +93,12 @@ export default function InterviewSetupPage() {
     setStarting(true);
     setStartError(null);
     try {
-      const id = await createInterviewSession(user.uid, {
-        ...draft,
-        role: draft.role.trim(),
-        jd: draft.jd.trim(),
-        cvSummary: cv?.summary ?? null,
-      });
+      const targets = await loadInterviewTargets(user.uid);
+      const id = await createInterviewSession(
+        user.uid,
+        { ...draft, role: draft.role.trim(), jd: draft.jd.trim(), cvSummary: cv?.summary ?? null },
+        targets
+      );
       router.push(`/interview/${id}`);
     } catch (err) {
       setStartError(err instanceof Error ? err.message : "Không tạo được buổi phỏng vấn.");

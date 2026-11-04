@@ -1,3 +1,4 @@
+import type { MistakeTarget } from "./learnerMemoryTypes";
 export type InterviewLevel = "intern" | "junior" | "mid" | "senior";
 export type InterviewType = "behavioral" | "technical" | "hr" | "mixed";
 export type InterviewVoice = "male1" | "male2" | "female1" | "female2";
@@ -97,6 +98,9 @@ export interface InterviewSession {
   turns: InterviewTurn[];
   report: InterviewReport | null;
   reportError: boolean;
+  /** Mistakes to practise, frozen at creation; absent when the read failed. */
+  targets?: MistakeTarget[];
+  memoryApplied?: boolean;
 }
 
 export interface InterviewCvProfile {

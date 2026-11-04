@@ -5,6 +5,7 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { callInterviewAi } from "@/lib/interviewAi";
 import { createConversationSession } from "@/lib/conversationSessions";
+import { loadSessionSnapshot } from "@/lib/learnerMemoryGrading";
 import { getConversationPrep } from "@/lib/conversationPreps";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import type { ConversationPrep } from "@/lib/conversationPrepTypes";
@@ -21,6 +22,7 @@ vi.mock("@/lib/conversationSessions", () => ({
   listUnfinishedConversationSessions: vi.fn().mockResolvedValue([]),
   deleteConversationSession: vi.fn(),
 }));
+vi.mock("@/lib/learnerMemoryGrading", () => ({ loadSessionSnapshot: vi.fn() }));
 vi.mock("@/lib/conversationPreps", () => ({ getConversationPrep: vi.fn() }));
 vi.mock("@/lib/warmUpSpeechClient", () => ({ warmUpSpeech: vi.fn() }));
 vi.mock("@/lib/micPermission", () => ({
@@ -72,8 +74,45 @@ describe("ConversationSetupPage", () => {
         persona: PREP.persona,
         goals: PREP.goals,
         prepId: "p1",
-      })
+      }),
+      undefined
     );
+  });
+
+  it("snapshots learner memory onto the new session", async () => {
+    const snap = { groupKey: "free", groupLabel: "Tự do", facts: [], targets: [] };
+    vi.mocked(loadSessionSnapshot).mockResolvedValueOnce(snap);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    fireEvent.change(screen.getByPlaceholderText(/chuẩn bị họp/), { target: { value: "Football" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu trò chuyện" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    expect(loadSessionSnapshot).toHaveBeenCalledWith("u1", expect.objectContaining({ topic: "Football" }));
+    expect(createConversationSession).toHaveBeenCalledWith("u1", expect.anything(), snap);
+  });
+
+  it("still creates the session when the snapshot is unavailable", async () => {
+    vi.mocked(loadSessionSnapshot).mockResolvedValueOnce(undefined);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    fireEvent.change(screen.getByPlaceholderText(/chuẩn bị họp/), { target: { value: "Football" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu trò chuyện" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    expect(createConversationSession).toHaveBeenCalledWith("u1", expect.anything(), undefined);
+  });
+
+  it("drops the stale prepId after picking a built-in preset", async () => {
+    searchParams = new URLSearchParams("prep=p1");
+    vi.mocked(getConversationPrep).mockResolvedValueOnce(PREP);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    await screen.findByDisplayValue(PREP.persona);
+    fireEvent.click(screen.getByRole("button", { name: /Gọi món ở nhà hàng/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu nhập vai" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    const setup = vi.mocked(createConversationSession).mock.calls[0][1];
+    expect(setup).toMatchObject({ presetId: "restaurant" });
+    expect(setup).not.toHaveProperty("prepId");
   });
 
   it("ignores a bad ?prep= id", async () => {

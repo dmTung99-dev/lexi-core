@@ -7,6 +7,7 @@ import {
   getConversationSession,
   listRecentConversationSessions,
   listUnfinishedConversationSessions,
+  markConversationMemoryApplied,
   saveConversationProgress,
 } from "./conversationSessions";
 import type { ConversationSetup } from "./conversationTypes";
@@ -45,6 +46,20 @@ describe("conversationSessions", () => {
         report: null, reportError: false, createdAt: expect.any(String),
       })
     );
+  });
+
+  it("writes memory only when a snapshot is given", async () => {
+    vi.mocked(doc).mockReturnValue({ id: "new-id" } as never);
+    const snap = { groupKey: "free", groupLabel: "Tự do", facts: [], targets: [] };
+    await createConversationSession("u1", SETUP, snap);
+    expect(setDoc).toHaveBeenLastCalledWith({ id: "new-id" }, expect.objectContaining({ memory: snap }));
+    await createConversationSession("u1", SETUP);
+    expect(vi.mocked(setDoc).mock.lastCall?.[1]).not.toHaveProperty("memory");
+  });
+
+  it("marks memory applied", async () => {
+    await markConversationMemoryApplied("u1", "s1");
+    expect(updateDoc).toHaveBeenLastCalledWith(expect.anything(), { memoryApplied: true });
   });
 
   it("returns null for a missing session and the session with its id otherwise", async () => {

@@ -32,6 +32,11 @@ describe("draft helpers", () => {
     expect(isDraftReady(rp)).toBe(false);
     expect(isDraftReady({ ...rp, persona: "A barista", goals: ["Gọi cà phê"] })).toBe(true);
   });
+  it("draftToSetup stores presetId for built-in cards, omits it for none/custom", () => {
+    expect(draftToSetup({ ...DEFAULT_CONVERSATION_DRAFT, topic: "Travel", presetId: "travel" })).toHaveProperty("presetId", "travel");
+    expect(draftToSetup({ ...DEFAULT_CONVERSATION_DRAFT, topic: "Travel", presetId: null })).not.toHaveProperty("presetId");
+    expect(draftToSetup({ ...DEFAULT_CONVERSATION_DRAFT, topic: "Travel", presetId: "custom" })).not.toHaveProperty("presetId");
+  });
   it("draftToSetup trims, and clears persona/goals in topic mode", () => {
     const s = draftToSetup({ ...DEFAULT_CONVERSATION_DRAFT, topic: " Travel ", persona: "x", goals: ["a"] });
     expect(s).toMatchObject({ mode: "topic", topic: "Travel", persona: null, goals: [] });

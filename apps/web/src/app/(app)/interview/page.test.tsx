@@ -10,6 +10,7 @@ import {
   listRecentInterviewSessions,
   listUnfinishedInterviewSessions,
 } from "@/lib/interviewSessions";
+import { loadInterviewTargets } from "@/lib/learnerMemoryGrading";
 import { getCvProfile } from "@/lib/cvProfile";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission } from "@/lib/micPermission";
@@ -25,6 +26,7 @@ vi.mock("@/lib/interviewSessions", () => ({
   listRecentInterviewSessions: vi.fn(),
   listUnfinishedInterviewSessions: vi.fn(),
 }));
+vi.mock("@/lib/learnerMemoryGrading", () => ({ loadInterviewTargets: vi.fn() }));
 vi.mock("@/lib/cvProfile", () => ({ getCvProfile: vi.fn(), saveCvProfile: vi.fn(), deleteCvProfile: vi.fn() }));
 vi.mock("@/lib/warmUpSpeechClient", () => ({ warmUpSpeech: vi.fn() }));
 vi.mock("@/lib/micPermission", () => ({ getMicPermission: vi.fn(), requestMicPermission: vi.fn() }));
@@ -82,8 +84,20 @@ describe("InterviewSetupPage", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/new-id"));
     expect(createInterviewSession).toHaveBeenCalledWith(
       "u1",
-      expect.objectContaining({ role: "Software Engineer", cvSummary: "CV SUMMARY", questionCount: 5 })
+      expect.objectContaining({ role: "Software Engineer", cvSummary: "CV SUMMARY", questionCount: 5 }),
+      undefined
     );
+  });
+
+  it("passes the remembered mistake targets to the new session", async () => {
+    const targets = [{ id: "m1", pattern: "p", rule: "r", example: { said: "w", better: "ok" } }];
+    vi.mocked(loadInterviewTargets).mockResolvedValue(targets);
+    setup();
+    fireEvent.change(screen.getByLabelText("Vị trí ứng tuyển"), { target: { value: "SE" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu phỏng vấn" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/new-id"));
+    expect(loadInterviewTargets).toHaveBeenCalledWith("u1");
+    expect(createInterviewSession).toHaveBeenCalledWith("u1", expect.anything(), targets);
   });
 
   it("shows no Đang dở section when nothing is unfinished", async () => {

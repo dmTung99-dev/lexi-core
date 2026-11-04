@@ -14,6 +14,7 @@ import {
   listUnfinishedConversationSessions,
 } from "@/lib/conversationSessions";
 import { buildScenarioPrompt, parseScenario } from "@/lib/conversationPrompts";
+import { loadSessionSnapshot } from "@/lib/learnerMemoryGrading";
 import { getConversationPrep } from "@/lib/conversationPreps";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
@@ -50,6 +51,13 @@ function ConversationSetupContent() {
   const preview = useInterviewAudio(draft.voice);
   const prepParam = useSearchParams().get("prep");
   const [prepId, setPrepId] = useState<string | null>(null);
+
+  // A prep kit only describes the custom role-play it prefilled; picking anything
+  // else (or switching mode) means it no longer applies.
+  function handleDraftChange(next: ConversationDraft) {
+    if (next.mode !== draft.mode || next.presetId !== CUSTOM_PRESET_ID) setPrepId(null);
+    setDraft(next);
+  }
 
   // ?prep=<id>: prefill a role-play from a Chuẩn bị tình huống kit — persona and
   // goals already exist, so the `scenario` call is skipped. A bad id is ignored.
@@ -139,10 +147,9 @@ function ConversationSetupContent() {
     setStartError(null);
     try {
       const setup = draftToSetup(draft);
-      const id = await createConversationSession(
-        user.uid,
-        prepId && setup.mode === "roleplay" ? { ...setup, prepId } : setup
-      );
+      const finalSetup = prepId && setup.mode === "roleplay" ? { ...setup, prepId } : setup;
+      const memory = await loadSessionSnapshot(user.uid, finalSetup);
+      const id = await createConversationSession(user.uid, finalSetup, memory);
       router.push(`/conversation/${id}`);
     } catch (err) {
       setStartError(err instanceof Error ? err.message : "Không tạo được buổi trò chuyện.");
@@ -169,7 +176,7 @@ function ConversationSetupContent() {
         <section className="iv-card iv-setup-main" aria-label="Thiết lập">
           <ConversationSetupForm
             value={draft}
-            onChange={setDraft}
+            onChange={handleDraftChange}
             onPreviewVoice={handlePreviewVoice}
             onBuildScenario={() => void handleBuildScenario()}
             building={building}

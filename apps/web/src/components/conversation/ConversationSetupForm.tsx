@@ -47,6 +47,7 @@ export function draftToSetup(d: ConversationDraft): ConversationSetup {
     reviewTranscript: d.reviewTranscript,
     persona: roleplay ? d.persona.trim() : null,
     goals: roleplay ? d.goals.map((g) => g.trim()).filter((g) => g.length > 0) : [],
+    ...(d.presetId && d.presetId !== CUSTOM_PRESET_ID ? { presetId: d.presetId } : {}),
   };
 }
 

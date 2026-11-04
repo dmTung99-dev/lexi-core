@@ -1,5 +1,6 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
+import type { MistakeTarget } from "./learnerMemoryTypes";
 import type { InterviewPlanItem, InterviewReport, InterviewSession, InterviewSetup, InterviewTurn } from "./interviewTypes";
 
 // Sessions created before translations were bundled into the plan have
@@ -20,7 +21,9 @@ function sessionRef(uid: string, id: string) {
   return doc(getFirebaseDb(), "users", uid, "interview_sessions", id);
 }
 
-export async function createInterviewSession(uid: string, setup: InterviewSetup): Promise<string> {
+export async function createInterviewSession(uid: string, setup: InterviewSetup,
+  targets?: MistakeTarget[]
+): Promise<string> {
   const ref = doc(sessionsCol(uid));
   const session: InterviewSession = {
     id: ref.id,
@@ -31,6 +34,7 @@ export async function createInterviewSession(uid: string, setup: InterviewSetup)
     turns: [],
     report: null,
     reportError: false,
+    ...(targets ? { targets } : {}),
   };
   await setDoc(ref, session);
   return ref.id;
@@ -88,4 +92,8 @@ export async function listUnfinishedInterviewSessions(uid: string, max = 3, now 
   return (await listLatest(uid))
     .filter((s) => s.status === "in_progress" && Date.parse(s.createdAt) >= cutoff)
     .slice(0, max);
+}
+
+export async function markInterviewMemoryApplied(uid: string, id: string): Promise<void> {
+  await updateDoc(sessionRef(uid, id), { memoryApplied: true });
 }

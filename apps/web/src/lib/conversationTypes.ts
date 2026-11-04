@@ -1,5 +1,5 @@
 import type { InterviewVoice } from "./interviewTypes";
-
+import type { SessionMemorySnapshot } from "./learnerMemoryTypes";
 export type ConversationMode = "topic" | "roleplay";
 export type ConversationLevel = "A2" | "B1" | "B2" | "C1";
 
@@ -114,6 +114,9 @@ export interface ConversationSession {
   goalsDone: number[];
   report: ConversationReport | null;
   reportError: boolean;
+  /** Learner memory frozen at creation; absent when the read failed. */
+  memory?: SessionMemorySnapshot;
+  memoryApplied?: boolean;
 }
 
 export function userTurnCount(messages: ConversationMessage[]): number {

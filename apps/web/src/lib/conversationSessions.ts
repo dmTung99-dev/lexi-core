@@ -1,5 +1,6 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
+import type { SessionMemorySnapshot } from "./learnerMemoryTypes";
 import type { ConversationReport, ConversationSession, ConversationSetup } from "./conversationTypes";
 
 export type ConversationProgress = Partial<
@@ -14,7 +15,9 @@ function sessionRef(uid: string, id: string) {
   return doc(getFirebaseDb(), "users", uid, "conversation_sessions", id);
 }
 
-export async function createConversationSession(uid: string, setup: ConversationSetup): Promise<string> {
+export async function createConversationSession(uid: string, setup: ConversationSetup,
+  memory?: SessionMemorySnapshot
+): Promise<string> {
   const ref = doc(sessionsCol(uid));
   const session: ConversationSession = {
     id: ref.id,
@@ -27,6 +30,7 @@ export async function createConversationSession(uid: string, setup: Conversation
     goalsDone: [],
     report: null,
     reportError: false,
+    ...(memory ? { memory } : {}),
   };
   await setDoc(ref, session);
   return ref.id;
@@ -76,4 +80,8 @@ export async function listUnfinishedConversationSessions(uid: string, max = 3, n
   return (await listLatest(uid))
     .filter((s) => s.status === "in_progress" && Date.parse(s.createdAt) >= cutoff)
     .slice(0, max);
+}
+
+export async function markConversationMemoryApplied(uid: string, id: string): Promise<void> {
+  await updateDoc(sessionRef(uid, id), { memoryApplied: true });
 }
