@@ -18,6 +18,8 @@ vi.mock("@/lib/interviewAi", () => ({ callInterviewAi: vi.fn(), hasAiKey: () => 
 vi.mock("@/lib/conversationSessions", () => ({
   createConversationSession: vi.fn(),
   listRecentConversationSessions: vi.fn().mockResolvedValue([]),
+  listUnfinishedConversationSessions: vi.fn().mockResolvedValue([]),
+  deleteConversationSession: vi.fn(),
 }));
 vi.mock("@/lib/conversationPreps", () => ({ getConversationPrep: vi.fn() }));
 vi.mock("@/lib/warmUpSpeechClient", () => ({ warmUpSpeech: vi.fn() }));
