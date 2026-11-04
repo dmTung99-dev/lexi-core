@@ -8,16 +8,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("renders all 11 nav items with the 7 group labels, and marks the current route active", () => {
+  it("renders the nav as one list without group headers, and marks the current route active", () => {
     vi.mocked(usePathname).mockReturnValue("/vocab-bank");
-    render(<Sidebar />);
+    const { container } = render(<Sidebar />);
 
-    expect(screen.getByText("Đọc")).toBeInTheDocument();
-    expect(screen.getByText("Quét từ")).toBeInTheDocument();
-    expect(screen.getByText("Kiến thức")).toBeInTheDocument();
-    expect(screen.getByText("Nghe")).toBeInTheDocument();
-    expect(screen.getByText("Phỏng vấn")).toBeInTheDocument();
-    expect(screen.getByText("Khác")).toBeInTheDocument();
+    expect(container.querySelector(".grp-label")).toBeNull();
+    for (const header of ["Đọc", "Quét từ", "Nghe", "Phỏng vấn", "Hội thoại", "Khác"]) {
+      expect(screen.queryByText(header)).not.toBeInTheDocument();
+    }
 
     const active = screen.getByRole("link", { name: /Ngân hàng từ vựng/ });
     expect(active).toHaveClass("active");

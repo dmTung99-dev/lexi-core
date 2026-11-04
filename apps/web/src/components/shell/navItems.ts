@@ -11,6 +11,8 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+// One flat list: every section below the core four had a single item, so its
+// header ("ĐỌC", "NGHE", …) only repeated the item's own label.
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
@@ -19,15 +21,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/lookup", icon: "🔍", label: "Tra từ" },
       { href: "/vocab-bank", icon: "📚", label: "Ngân hàng từ vựng", shortLabel: "Từ vựng" },
       { href: "/practice", icon: "🎯", label: "Ôn tập" },
+      { href: "/reading", icon: "📖", label: "Đọc — tổng quan" },
+      { href: "/word-radar", icon: "🛰️", label: "Quét từ vựng" },
+      { href: "/knowledge", icon: "📖", label: "Kiến thức" },
+      { href: "/listening", icon: "🎧", label: "Nghe — tổng quan" },
+      { href: "/interview", icon: "🎤", label: "Phỏng vấn tiếng Anh" },
+      { href: "/conversation", icon: "💬", label: "Hội thoại tiếng Anh" },
+      { href: "/settings", icon: "⚙️", label: "Cài đặt" },
     ],
   },
-  { label: "Đọc", items: [{ href: "/reading", icon: "📖", label: "Đọc — tổng quan" }] },
-  { label: "Quét từ", items: [{ href: "/word-radar", icon: "🛰️", label: "Quét từ vựng" }] },
-  { label: "Kiến thức", items: [{ href: "/knowledge", icon: "📖", label: "Kiến thức" }] },
-  { label: "Nghe", items: [{ href: "/listening", icon: "🎧", label: "Nghe — tổng quan" }] },
-  { label: "Phỏng vấn", items: [{ href: "/interview", icon: "🎤", label: "Phỏng vấn tiếng Anh" }] },
-  { label: "Hội thoại", items: [{ href: "/conversation", icon: "💬", label: "Hội thoại tiếng Anh" }] },
-  { label: "Khác", items: [{ href: "/settings", icon: "⚙️", label: "Cài đặt" }] },
 ];
 
 const ALL_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);

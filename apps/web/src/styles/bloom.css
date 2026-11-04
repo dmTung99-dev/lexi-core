@@ -3672,6 +3672,36 @@ html {
   }
 }
 
+/* Desktop shell: the frame is exactly one viewport tall, so the page itself
+   never scrolls. .main (overflow-y: auto) is the scroller and the sidebar
+   stays put; a sidebar taller than the window scrolls on its own. The height
+   is divided by the font-size zoom so the zoomed frame still fills exactly one
+   viewport, and min-height is lifted because it is zoomed too. This also makes
+   sticky bars inside .main (.reading-submit-bar, .prep-jump) pin on desktop.
+   Phones (<= 820px) keep their page-scroll layout. */
+@media (min-width: 821px) {
+  .app-frame {
+    min-height: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .app-frame.fs-large {
+    height: calc(100vh / 1.15);
+    height: calc(100dvh / 1.15);
+  }
+  .app-frame.fs-small {
+    height: calc(100vh / 0.9);
+    height: calc(100dvh / 0.9);
+  }
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .main {
+    overscroll-behavior: contain;
+  }
+}
+
 /* Short windows (landscape phones wider than 820px, tiny desktop windows): no
    480px floor, so the frame is exactly the viewport and the page never scrolls;
    the dock is capped so the thread keeps room. After the zoom rules above so the
