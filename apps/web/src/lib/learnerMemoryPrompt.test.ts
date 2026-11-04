@@ -116,6 +116,15 @@ describe("parseMemoryUpdate", () => {
   it("never throws on garbage", () => {
     expect(parseMemoryUpdate("not json at all", ["m1"], "conversation")).toEqual({ checks: [], found: [], topicFacts: null });
   });
+  it("returns the empty update for non-object JSON", () => {
+    for (const r of ["null", "[]", "5", '"x"']) {
+      expect(parseMemoryUpdate(r, ["m1"], "conversation")).toEqual({ checks: [], found: [], topicFacts: null });
+    }
+  });
+  it("de-duplicates checks by id, first wins", () => {
+    const dup = JSON.stringify({ mistakeChecks: [{ id: "m1", result: "wrong" }, { id: "m1", result: "correct" }] });
+    expect(parseMemoryUpdate(dup, ["m1"], "conversation").checks).toEqual([{ id: "m1", result: "wrong" }]);
+  });
   it("caps found at 3", () => {
     const many = JSON.stringify({ recurringMistakes: [1, 2, 3, 4].map((n) => ({ pattern: `p${n}`, examples: [{ said: "a", better: "b" }] })) });
     expect(parseMemoryUpdate(many, [], "interview").found).toHaveLength(3);

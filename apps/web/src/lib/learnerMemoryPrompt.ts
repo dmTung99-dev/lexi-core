@@ -98,16 +98,22 @@ export function parseFoundMistakes(value: unknown, keepId: (id: string) => boole
 export function parseMemoryUpdate(raw: string, trackedIds: string[], kind: "conversation" | "interview"): MemoryUpdate {
   let json: Record<string, unknown>;
   try {
-    json = parseAiJsonObject(raw);
+    const parsed: unknown = parseAiJsonObject(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { checks: [], found: [], topicFacts: null };
+    json = parsed as Record<string, unknown>;
   } catch {
     return { checks: [], found: [], topicFacts: null };
   }
   const known = new Set(trackedIds);
   const checks: MemoryUpdate["checks"] = [];
+  const checked = new Set<string>();
   for (const item of Array.isArray(json.mistakeChecks) ? json.mistakeChecks : []) {
     const o = obj(item);
     const id = str(o.id);
-    if (known.has(id) && (o.result === "correct" || o.result === "wrong")) checks.push({ id, result: o.result });
+    if (known.has(id) && !checked.has(id) && (o.result === "correct" || o.result === "wrong")) {
+      checked.add(id);
+      checks.push({ id, result: o.result });
+    }
   }
   const found = parseFoundMistakes(json.recurringMistakes, (id) => known.has(id));
   let topicFacts: MemoryUpdate["topicFacts"] = null;
