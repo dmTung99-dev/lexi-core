@@ -34,6 +34,8 @@ export interface VocabRecord {
 }
 
 export type VocabRecordUpdate = Pick<VocabRecord, "meaning" | "examples" | "topicIds" | "personalNotes">;
+/** Extra dictionary fields "Hiệu chỉnh" may rewrite on an existing record. */
+export type VocabRecordRefinement = Partial<Pick<VocabRecord, "ipa" | "definition" | "synonyms" | "cefrLevel">>;
 export type NewVocabRecord = Omit<VocabRecord, "id">;
 type TargetLanguage = VocabRecord["targetLanguage"];
 
@@ -60,7 +62,7 @@ export async function deleteVocabRecord(uid: string, id: string, language: Targe
 export async function updateVocabRecord(
   uid: string,
   id: string,
-  updates: VocabRecordUpdate,
+  updates: VocabRecordUpdate & VocabRecordRefinement,
   language: TargetLanguage
 ): Promise<void> {
   const ref = doc(getFirebaseDb(), "users", uid, `vocab_records_${language}`, id);

@@ -77,6 +77,23 @@ describe("VocabDrawer", () => {
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
+  it("shows Hiệu chỉnh only when onRefine is given, calls it, and disables it while refining", () => {
+    const { rerender } = render(
+      <VocabDrawer record={RECORD} topics={TOPICS} onClose={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />
+    );
+    expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).not.toBeInTheDocument();
+    const onRefine = vi.fn();
+    rerender(
+      <VocabDrawer record={RECORD} topics={TOPICS} onClose={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} onRefine={onRefine} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Hiệu chỉnh" }));
+    expect(onRefine).toHaveBeenCalledOnce();
+    rerender(
+      <VocabDrawer record={RECORD} topics={TOPICS} onClose={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} onRefine={onRefine} refining />
+    );
+    expect(screen.getByRole("button", { name: "Đang hiệu chỉnh…" })).toBeDisabled();
+  });
+
   it("calls onEdit when Sửa is clicked", () => {
     const onEdit = vi.fn();
     render(

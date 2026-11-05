@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
@@ -12,13 +12,14 @@ import { buildConversationReportPrompt, parseConversationReport, userMessageInde
 import { completeConversationSession, getConversationSession, listRecentConversationSessions } from "@/lib/conversationSessions";
 import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
 import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
-import { savePhraseToVocab } from "@/lib/savePhraseToVocab";
+import { isPhraseSaved } from "@/lib/savePhraseToVocab";
 import { conversationRecordingKey } from "@/lib/recordedAudioStore";
-import type { ConversationPhrase, ConversationSession } from "@/lib/conversationTypes";
+import type { ConversationSession } from "@/lib/conversationTypes";
 import { ConversationReportSummary } from "@/components/conversation/ConversationReportSummary";
 import { RecurringMistakes } from "@/components/conversation/RecurringMistakes";
 import { CorrectionList } from "@/components/conversation/CorrectionList";
 import { PhraseSaveList } from "@/components/conversation/PhraseSaveList";
+import { PhraseSaveBar, usePhraseVocabSaver } from "@/components/shared/PhraseVocabSaver";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -34,11 +35,28 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
   const [session, setSession] = useState<ConversationSession | null>(null);
   const [previous, setPrevious] = useState<ConversationSession | null>(null);
   const [missing, setMissing] = useState(false);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
   const [regrading, setRegrading] = useState(false);
   const [regradeError, setRegradeError] = useState<string | null>(null);
-  const [phraseSaveError, setPhraseSaveError] = useState<string | null>(null);
-  const savingRef = useRef<Set<string>>(new Set());
+  const saver = usePhraseVocabSaver({
+    uid: user?.uid ?? null,
+    settings,
+    level: session?.setup.level ?? "B1",
+    note: "Từ luyện Hội thoại tiếng Anh",
+  });
+  const { markSaved } = saver;
+
+  // Phrases already in the vocab bank show as saved straight away.
+  useEffect(() => {
+    if (!user || !session?.report) return;
+    let cancelled = false;
+    const phrases = session.report.phrases;
+    void Promise.all(phrases.map((p) => isPhraseSaved(user.uid, p.text).catch(() => false))).then((flags) => {
+      if (!cancelled) markSaved(phrases.filter((_, i) => flags[i]).map((p) => p.text));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, session?.report, markSaved]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -112,22 +130,6 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
     setRegrading(false);
   }
 
-  async function handleSavePhrase(phrase: ConversationPhrase) {
-    if (!user || !session) return;
-    // Guards a double-click from firing two saves for the same phrase.
-    if (savingRef.current.has(phrase.text)) return;
-    savingRef.current.add(phrase.text);
-    setPhraseSaveError(null);
-    try {
-      await savePhraseToVocab(user.uid, phrase, { level: session.setup.level, note: "Từ luyện Hội thoại tiếng Anh" });
-      setSaved((prev) => new Set(prev).add(phrase.text));
-    } catch {
-      setPhraseSaveError("Không lưu được cụm từ — thử lại.");
-    } finally {
-      savingRef.current.delete(phrase.text);
-    }
-  }
-
   return (
     <div className="iv-page iv-report">
       <header className="iv-report-head">
@@ -149,8 +151,9 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
             items={report.corrections}
             recordingKeyFor={(i) => conversationRecordingKey(session.id, i)}
           />
-          {phraseSaveError && <p className="iv-error" role="alert">{phraseSaveError}</p>}
-          <PhraseSaveList phrases={report.phrases} saved={saved} onSave={(p) => void handleSavePhrase(p)} />
+          <PhraseSaveList phrases={report.phrases} saved={saver.saved} onSave={(p) => void saver.saveOne(p)} />
+          <PhraseSaveBar saver={saver} items={report.phrases} />
+          {saver.modal}
         </>
       ) : (
         <section className="iv-card">

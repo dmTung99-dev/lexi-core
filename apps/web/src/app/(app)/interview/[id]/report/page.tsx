@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
@@ -12,20 +12,20 @@ import { answeredMainIndexes, buildReportPrompt, parseReport } from "@/lib/inter
 import { completeInterviewSession, getInterviewSession, listRecentInterviewSessions } from "@/lib/interviewSessions";
 import { applyGradingMemory, loadGradingMemory, toReportMemoryInput } from "@/lib/learnerMemoryGrading";
 import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
-import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
-import { capitalizeHeadword } from "@/lib/vocabDisplay";
+import { isPhraseSaved } from "@/lib/savePhraseToVocab";
+import type { PhraseSource } from "@/lib/phraseEnrich";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { interviewRecordingKey } from "@/lib/recordedAudioStore";
 import {
   INTERVIEW_LEVELS,
   INTERVIEW_TYPES,
   combinedAnswer,
-  type InterviewPhrase,
   type InterviewSession,
 } from "@/lib/interviewTypes";
 import { ScoreSummary } from "@/components/interview/ScoreSummary";
 import { ImprovementList } from "@/components/interview/ImprovementList";
-import { QuestionReview } from "@/components/interview/QuestionReview";
+import { QuestionReview, sentenceContaining } from "@/components/interview/QuestionReview";
+import { PhraseSaveBar, usePhraseVocabSaver } from "@/components/shared/PhraseVocabSaver";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -42,11 +42,39 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
   const [previous, setPrevious] = useState<InterviewSession | null>(null);
   const [missing, setMissing] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
   const [regrading, setRegrading] = useState(false);
   const [regradeError, setRegradeError] = useState<string | null>(null);
-  const [phraseSaveError, setPhraseSaveError] = useState<string | null>(null);
-  const savingRef = useRef<Set<string>>(new Set());
+  const saver = usePhraseVocabSaver({
+    uid: user?.uid ?? null,
+    settings,
+    level: "B1",
+    note: "Từ luyện Phỏng vấn tiếng Anh",
+    activeContext: "business",
+  });
+  const { markSaved } = saver;
+  // Every phrase across the questions, each with the model-answer sentence it came from.
+  const phraseItems = useMemo<PhraseSource[]>(() => {
+    const seen = new Set<string>();
+    return (session?.report?.questions ?? []).flatMap((q) =>
+      q.phrases.flatMap((p) => {
+        if (seen.has(p.text)) return [];
+        seen.add(p.text);
+        return [{ text: p.text, meaning: p.meaning, example: sentenceContaining(q.modelAnswer, p.text) }];
+      })
+    );
+  }, [session?.report]);
+
+  // Phrases already in the vocab bank show as saved straight away.
+  useEffect(() => {
+    if (!user || phraseItems.length === 0) return;
+    let cancelled = false;
+    void Promise.all(phraseItems.map((p) => isPhraseSaved(user.uid, p.text).catch(() => false))).then((flags) => {
+      if (!cancelled) markSaved(phraseItems.filter((_, i) => flags[i]).map((p) => p.text));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, phraseItems, markSaved]);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
 
   useEffect(() => {
@@ -124,48 +152,6 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
     setRegrading(false);
   }
 
-  async function handleSavePhrase(phrase: InterviewPhrase, example: string) {
-    if (!user) return;
-    // Guards a double-click (or two fast taps) from firing two saves for the
-    // same phrase while the first is still in flight.
-    if (savingRef.current.has(phrase.text)) return;
-    savingRef.current.add(phrase.text);
-    const headword = capitalizeHeadword(phrase.text.trim());
-    setPhraseSaveError(null);
-    try {
-      const existing = await getVocabRecordByHeadword(user.uid, headword, "english");
-      if (!existing) {
-        const now = new Date().toISOString();
-        await saveVocabRecord(user.uid, {
-          headword,
-          inputType: "phrase",
-          ipa: "",
-          meaning: phrase.meaning,
-          examples: example ? [example] : [],
-          personalNotes: "Từ luyện Phỏng vấn tiếng Anh",
-          topicIds: [],
-          targetLanguage: "english",
-          cefrLevel: "b1",
-          activeContext: "business",
-          createdAt: now,
-          updatedAt: now,
-          nextReviewAt: null,
-          sm2Repetitions: 0,
-          sm2EaseFactor: 2.5,
-          sm2Interval: 1,
-          definition: "",
-          synonyms: [],
-        });
-      }
-      setSaved((prev) => new Set(prev).add(phrase.text));
-    } catch {
-      // Leave it unsaved; the user can click again.
-      setPhraseSaveError("Không lưu được cụm từ — thử lại.");
-    } finally {
-      savingRef.current.delete(phrase.text);
-    }
-  }
-
   return (
     <div className="iv-page iv-report">
       <header className="iv-report-head">
@@ -199,7 +185,8 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
 
       <section className="iv-qr-list" aria-label="Từng câu hỏi">
         <h3 className="iv-card-title">Từng câu hỏi</h3>
-        {phraseSaveError && <p className="iv-error" role="alert">{phraseSaveError}</p>}
+        <PhraseSaveBar saver={saver} items={phraseItems} />
+        {saver.modal}
         {touched.map((i) => (
           <QuestionReview
             key={i}
@@ -214,8 +201,8 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
               audio.stop();
               void audio.speak(text);
             }}
-            savedPhrases={saved}
-            onSavePhrase={(p, ex) => void handleSavePhrase(p, ex)}
+            savedPhrases={saver.saved}
+            onSavePhrase={(p, ex) => void saver.saveOne({ text: p.text, meaning: p.meaning, example: ex })}
             recordingKeys={session.turns.flatMap((t, ti) =>
               t.mainIndex === i && !t.skipped ? [interviewRecordingKey(session.id, ti)] : []
             )}

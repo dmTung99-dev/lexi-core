@@ -3,12 +3,34 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ConversationPrepKitPage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { getConversationPrep } from "@/lib/conversationPreps";
-import { isPhraseSaved, savePhraseToVocab } from "@/lib/savePhraseToVocab";
+import { isPhraseSaved } from "@/lib/savePhraseToVocab";
+import { useState } from "react";
 import type { ConversationPrep } from "@/lib/conversationPrepTypes";
 
 vi.mock("@/lib/useAuthUser", () => ({ useAuthUser: vi.fn() }));
 vi.mock("@/lib/conversationPreps", () => ({ getConversationPrep: vi.fn() }));
-vi.mock("@/lib/savePhraseToVocab", () => ({ isPhraseSaved: vi.fn(), savePhraseToVocab: vi.fn() }));
+vi.mock("@/lib/savePhraseToVocab", () => ({ isPhraseSaved: vi.fn() }));
+vi.mock("@/lib/SettingsContext", () => ({ useSettingsContext: () => ({ settings: null }) }));
+// The saver itself is covered by PhraseVocabSaver.test.tsx; here it only
+// records what the page asks of it.
+const SAVER = vi.hoisted(() => ({ opts: null as unknown, saveOne: vi.fn() }));
+vi.mock("@/components/shared/PhraseVocabSaver", () => ({
+  usePhraseVocabSaver: (opts: unknown) => {
+    SAVER.opts = opts;
+    const [saved, setSaved] = useState<Set<string>>(new Set());
+    const markSaved = useState(() => (texts: string[]) => setSaved((p) => new Set([...p, ...texts])))[0];
+    return {
+      saved,
+      markSaved,
+      saveOne: async (item: { text: string }) => {
+        SAVER.saveOne(item);
+        markSaved([item.text]);
+      },
+      modal: null,
+    };
+  },
+  PhraseSaveBar: () => null,
+}));
 const AUDIO = { speak: vi.fn().mockResolvedValue(true), prefetch: vi.fn(), playPrefetched: vi.fn(), stop: vi.fn() };
 vi.mock("@/lib/useInterviewAudio", () => ({ useInterviewAudio: () => AUDIO }));
 vi.mock("@/components/SignInButton", () => ({ SignInButton: () => <button>Đăng nhập với Google</button> }));
@@ -62,20 +84,13 @@ describe("ConversationPrepKitPage", () => {
     expect(screen.getByRole("link", { name: "Mẫu câu" })).toHaveAttribute("href", "#prep-patterns");
   });
 
-  it("marks already-saved words on load and saves a new one", async () => {
-    vi.mocked(savePhraseToVocab).mockResolvedValueOnce();
+  it("marks already-saved words on load and saves a new one through the phrase saver", async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("Đã lưu")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Lưu a heads-up" }));
     await waitFor(() => expect(screen.getAllByText("Đã lưu")).toHaveLength(2));
-    expect(savePhraseToVocab).toHaveBeenCalledWith("u1", PREP.vocab[1], { level: "B1", note: "Từ Chuẩn bị tình huống" });
-  });
-
-  it("shows an error when saving a word fails", async () => {
-    vi.mocked(savePhraseToVocab).mockRejectedValueOnce(new Error("x"));
-    renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Lưu a heads-up" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Không lưu được từ — thử lại.");
+    expect(SAVER.saveOne).toHaveBeenCalledWith(PREP.vocab[1]);
+    expect(SAVER.opts).toMatchObject({ uid: "u1", level: "B1", note: "Từ Chuẩn bị tình huống" });
   });
 
   it("speaks a line through the conversation voice", async () => {

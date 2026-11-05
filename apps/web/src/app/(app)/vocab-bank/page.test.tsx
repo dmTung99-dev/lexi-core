@@ -6,6 +6,7 @@ import { useSettingsContext } from "@/lib/SettingsContext";
 import { deleteVocabRecord, getVocabRecords, updateVocabRecord } from "@/lib/vocabRecords";
 import { getTopics } from "@/lib/topics";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+import { enrichPhrases } from "@/lib/phraseEnrich";
 
 vi.mock("@/lib/useAuthUser", () => ({ useAuthUser: vi.fn() }));
 vi.mock("@/lib/SettingsContext", () => ({ useSettingsContext: vi.fn() }));
@@ -15,6 +16,15 @@ vi.mock("@/lib/vocabRecords", () => ({
   updateVocabRecord: vi.fn(),
 }));
 vi.mock("@/lib/topics", () => ({ getTopics: vi.fn() }));
+vi.mock("@/lib/phraseEnrich", async () => ({
+  ...(await vi.importActual<typeof import("@/lib/phraseEnrich")>("@/lib/phraseEnrich")),
+  enrichPhrases: vi.fn(),
+}));
+
+const WITH_KEY = {
+  ...DEFAULT_SETTINGS,
+  providers: { ...DEFAULT_SETTINGS.providers, gemini: { ...DEFAULT_SETTINGS.providers.gemini, apiKeyCiphertext: "c" } },
+};
 vi.mock("@/components/SignInButton", () => ({
   SignInButton: () => <button>Đăng nhập với Google</button>,
 }));
@@ -380,6 +390,65 @@ describe("VocabBankPage", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     // Both the list row and the still-open drawer reflect the update in place (no refetch).
     expect(screen.getAllByText("nghĩa đã sửa")).toHaveLength(2);
+  });
+
+  describe("Hiệu chỉnh", () => {
+    function withKey() {
+      vi.mocked(useSettingsContext).mockReturnValue({ settings: WITH_KEY, loading: false, error: null, save: vi.fn() } as never);
+      vi.mocked(useAuthUser).mockReturnValue({ user: { uid: "u1" } as never, loading: false });
+      vi.mocked(getVocabRecords).mockResolvedValue([RECORD_DUE_TODAY, RECORD_NOT_DUE] as never);
+      vi.mocked(getTopics).mockResolvedValue([]);
+    }
+
+    it("is hidden without an AI key", async () => {
+      vi.mocked(useAuthUser).mockReturnValue({ user: { uid: "u1" } as never, loading: false });
+      vi.mocked(getVocabRecords).mockResolvedValue([RECORD_DUE_TODAY] as never);
+      vi.mocked(getTopics).mockResolvedValue([]);
+      render(<VocabBankPage />);
+      fireEvent.click(await screen.findByText("relocate"));
+      expect(screen.queryByRole("button", { name: "Hiệu chỉnh" })).not.toBeInTheDocument();
+    });
+
+    it("re-looks the word up with its own meaning as context, previews it in the modal, and saves the dictionary fields", async () => {
+      withKey();
+      vi.mocked(updateVocabRecord).mockResolvedValue(undefined);
+      vi.mocked(enrichPhrases).mockResolvedValue([
+        {
+          kind: "wordPhrase", headword: "relocate", inputType: "word", ipa: "/ˌriːˈloʊkeɪt/", meaning: "chuyển chỗ ở, dời đi",
+          definition: "to move to a new place", synonyms: ["move"], examples: ["They relocated to Hanoi."], suggestedTopics: [], cefrLevel: "b1",
+        },
+      ]);
+      render(<VocabBankPage />);
+      fireEvent.click(await screen.findByText("relocate"));
+      fireEvent.click(screen.getByRole("button", { name: "Hiệu chỉnh" }));
+      expect(await screen.findByDisplayValue("chuyển chỗ ở, dời đi")).toBeInTheDocument();
+      expect(enrichPhrases).toHaveBeenCalledWith(WITH_KEY, [{ text: "relocate", meaning: "dời đi", example: "" }], "english");
+      fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+      await waitFor(() =>
+        expect(updateVocabRecord).toHaveBeenCalledWith(
+          "u1",
+          "1",
+          expect.objectContaining({
+            meaning: "chuyển chỗ ở, dời đi", ipa: "/ˌriːˈloʊkeɪt/", definition: "to move to a new place",
+            synonyms: ["move"], cefrLevel: "b1", examples: ["They relocated to Hanoi."],
+          }),
+          "english"
+        )
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(screen.getByText("to move to a new place")).toBeInTheDocument();
+    });
+
+    it("shows an error and changes nothing when the lookup fails", async () => {
+      withKey();
+      vi.mocked(enrichPhrases).mockRejectedValue(new Error("quota"));
+      render(<VocabBankPage />);
+      fireEvent.click(await screen.findByText("relocate"));
+      fireEvent.click(screen.getByRole("button", { name: "Hiệu chỉnh" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Không hiệu chỉnh được");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(updateVocabRecord).not.toHaveBeenCalled();
+    });
   });
 
   it("closes the edit modal without saving when Huỷ is clicked", async () => {

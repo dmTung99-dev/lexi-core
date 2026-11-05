@@ -12,9 +12,12 @@ interface VocabDrawerProps {
   onClose: () => void;
   onDelete: () => void;
   onEdit: () => void;
+  /** "Hiệu chỉnh": re-look the word up with AI; hidden when not given (no AI key). */
+  onRefine?: () => void;
+  refining?: boolean;
 }
 
-export function VocabDrawer({ record, topics, onClose, onDelete, onEdit }: VocabDrawerProps) {
+export function VocabDrawer({ record, topics, onClose, onDelete, onEdit, onRefine, refining = false }: VocabDrawerProps) {
   const mastery = computeMasteryPercent(record);
   const topicNames = resolveTopicNames(record.topicIds, topics);
   const ttsLang = ttsLanguageCode(record.targetLanguage);
@@ -93,6 +96,11 @@ export function VocabDrawer({ record, topics, onClose, onDelete, onEdit }: Vocab
           </div>
           <div className="fa">
             <button onClick={onEdit}>Sửa</button>
+            {onRefine && (
+              <button onClick={onRefine} disabled={refining}>
+                {refining ? "Đang hiệu chỉnh…" : "Hiệu chỉnh"}
+              </button>
+            )}
             <button className="danger" onClick={onDelete}>
               Xoá
             </button>

@@ -28,6 +28,8 @@
 - Quản lý chủ đề: tạo mới, đổi tên, xóa
 - Ô tìm kiếm (khớp trên từ hoặc nghĩa) + lọc theo **Cần ôn hôm nay**, chủ đề, và cấp độ CEFR (A1–C2) — bộ lọc giống hệt nhau trên cả app Flutter và web
 - Xem chi tiết, sửa, xóa từ
+- **Hiệu chỉnh** (web): trong ô chi tiết của một từ, AI tra lại từ đó (dựa vào nghĩa và ví dụ đã lưu để hiểu đúng ngữ cảnh) rồi mở cửa sổ sửa với bản đề xuất — IPA, nghĩa, định nghĩa, từ đồng nghĩa, cấp độ CEFR; ví dụ cũ được giữ, ví dụ mới thêm vào sau; lịch ôn, ngày tạo, ghi chú và chủ đề đã chọn giữ nguyên. Dùng cho mọi từ, kể cả từ lưu sơ sài trước đây
+- **Từ lưu từ Hội thoại, Chuẩn bị tình huống, Phỏng vấn** (web) đầy đủ như từ tra ở Tra từ: AI tra cụm đó (IPA, định nghĩa, từ đồng nghĩa, chủ đề, CEFR, ví dụ — câu của buổi học giữ làm ví dụ đầu) rồi mở cửa sổ sửa trước khi lưu; danh sách còn ≥ 3 từ chưa lưu thì có nút **Lưu tất cả** (tra cả danh sách trong một lần gọi AI, lưu thẳng). Tra lỗi thì vẫn có thể **Lưu bản cơ bản**
 
 ### Luyện tập cách khoảng (Spaced Repetition Practice)
 - Thuật toán **SM-2** tính lịch ôn tập tối ưu

@@ -3,16 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuthUser } from "@/lib/useAuthUser";
+import { useSettingsContext } from "@/lib/SettingsContext";
 import { useRouteParams } from "@/lib/useRouteParams";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
 import { SignInButton } from "@/components/SignInButton";
 import { getConversationPrep } from "@/lib/conversationPreps";
-import { isPhraseSaved, savePhraseToVocab } from "@/lib/savePhraseToVocab";
+import { isPhraseSaved } from "@/lib/savePhraseToVocab";
 import type { ConversationPrep } from "@/lib/conversationPrepTypes";
-import type { ConversationPhrase } from "@/lib/conversationTypes";
 import { PrepDialogue } from "@/components/conversation/prep/PrepDialogue";
 import { PrepPatternCard } from "@/components/conversation/prep/PrepPatternCard";
 import { PrepVocabList } from "@/components/conversation/prep/PrepVocabList";
+import { PhraseSaveBar, usePhraseVocabSaver } from "@/components/shared/PhraseVocabSaver";
 
 export default function ConversationPrepKitPage({ params }: { params: Promise<{ id: string }> }) {
   const resolved = useRouteParams(params);
@@ -22,12 +23,17 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
   const [missing, setMissing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [ringed, setRinged] = useState<number | null>(null);
-  const savingRef = useRef<Set<string>>(new Set());
   const ringTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audio = useInterviewAudio("female1");
+  const { settings } = useSettingsContext();
+  const saver = usePhraseVocabSaver({
+    uid: user?.uid ?? null,
+    settings,
+    level: prep?.level ?? "B1",
+    note: "Từ Chuẩn bị tình huống",
+  });
+  const { markSaved } = saver;
 
   useEffect(() => {
     if (!user || !id) return;
@@ -41,7 +47,7 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
         }
         setPrep(p);
         const flags = await Promise.all(p.vocab.map((v) => isPhraseSaved(user.uid, v.text).catch(() => false)));
-        if (!cancelled) setSaved((prev) => new Set([...prev, ...p.vocab.filter((_, i) => flags[i]).map((v) => v.text)]));
+        if (!cancelled) markSaved(p.vocab.filter((_, i) => flags[i]).map((v) => v.text));
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -49,7 +55,7 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
     return () => {
       cancelled = true;
     };
-  }, [user, id, reloadKey]);
+  }, [user, id, reloadKey, markSaved]);
 
   useEffect(() => () => {
     if (ringTimer.current) clearTimeout(ringTimer.current);
@@ -107,21 +113,6 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
     ringTimer.current = setTimeout(() => setRinged(null), 1600);
   }
 
-  async function handleSave(item: ConversationPhrase) {
-    if (!user || !prep) return;
-    if (savingRef.current.has(item.text)) return;
-    savingRef.current.add(item.text);
-    setSaveError(null);
-    try {
-      await savePhraseToVocab(user.uid, item, { level: prep.level, note: "Từ Chuẩn bị tình huống" });
-      setSaved((prev) => new Set(prev).add(item.text));
-    } catch {
-      setSaveError("Không lưu được từ — thử lại.");
-    } finally {
-      savingRef.current.delete(item.text);
-    }
-  }
-
   return (
     <div className="iv-page prep-kit">
       <Link href="/conversation/prep">← Chuẩn bị tình huống</Link>
@@ -160,8 +151,9 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
           </section>
           <section id="prep-vocab" className="iv-card prep-section">
             <h3 className="iv-card-title prep-section-title">Từ/cụm từ mới</h3>
-            {saveError && <p className="iv-error" role="alert">{saveError}</p>}
-            <PrepVocabList items={prep.vocab} saved={saved} onSave={(item) => void handleSave(item)} onSpeak={speak} />
+            <PrepVocabList items={prep.vocab} saved={saver.saved} onSave={(item) => void saver.saveOne(item)} onSpeak={speak} />
+            <PhraseSaveBar saver={saver} items={prep.vocab} />
+            {saver.modal}
             <p className="iv-muted">→ lưu vào Ngân hàng từ vựng</p>
           </section>
         </div>

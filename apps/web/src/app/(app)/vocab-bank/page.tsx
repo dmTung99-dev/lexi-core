@@ -11,6 +11,8 @@ import {
   type VocabRecordUpdate,
 } from "@/lib/vocabRecords";
 import { getTopics, type Topic } from "@/lib/topics";
+import { hasAiKey } from "@/lib/interviewAi";
+import { enrichPhrases, refineVocabRecord } from "@/lib/phraseEnrich";
 import { formatDueLabel } from "@/lib/vocabDisplay";
 import { isFilterActive, matchesFilters, type VocabFilterState } from "@/lib/vocabFilters";
 import { usePaginatedScroll } from "@/lib/usePaginatedScroll";
@@ -33,6 +35,10 @@ export default function VocabBankPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  // "Hiệu chỉnh": the AI's proposed version of the selected record, previewed in the edit modal.
+  const [refineDraft, setRefineDraft] = useState<VocabRecord | null>(null);
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
 
   useEffect(() => {
     setError(null);
@@ -124,6 +130,32 @@ export default function VocabBankPage() {
     setEditing(false);
   };
 
+  const handleRefine = async () => {
+    if (!settings || !selected || refining) return;
+    setRefining(true);
+    setRefineError(null);
+    try {
+      const [result] = await enrichPhrases(
+        settings,
+        [{ text: selected.headword, meaning: selected.meaning, example: selected.examples[0] ?? "" }],
+        selected.targetLanguage
+      );
+      setRefineDraft(refineVocabRecord(selected, result, topics));
+    } catch {
+      setRefineError("Không hiệu chỉnh được từ này — thử lại sau.");
+    }
+    setRefining(false);
+  };
+
+  const handleSaveRefined = async (updates: VocabRecordUpdate) => {
+    if (!user || !refineDraft) return;
+    const { ipa, definition, synonyms, cefrLevel } = refineDraft;
+    await updateVocabRecord(user.uid, refineDraft.id, { ...updates, ipa, definition, synonyms, cefrLevel }, refineDraft.targetLanguage);
+    const next = { ...refineDraft, ...updates };
+    setRecords((prev) => (prev ? prev.map((r) => (r.id === next.id ? next : r)) : prev));
+    setRefineDraft(null);
+  };
+
   if (authLoading) return <p>Đang tải…</p>;
 
   if (!user) {
@@ -144,6 +176,7 @@ export default function VocabBankPage() {
       <h2 className="scr-title">Ngân hàng từ vựng</h2>
       <p className="scr-sub">{records.length} từ trong Ngân hàng từ vựng.</p>
       {deleteError && <p role="alert">Lỗi xoá từ: {deleteError}</p>}
+      {refineError && <p role="alert">{refineError}</p>}
       <div className="vb-search">
         <input
           type="text"
@@ -212,6 +245,8 @@ export default function VocabBankPage() {
             onClose={() => setSelectedId(null)}
             onDelete={() => void handleDelete(selected.id)}
             onEdit={() => setEditing(true)}
+            onRefine={hasAiKey(settings) ? () => void handleRefine() : undefined}
+            refining={refining}
           />
         )}
       </div>
@@ -221,6 +256,14 @@ export default function VocabBankPage() {
           topics={topics}
           onClose={() => setEditing(false)}
           onSave={handleUpdate}
+        />
+      )}
+      {refineDraft && (
+        <EditVocabModal
+          record={refineDraft}
+          topics={topics}
+          onClose={() => setRefineDraft(null)}
+          onSave={handleSaveRefined}
         />
       )}
       {totalPages > 1 && (

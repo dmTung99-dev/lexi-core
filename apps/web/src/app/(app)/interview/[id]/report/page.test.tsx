@@ -13,6 +13,7 @@ import {
 import { getMistakeMemory, saveMistakeMemory } from "@/lib/learnerMemory";
 import { callInterviewAi } from "@/lib/interviewAi";
 import { getVocabRecordByHeadword, saveVocabRecord } from "@/lib/vocabRecords";
+import { enrichPhrases } from "@/lib/phraseEnrich";
 import { DEFAULT_SETTINGS, type UserSettings } from "@/lib/settings";
 import type { InterviewReport, InterviewSession } from "@/lib/interviewTypes";
 
@@ -35,6 +36,10 @@ vi.mock("@/lib/learnerMemory", () => ({
 }));
 vi.mock("@/lib/interviewAi", () => ({ callInterviewAi: vi.fn(), hasAiKey: () => true }));
 vi.mock("@/lib/vocabRecords", () => ({ getVocabRecordByHeadword: vi.fn(), saveVocabRecord: vi.fn() }));
+vi.mock("@/lib/phraseEnrich", () => ({ enrichPhrases: vi.fn() }));
+vi.mock("@/lib/topics", () => ({ getTopics: vi.fn().mockResolvedValue([]) }));
+vi.mock("@/lib/savePhraseToVocab", () => ({ isPhraseSaved: vi.fn().mockResolvedValue(false), savePhraseToVocab: vi.fn() }));
+vi.mock("@/components/shared/PronunciationButton", () => ({ PronunciationButton: () => null }));
 const AUDIO = { speak: vi.fn().mockResolvedValue(true), prefetch: vi.fn(), playPrefetched: vi.fn(), stop: vi.fn() };
 vi.mock("@/lib/useInterviewAudio", () => ({ useInterviewAudio: () => AUDIO }));
 vi.mock("@/components/SignInButton", () => ({ SignInButton: () => <button>Đăng nhập với Google</button> }));
@@ -176,23 +181,38 @@ describe("InterviewReportPage", () => {
     expect(await screen.findByText("+1.1 so với buổi trước")).toBeInTheDocument();
   });
 
-  it("saves a phrase to the English vocab bank with its meaning", async () => {
+  it("looks a phrase up in full, then saves it to the English vocab bank from the edit modal", async () => {
+    vi.mocked(enrichPhrases).mockImplementation(async (_s, items) =>
+      items.map((it) => ({
+        kind: "wordPhrase" as const, headword: it.text, inputType: "phrase" as const, ipa: "/ˈrɑːðər/",
+        meaning: it.meaning, definition: "instead of", synonyms: ["instead of"], examples: [it.example],
+        suggestedTopics: [], cefrLevel: "b2" as const,
+      }))
+    );
     renderPage(makeSession());
     fireEvent.click(await screen.findByRole("button", { name: /rather than debate it/ }));
+    await waitFor(() =>
+      expect(enrichPhrases).toHaveBeenCalledWith(expect.anything(), [
+        { text: "rather than debate it", meaning: "thay vì tranh cãi", example: "Rather than debate it, I proposed a prototype." },
+      ])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Lưu" }));
     await waitFor(() => expect(saveVocabRecord).toHaveBeenCalled());
     expect(vi.mocked(saveVocabRecord).mock.calls[0][1]).toMatchObject({
       headword: "Rather than debate it",
-      inputType: "phrase",
+      ipa: "/ˈrɑːðər/",
+      definition: "instead of",
+      cefrLevel: "b2",
       meaning: "thay vì tranh cãi",
       examples: ["Rather than debate it, I proposed a prototype."],
+      personalNotes: "Từ luyện Phỏng vấn tiếng Anh",
+      activeContext: "business",
       targetLanguage: "english",
     });
     expect(await screen.findByRole("button", { name: /đã lưu/ })).toBeDisabled();
   });
 
-  it("ignores a second click on the same phrase while the first save is still in flight", async () => {
-    // The SAME pending promise is returned on every call — if the in-flight
-    // guard fails, both clicks await it and both proceed once it resolves.
+  it("ignores a second click on the same phrase while the first lookup is still in flight", async () => {
     let resolveGet: (v: unknown) => void = () => {};
     const pending = new Promise((resolve) => {
       resolveGet = resolve;
@@ -202,11 +222,9 @@ describe("InterviewReportPage", () => {
     const phraseBtn = await screen.findByRole("button", { name: /rather than debate it/ });
     fireEvent.click(phraseBtn);
     fireEvent.click(phraseBtn);
-
-    resolveGet(null);
-    await waitFor(() => expect(saveVocabRecord).toHaveBeenCalled());
+    resolveGet({ id: "x" });
+    expect(await screen.findByRole("button", { name: /đã lưu/ })).toBeInTheDocument();
     expect(getVocabRecordByHeadword).toHaveBeenCalledTimes(1);
-    expect(saveVocabRecord).toHaveBeenCalledTimes(1);
   });
 
   it("does not duplicate an existing phrase", async () => {
@@ -214,15 +232,17 @@ describe("InterviewReportPage", () => {
     renderPage(makeSession());
     fireEvent.click(await screen.findByRole("button", { name: /rather than debate it/ }));
     expect(await screen.findByRole("button", { name: /đã lưu/ })).toBeInTheDocument();
+    expect(enrichPhrases).not.toHaveBeenCalled();
     expect(saveVocabRecord).not.toHaveBeenCalled();
   });
 
-  it("shows an error when saving a phrase fails, without marking it saved", async () => {
-    vi.mocked(saveVocabRecord).mockRejectedValue(new Error("network"));
+  it("shows an error and offers a basic save when the lookup fails, without marking it saved", async () => {
+    vi.mocked(getVocabRecordByHeadword).mockResolvedValue(null);
+    vi.mocked(enrichPhrases).mockRejectedValue(new Error("quota"));
     renderPage(makeSession());
     fireEvent.click(await screen.findByRole("button", { name: /rather than debate it/ }));
-    expect(await screen.findByText("Không lưu được cụm từ — thử lại.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /rather than debate it/ })).not.toBeDisabled();
+    expect(await screen.findByText(/Không tra được thông tin từ/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lưu bản cơ bản" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /đã lưu/ })).not.toBeInTheDocument();
   });
 
