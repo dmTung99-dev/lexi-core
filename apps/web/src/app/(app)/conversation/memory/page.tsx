@@ -5,20 +5,26 @@ import Link from "next/link";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { SignInButton } from "@/components/SignInButton";
 import {
+  deleteCoveredItem,
   deleteTopicFact,
   deleteTopicMemory,
   deleteTrackedMistake,
   getMistakeMemory,
+  getPrepCoverage,
+  listPrepSceneMemories,
   listTopicMemories,
 } from "@/lib/learnerMemory";
-import type { TopicMemory, TrackedMistake } from "@/lib/learnerMemoryTypes";
+import type { PrepCoverage, TopicMemory, TrackedMistake } from "@/lib/learnerMemoryTypes";
 import { MistakeMemoryList } from "@/components/conversation/memory/MistakeMemoryList";
+import { PrepCoverageList } from "@/components/conversation/memory/PrepCoverageList";
 import { TopicMemoryList } from "@/components/conversation/memory/TopicMemoryList";
 
 export default function MemoryPage() {
   const { user, loading: authLoading } = useAuthUser();
   const [mistakes, setMistakes] = useState<TrackedMistake[]>([]);
   const [topics, setTopics] = useState<TopicMemory[]>([]);
+  const [coverage, setCoverage] = useState<PrepCoverage>({ patterns: [], words: [], updatedAt: "" });
+  const [scenes, setScenes] = useState<TopicMemory[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -26,11 +32,13 @@ export default function MemoryPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([getMistakeMemory(user.uid), listTopicMemories(user.uid)])
-      .then(([m, t]) => {
+    Promise.all([getMistakeMemory(user.uid), listTopicMemories(user.uid), getPrepCoverage(user.uid), listPrepSceneMemories(user.uid)])
+      .then(([m, t, c, s]) => {
         if (cancelled) return;
         setMistakes(m.items);
         setTopics(t);
+        setCoverage(c);
+        setScenes(s);
         setLoaded(true);
       })
       .catch(() => {
@@ -63,7 +71,13 @@ export default function MemoryPage() {
     }
   }
 
-  const empty = loaded && mistakes.length === 0 && topics.length === 0;
+  const empty =
+    loaded &&
+    mistakes.length === 0 &&
+    topics.length === 0 &&
+    coverage.patterns.length === 0 &&
+    coverage.words.length === 0 &&
+    scenes.length === 0;
 
   return (
     <div className="iv-page memory-page">
@@ -75,7 +89,7 @@ export default function MemoryPage() {
       {!loaded && !loadError && <p>Đang tải…</p>}
       {empty && (
         <p className="iv-muted">
-          Chưa có gì ở đây. Bộ nhớ sẽ đầy dần sau khi bạn hoàn thành và chấm điểm một buổi Hội thoại hoặc Phỏng vấn.
+          Chưa có gì ở đây. Bộ nhớ sẽ đầy dần sau khi bạn hoàn thành và chấm điểm một buổi Hội thoại hoặc Phỏng vấn, hoặc tạo một bộ Chuẩn bị tình huống.
         </p>
       )}
       <MistakeMemoryList
@@ -97,6 +111,32 @@ export default function MemoryPage() {
         }
         onDeleteGroup={(key) =>
           void run(() => deleteTopicMemory(uid, key), () => setTopics((l) => l.filter((g) => g.key !== key)))
+        }
+      />
+      <PrepCoverageList
+        coverage={coverage}
+        onDelete={(kind, text) =>
+          void run(
+            () => deleteCoveredItem(uid, kind, text),
+            () => setCoverage((c) => ({ ...c, [kind]: c[kind].filter((i) => i.text !== text) }))
+          )
+        }
+      />
+      <TopicMemoryList
+        title="Chuẩn bị tình huống — diễn biến nhập vai"
+        groups={scenes}
+        groupHref={(key) => `/conversation/prep/${key.replace(/^prep_/, "")}`}
+        onDeleteFact={(key, factId) =>
+          void run(
+            () => deleteTopicFact(uid, key, factId),
+            () =>
+              setScenes((l) =>
+                l.map((g) => (g.key === key ? { ...g, facts: g.facts.filter((f) => f.id !== factId) } : g)).filter((g) => g.facts.length > 0)
+              )
+          )
+        }
+        onDeleteGroup={(key) =>
+          void run(() => deleteTopicMemory(uid, key), () => setScenes((l) => l.filter((g) => g.key !== key)))
         }
       />
     </div>

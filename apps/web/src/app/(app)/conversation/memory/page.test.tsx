@@ -8,6 +8,9 @@ import {
   deleteTrackedMistake,
   getMistakeMemory,
   listTopicMemories,
+  getPrepCoverage,
+  deleteCoveredItem,
+  listPrepSceneMemories,
 } from "@/lib/learnerMemory";
 import type { TrackedMistake, TopicMemory } from "@/lib/learnerMemoryTypes";
 
@@ -18,6 +21,9 @@ vi.mock("@/lib/learnerMemory", () => ({
   deleteTrackedMistake: vi.fn(),
   deleteTopicFact: vi.fn(),
   deleteTopicMemory: vi.fn(),
+  getPrepCoverage: vi.fn(),
+  deleteCoveredItem: vi.fn(),
+  listPrepSceneMemories: vi.fn(),
 }));
 vi.mock("@/components/SignInButton", () => ({ SignInButton: () => <button>Đăng nhập với Google</button> }));
 
@@ -54,9 +60,25 @@ const TOPICS: TopicMemory[] = [
   },
 ];
 
-function load(mistakes = MISTAKES, topics = TOPICS) {
+const COVERAGE = {
+  patterns: [{ text: "I'd like to walk you through ___", lastSeenAt: "2026-11-05T00:00:00.000Z" }],
+  words: [{ text: "behind schedule", lastSeenAt: "2026-11-05T00:00:00.000Z" }],
+  updatedAt: "2026-11-05T00:00:00.000Z",
+};
+const SCENES: TopicMemory[] = [
+  {
+    key: "prep_p1",
+    label: "Báo cáo trễ tiến độ",
+    updatedAt: "2026-11-05T00:00:00.000Z",
+    facts: [{ id: "s1", fact: "Told the client the task is 3 days late", asked: ["cause"], updatedAt: "2026-11-05T00:00:00.000Z" }],
+  },
+];
+
+function load(mistakes = MISTAKES, topics = TOPICS, coverage = COVERAGE, scenes = SCENES) {
   vi.mocked(getMistakeMemory).mockResolvedValue({ items: mistakes, updatedAt: "x" });
   vi.mocked(listTopicMemories).mockResolvedValue(topics);
+  vi.mocked(getPrepCoverage).mockResolvedValue(coverage);
+  vi.mocked(listPrepSceneMemories).mockResolvedValue(scenes);
 }
 
 beforeEach(() => {
@@ -134,10 +156,40 @@ describe("MemoryPage", () => {
     await waitFor(() => expect(screen.queryByText("Du lịch")).not.toBeInTheDocument());
   });
 
-  it("shows the empty state when both lists are empty", async () => {
-    load([], []);
+  it("shows the empty state only when every store is empty", async () => {
+    load([], [], { patterns: [], words: [], updatedAt: "" }, []);
     render(<MemoryPage />);
-    expect(await screen.findByText(/sau khi bạn hoàn thành và chấm điểm/)).toBeInTheDocument();
+    expect(await screen.findByText(/Chưa có gì ở đây/)).toBeInTheDocument();
+  });
+
+  it("shows what Chuẩn bị kits taught and the kit role-play memory with a link to the kit", async () => {
+    load();
+    render(<MemoryPage />);
+    const taught = await screen.findByRole("region", { name: "Chuẩn bị tình huống — đã học" });
+    expect(within(taught).getByText("I'd like to walk you through ___")).toBeInTheDocument();
+    expect(within(taught).getByText("behind schedule")).toBeInTheDocument();
+    const scenes = screen.getByRole("region", { name: "Chuẩn bị tình huống — diễn biến nhập vai" });
+    expect(within(scenes).getByText("Told the client the task is 3 days late")).toBeInTheDocument();
+    expect(within(scenes).getByRole("link", { name: "Báo cáo trễ tiến độ" })).toHaveAttribute("href", "/conversation/prep/p1");
+  });
+
+  it("deletes a taught word after confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(deleteCoveredItem).mockResolvedValueOnce();
+    load();
+    render(<MemoryPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Xoá: behind schedule" }));
+    await waitFor(() => expect(screen.queryByText("behind schedule")).not.toBeInTheDocument());
+    expect(deleteCoveredItem).toHaveBeenCalledWith("u1", "words", "behind schedule");
+  });
+
+  it("deletes a kit scene fact", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(deleteTopicFact).mockResolvedValueOnce();
+    load();
+    render(<MemoryPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Xoá: Told the client the task is 3 days late" }));
+    await waitFor(() => expect(deleteTopicFact).toHaveBeenCalledWith("u1", "prep_p1", "s1"));
   });
 
   it("shows an error line when loading fails", async () => {

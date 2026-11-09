@@ -1,22 +1,29 @@
+import Link from "next/link";
 import type { TopicMemory } from "@/lib/learnerMemoryTypes";
 
 export function TopicMemoryList({
   groups,
   onDeleteFact,
   onDeleteGroup,
+  title = "Nội dung đã kể",
+  groupHref,
 }: {
   groups: TopicMemory[];
+  title?: string;
+  groupHref?: (key: string) => string | null;
   onDeleteFact: (key: string, factId: string) => void;
   onDeleteGroup: (key: string) => void;
 }) {
   if (groups.length === 0) return null;
   return (
-    <section className="iv-card memory-section" aria-label="Nội dung đã kể">
-      <h3 className="iv-card-title">Nội dung đã kể</h3>
+    <section className="iv-card memory-section" aria-label={title}>
+      <h3 className="iv-card-title">{title}</h3>
       {groups.map((g) => (
         <div key={g.key} className="memory-group">
           <div className="iv-row memory-group-head">
-            <h4 className="memory-group-title">{g.label}</h4>
+            <h4 className="memory-group-title">
+              {groupHref?.(g.key) ? <Link href={groupHref(g.key) as string}>{g.label}</Link> : g.label}
+            </h4>
             <button
               type="button"
               className="btn-secondary memory-delete"
