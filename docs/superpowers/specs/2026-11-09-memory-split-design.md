@@ -178,3 +178,5 @@ Empty states per section. The prep create page gets a small link to the memory p
 - The switch is a checkbox in the existing `iv-checkbox` style (the web app has no `BloomSwitch`; that is a Flutter widget).
 - Coverage items use one shape `{ text, lastSeenAt }` for both patterns and words (instead of `CoveredPattern.pattern` / `CoveredWord.text`).
 - The kit scene block on the memory page always links to the kit page; for a deleted kit that page shows "Không tìm thấy bộ tài liệu".
+- The memory page shows Chuẩn bị as two cards ("Chuẩn bị tình huống — đã học" and "Chuẩn bị tình huống — diễn biến nhập vai") with one page-wide empty message instead of per-section empty states.
+- The memory page reads are independent (`Promise.allSettled`): a failed read shows the error line, but the other sections still render.

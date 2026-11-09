@@ -36,4 +36,20 @@ describe("useMemoryPreference", () => {
     await act(async () => result.current[1](false));
     expect(result.current[0]).toBe(false);
   });
+
+  it("never saves while settings are still loading, but updates the value", () => {
+    vi.mocked(useSettingsContext).mockReturnValue({ settings: DEFAULT_SETTINGS, loading: true, error: null, save });
+    const { result } = renderHook(() => useMemoryPreference("memoryInPrep"));
+    act(() => result.current[1](false));
+    expect(result.current[0]).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("never saves after a failed settings load, but updates the value", () => {
+    vi.mocked(useSettingsContext).mockReturnValue({ settings: DEFAULT_SETTINGS, loading: false, error: "x", save });
+    const { result } = renderHook(() => useMemoryPreference("memoryInPrep"));
+    act(() => result.current[1](false));
+    expect(result.current[0]).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
 });

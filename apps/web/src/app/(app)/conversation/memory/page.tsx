@@ -32,18 +32,18 @@ export default function MemoryPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([getMistakeMemory(user.uid), listTopicMemories(user.uid), getPrepCoverage(user.uid), listPrepSceneMemories(user.uid)])
-      .then(([m, t, c, s]) => {
+    // Independent reads: one failing read must not blank the other sections.
+    Promise.allSettled([getMistakeMemory(user.uid), listTopicMemories(user.uid), getPrepCoverage(user.uid), listPrepSceneMemories(user.uid)]).then(
+      ([m, t, c, s]) => {
         if (cancelled) return;
-        setMistakes(m.items);
-        setTopics(t);
-        setCoverage(c);
-        setScenes(s);
+        if (m.status === "fulfilled") setMistakes(m.value.items);
+        if (t.status === "fulfilled") setTopics(t.value);
+        if (c.status === "fulfilled") setCoverage(c.value);
+        if (s.status === "fulfilled") setScenes(s.value);
+        setLoadError([m, t, c, s].some((r) => r.status === "rejected"));
         setLoaded(true);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      });
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -73,6 +73,7 @@ export default function MemoryPage() {
 
   const empty =
     loaded &&
+    !loadError &&
     mistakes.length === 0 &&
     topics.length === 0 &&
     coverage.patterns.length === 0 &&
@@ -86,7 +87,7 @@ export default function MemoryPage() {
       <p className="scr-sub">Những lỗi hay mắc và nội dung bạn đã kể, để AI hỏi và luyện đúng chỗ ở buổi sau.</p>
       {loadError && <p className="iv-error" role="alert">Không tải được bộ nhớ — thử lại sau.</p>}
       {deleteError && <p className="iv-error" role="alert">{deleteError}</p>}
-      {!loaded && !loadError && <p>Đang tải…</p>}
+      {!loaded && <p>Đang tải…</p>}
       {empty && (
         <p className="iv-muted">
           Chưa có gì ở đây. Bộ nhớ sẽ đầy dần sau khi bạn hoàn thành và chấm điểm một buổi Hội thoại hoặc Phỏng vấn, hoặc tạo một bộ Chuẩn bị tình huống.

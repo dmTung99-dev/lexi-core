@@ -198,6 +198,14 @@ describe("MemoryPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Không tải được bộ nhớ");
   });
 
+  it("still shows the other sections when one read fails", async () => {
+    vi.mocked(listPrepSceneMemories).mockRejectedValue(new Error("boom"));
+    render(<MemoryPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Không tải được bộ nhớ");
+    expect(await screen.findByText("Thiếu mạo từ")).toBeInTheDocument();
+    expect(screen.queryByText(/Chưa có gì ở đây/)).not.toBeInTheDocument();
+  });
+
   it("shows an error line when a delete fails and keeps the row", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(deleteTrackedMistake).mockRejectedValue(new Error("x"));

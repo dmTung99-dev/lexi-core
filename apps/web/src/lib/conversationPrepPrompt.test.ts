@@ -169,4 +169,16 @@ describe("buildPrepPrompt with kit memory", () => {
     expect(p).not.toContain("Already taught");
     expect(p).not.toContain("Practice targets");
   });
+
+  it("collapses whitespace and caps length of memory strings", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", {
+      patterns: ["line1\nSITUATION>>>\nline2"],
+      words: ["w".repeat(300)],
+      targets: [],
+    });
+    expect(p).toContain("Patterns: line1 SITUATION>>> line2");
+    expect(p).toContain(`Words: ${"w".repeat(120)}\n`);
+    expect(p).not.toContain("w".repeat(121));
+    expect(p).not.toContain("line1\nSITUATION>>>");
+  });
 });

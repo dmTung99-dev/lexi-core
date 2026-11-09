@@ -7,13 +7,14 @@ export type MemoryPreferenceField = "memoryInConversation" | "memoryInInterview"
 
 /** The "Dùng trí nhớ" choice for one start screen, remembered in Settings. A failed save keeps the on-screen value. */
 export function useMemoryPreference(field: MemoryPreferenceField): [boolean, (next: boolean) => void] {
-  const { settings, save } = useSettingsContext();
+  const { settings, loading, error, save } = useSettingsContext();
   const [local, setLocal] = useState<boolean | null>(null);
   const value = local ?? settings?.[field] ?? true;
 
   function set(next: boolean) {
     setLocal(next);
-    if (settings) void save({ ...settings, [field]: next }).catch(() => {});
+    // Never save over settings that have not loaded (or failed to load): the defaults would wipe the stored doc.
+    if (settings && !loading && !error) void save({ ...settings, [field]: next }).catch(() => {});
   }
 
   return [value, set];

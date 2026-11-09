@@ -13,17 +13,24 @@ export class PrepUnclearError extends InterviewAiError {
   }
 }
 
+const MEMORY_STRING_MAX = 120;
+
+/** Memory strings come from earlier AI output: keep them to one short line so they cannot break the prompt's structure. */
+function clean(s: string): string {
+  return s.replace(/\s+/g, " ").trim().slice(0, MEMORY_STRING_MAX);
+}
+
 function kitMemorySection(memory?: KitMemory): string {
   if (!memory) return "";
   const parts: string[] = [];
   if (memory.patterns.length > 0 || memory.words.length > 0) {
     parts.push(`Already taught in this learner's earlier kits (do NOT use these as this kit's "patterns" or "vocab" items; they may appear again inside the dialogue as natural review):
-Patterns: ${memory.patterns.length > 0 ? memory.patterns.join(" | ") : "(none)"}
-Words: ${memory.words.length > 0 ? memory.words.join(" | ") : "(none)"}`);
+Patterns: ${memory.patterns.length > 0 ? memory.patterns.map(clean).join(" | ") : "(none)"}
+Words: ${memory.words.length > 0 ? memory.words.map(clean).join(" | ") : "(none)"}`);
   }
   if (memory.targets.length > 0) {
     const lines = memory.targets
-      .map((t) => `- ${t.pattern}: ${t.rule} (said "${t.example.said}", better "${t.example.better}")`)
+      .map((t) => `- ${clean(t.pattern)}: ${clean(t.rule)} (said "${clean(t.example.said)}", better "${clean(t.example.better)}")`)
       .join("\n");
     parts.push(`Practice targets — mistakes this learner keeps making:
 ${lines}
