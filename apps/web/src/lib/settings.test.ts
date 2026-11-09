@@ -22,6 +22,12 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.providers.openrouter.apiKeyCiphertext).toBeNull();
     expect(DEFAULT_SETTINGS.targetLanguage).toBe("english");
   });
+
+  it("uses memory on every screen by default", () => {
+    expect(DEFAULT_SETTINGS.memoryInConversation).toBe(true);
+    expect(DEFAULT_SETTINGS.memoryInInterview).toBe(true);
+    expect(DEFAULT_SETTINGS.memoryInPrep).toBe(true);
+  });
 });
 
 describe("getSettings", () => {

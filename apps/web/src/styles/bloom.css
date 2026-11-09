@@ -4324,3 +4324,6 @@ html {
 .memory-group-head { justify-content: space-between; }
 .memory-group-title { margin: 0; font-size: calc(16px * var(--type-scale)); }
 .memory-delete { min-height: 44px; min-width: 44px; flex-shrink: 0; }
+.memory-switch { align-items: flex-start; }
+.memory-switch input { margin-top: 3px; }
+.memory-switch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

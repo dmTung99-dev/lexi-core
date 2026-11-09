@@ -17,6 +17,10 @@ export interface UserSettings {
   theme: Theme;
   fontSize: FontSize;
   targetLanguage: TargetLanguage;
+  /** Last "Dùng trí nhớ" choice on each start screen; missing in old docs = true. */
+  memoryInConversation: boolean;
+  memoryInInterview: boolean;
+  memoryInPrep: boolean;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -29,6 +33,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   theme: "system",
   fontSize: "medium",
   targetLanguage: "english",
+  memoryInConversation: true,
+  memoryInInterview: true,
+  memoryInPrep: true,
 };
 
 function settingsRef(uid: string) {
