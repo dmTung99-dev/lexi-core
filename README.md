@@ -98,8 +98,8 @@ Hub với 2 tính năng con (truy cập qua tab "Luyện tập" → card "Luyệ
 - **Lưu & thoát / Tiếp tục** (cả Phỏng vấn và Hội thoại) — tiến độ lưu lên Firestore sau mỗi lượt; nút **Lưu & thoát** giữ cả câu đang soạn rồi rời phiên mà không chấm điểm. Các buổi dở dang trong 14 ngày gần nhất hiện ở mục **Đang dở** trên trang thiết lập (kèm tiến độ, nút **Tiếp tục** / **Bỏ**), mở lại được trên mọi máy. Ghi âm "Nghe lại giọng tôi" không theo sang máy khác vì chỉ giữ trong bộ nhớ trình duyệt.
 - Chỉ trên web (React) không có trên app Flutter
 - **Hội thoại tiếng Anh (web):** trò chuyện với AI bằng giọng nói hoặc gõ, về một chủ đề tự do hoặc nhập vai một tình huống có mục tiêu; gợi ý sửa câu và gợi ý cách nói theo yêu cầu (kèm giải thích "Tại sao?" bằng tiếng Việt cho thì, giới từ, trật tự từ, cụm cố định — ở gợi ý cách nói thì bấm mới mở), báo cáo cuối buổi với lỗi lặp lại (kèm một câu quy tắc dễ nhớ), câu đáng sửa (kèm "Tại sao?" cho từng chỗ sửa) và cụm từ lưu vào Ngân hàng từ vựng; chỗ nhận dạng giọng nói nghe nhầm (từ phát âm gần giống nhưng vô nghĩa trong ngữ cảnh) không bị tính là lỗi. Lời thoại của AI kèm sẵn bản dịch tiếng Việt (bấm dịch hiện ngay) và có nút **Nghe lại giọng tôi**, dùng chung bộ STT với Phỏng vấn.
-- **Chuẩn bị tình huống (web):** gõ tình huống sắp gặp bằng tiếng Việt (VD: "Tôi chuẩn bị báo cáo với khách hàng về task A"), chọn trình độ, AI tạo một bộ tài liệu được lưu lại: kịch bản hội thoại mẫu (nghe từng câu, bấm Dịch), 5–8 mẫu câu hay dùng (tô sáng trong kịch bản, kèm "Tại sao?" bằng tiếng Việt) và 6–10 từ/cụm từ mới lưu được vào Ngân hàng từ vựng. Nút **Luyện nhập vai tình huống này** mở Hội thoại với persona/mục tiêu điền sẵn.
-- **Trí nhớ người học (web, Hội thoại + Phỏng vấn):** AI nhớ những gì bạn đã chia sẻ theo từng chủ đề nên buổi Hội thoại sau về cùng chủ đề (VD: cùng một địa điểm du lịch) hỏi khía cạnh khác thay vì lặp lại; một danh sách lỗi hay mắc dùng chung cho cả hai tính năng, ôn kiểu SM-2 ("Đang luyện" -> "Đã quen" sau 3 lần dùng đúng liên tiếp) và được đưa vào buổi sau làm mục tiêu luyện (Hội thoại tối đa 3, Phỏng vấn tối đa 2). Trang **AI nhớ gì về bạn** tại `/conversation/memory` cho xem và xoá từng mục. Trí nhớ chỉ cập nhật một lần mỗi buổi, lúc chấm điểm (kể cả **Chấm lại**); **Lưu & thoát** không cập nhật trí nhớ.
+- **Chuẩn bị tình huống (web):** gõ tình huống sắp gặp bằng tiếng Việt (VD: "Tôi chuẩn bị báo cáo với khách hàng về task A"), chọn trình độ, AI tạo một bộ tài liệu được lưu lại: kịch bản hội thoại mẫu (nghe từng câu, bấm Dịch), 5–8 mẫu câu hay dùng (tô sáng trong kịch bản, kèm "Tại sao?" bằng tiếng Việt) và 6–10 từ/cụm từ mới lưu được vào Ngân hàng từ vựng. Nút **Luyện nhập vai tình huống này** mở Hội thoại với persona/mục tiêu điền sẵn. Bộ mới tránh lặp mẫu câu/từ đã học và lồng 1–2 lỗi hay mắc đang đến hạn thành thẻ mẫu câu.
+- **Trí nhớ người học (web, Hội thoại + Phỏng vấn):** AI nhớ những gì bạn đã chia sẻ theo từng chủ đề nên buổi Hội thoại sau về cùng chủ đề (VD: cùng một địa điểm du lịch) hỏi khía cạnh khác thay vì lặp lại; một danh sách lỗi hay mắc dùng chung cho cả hai tính năng, ôn kiểu SM-2 ("Đang luyện" -> "Đã quen" sau 3 lần dùng đúng liên tiếp) và được đưa vào buổi sau làm mục tiêu luyện (Hội thoại tối đa 3, Phỏng vấn tối đa 2). Trang **AI nhớ gì về bạn** tại `/conversation/memory` cho xem và xoá từng mục. Trí nhớ chỉ cập nhật một lần mỗi buổi, lúc chấm điểm (kể cả **Chấm lại**); **Lưu & thoát** không cập nhật trí nhớ. Bộ nhớ chia hai: Hội thoại/Phỏng vấn (chuyện thật bạn kể) và Chuẩn bị tình huống (mẫu câu, từ đã học qua các bộ và diễn biến nhập vai của từng bộ); danh sách lỗi hay mắc dùng chung. Mỗi màn bắt đầu có công tắc **Dùng trí nhớ** (tắt thì AI không thấy trí nhớ, nhưng vẫn ghi nhớ sau buổi).
 
 ### Quét từ vựng (Word Radar)
 Trên app Flutter: tab "Luyện tập" → card "Quét từ vựng". Trên web: mục **"Quét từ vựng"** riêng trên sidebar (ngang hàng với "Đọc", không còn nằm trong hub Đọc).
@@ -566,6 +566,11 @@ users/
     conversation_memory/       # Trí nhớ theo chủ đề Hội thoại (chỉ web)
       {groupKey}/
         key, label, facts[{id, fact, asked[], updatedAt}] (tối đa 12), updatedAt
+    prep_memory/
+      coverage                 # Chuẩn bị: patterns[{text, lastSeenAt}] (≤60), words[{text, lastSeenAt}] (≤120), updatedAt
+    prep_scene_memory/         # Diễn biến nhập vai theo từng bộ Chuẩn bị (thay cho conversation_memory/prep_*)
+      {prepId}/
+        key (prep_<prepId>), label, facts[{id, fact, asked[], updatedAt}] (≤12), updatedAt
 ```
 
 ---
@@ -599,6 +604,12 @@ users/
 - [ ] **Chạy thật với AI key** — làm hai buổi Hội thoại chủ đề Du lịch về cùng một địa điểm: buổi thứ hai phải hỏi khác buổi đầu; khi có mục tiêu là lỗi thì quá khứ, AI nên hỏi tự nhiên về một sự kiện đã xảy ra; kế hoạch Phỏng vấn có một câu hỏi bám theo mục tiêu; trang `/conversation/memory` hiện đúng các mục và xoá từng mục được.
 - [ ] **Hội thoại không thành bài tập ngữ pháp** — trong một buổi dài, các câu hỏi không bị lặp lại kiểu luyện ngữ pháp (mục tiêu chỉ được gợi ở các lượt 2, 5, 8, 11).
 - [ ] **iPhone, trang AI nhớ gì về bạn** — mở `/conversation/memory` với văn bản dài (mẫu lỗi, ví dụ, câu chia sẻ): không tràn ngang, nút xoá bấm được (>= 44px).
+
+**Việc cần làm tiếp (tách bộ nhớ + Dùng trí nhớ, 2026-11-09):**
+
+- [ ] **Chạy thật với AI key** — tạo hai bộ Chuẩn bị gần chủ đề: bộ thứ hai không lặp mẫu câu chính; một lỗi đang đến hạn thành một thẻ mẫu câu; nhập vai từ một bộ hai lần: lần hai đi tiếp cảnh cũ; sau đó phần Hội thoại trên trang "AI nhớ gì về bạn" không có chi tiết bịa từ nhập vai.
+- [ ] **Tắt Dùng trí nhớ** — trên cả ba màn: AI không nhắc gì từ trí nhớ, nhưng sau khi chấm/tạo bộ trang "AI nhớ gì về bạn" vẫn cập nhật; lựa chọn được nhớ ở lần mở sau (cả trên máy khác).
+- [ ] **iPhone** — công tắc Dùng trí nhớ và phần Chuẩn bị tình huống trên trang trí nhớ không tràn ngang, nút Xoá ≥ 44px.
 
 **Ý tưởng khác đã brainstorm (chưa xếp lịch):**
 

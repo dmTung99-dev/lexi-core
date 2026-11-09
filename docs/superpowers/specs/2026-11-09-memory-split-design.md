@@ -1,7 +1,7 @@
 # LexiCore — Memory split, Chuẩn bị tình huống memory, and the "Dùng trí nhớ" switch (web)
 
 **Date:** 2026-11-09
-**Status:** Design approved in brainstorming; spec awaiting owner review.
+**Status:** Implemented (2026-11-09).
 **Covers:** Splitting learner memory into a Hội thoại/Phỏng vấn store and a new Chuẩn bị tình huống store (with one shared mistake list), giving kit generation a memory, adding a per-screen "Dùng trí nhớ" switch that turns memory *use* off but never memory *writing*, and the rules that keep the stores from conflicting.
 **Builds on:** `2026-11-04-learner-memory-design.md` (learner memory), `2026-11-03-conversation-prep-design.md` (prep kits).
 **Deferred, separate spec later:** a "Tất cả" / cumulative CEFR level picker weighted toward the top level on every screen with a level picker.
@@ -172,3 +172,9 @@ Empty states per section. The prep create page gets a small link to the memory p
 - **Unit:** key routing (`prep_` → scene store, others → Hội thoại store); legacy fallback read and cleanup after write; coverage normalise/dedupe/cap/eviction; `buildPrepPrompt` with and without memory (sections, rules, truncation to 40/80); report prompt carries the contradiction rule; settings defaults for missing fields.
 - **Page:** switch off → session created without snapshot/targets but grading still writes; switch value saved to settings and stored on the session/kit; role-play from a kit never writes `conversation_memory`; kit creation updates coverage; kit deletion removes its scene memory; memory page shows three sections, excludes `prep_*` from Hội thoại, deletes coverage items and scene facts.
 - **Manual with a real AI key:** two kits on related situations → the second has different main patterns; a due mistake appears as a pattern card; two role-plays from one kit → the second continues the scene; after a kit role-play the Hội thoại section on the memory page has no invented details; switch off → the chat shows no sign of memory, and the memory page still updates after grading.
+
+## 11. Deviations from this spec
+
+- The switch is a checkbox in the existing `iv-checkbox` style (the web app has no `BloomSwitch`; that is a Flutter widget).
+- Coverage items use one shape `{ text, lastSeenAt }` for both patterns and words (instead of `CoveredPattern.pattern` / `CoveredWord.text`).
+- The kit scene block on the memory page always links to the kit page; for a deleted kit that page shows "Không tìm thấy bộ tài liệu".

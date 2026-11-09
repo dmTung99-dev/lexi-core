@@ -2475,3 +2475,24 @@ Plan: docs/superpowers/plans/2026-11-03-conversation-prep.md. Branch base ba3ea9
 - Task 8: docs (README, spec status, this ledger).
 - New: Firestore `users/{uid}/learner_memory/mistakes`, `users/{uid}/conversation_memory/{groupKey}`. Lưu & thoát does not update memory.
 - Deploy: web only (App Hosting push); no backend/functions change. PENDING owner: manual run with a real AI key and iPhone check of the memory page (see README checklist).
+
+## Memory split (feat/memory-split) — SDD ledger
+Plan: docs/superpowers/plans/2026-11-09-memory-split.md. Branch base f292def. Reports: ms-task-N-report.md.
+- Task 1: complete (commits f292def..b665991, review clean). Minor: listPrepSceneMemories sort throws if a doc lacks updatedAt; reads whole legacy collection. Memory page hides prep groups until Task 8 (don't merge before).
+- Task 2: complete (commits b665991..3444beb, review clean). Minor: getPrepCoverage unvalidated cast; deleteCoveredItem not transactional. Full-suite page tests (vocab-bank, interview/[id], reading part6/7) flaky under load; pass in isolation.
+- Task 3: complete (commits 3444beb..f154670, review clean). Minor: kitMemorySection interpolates memory strings unsanitised (newlines/quotes, no length cap) after the SITUATION fence; suggest collapse whitespace + cap 120.
+- Task 4: complete (commits f154670..76dfa66, review clean).
+- Task 5: complete (commits 76dfa66..51df2c1, review clean; full suite 1586/1586 by controller). Minor: toggle before settings load isn't saved; local override never re-syncs; no double-toggle test.
+- Task 6: complete (commits 51df2c1..21ee9e7, review clean; full suite 1589 pass). Minor: no test for switch off + ?prep=. Grading still reads memory when off = by design (spec §5 write base).
+- Task 7: complete (commits 21ee9e7..dad7644, review clean; full suite 1594 pass). Minor: switch change doesn't invalidate a pending (save-failed) kit; no failed-save→retry coverage test.
+- Task 8: complete (commits dad7644..09c2cc0, review clean; full suite 1597 pass). Minor: memory page load is all-or-nothing (Promise.allSettled better); .memory-group-title lacks overflow-wrap/min-width:0; no test for scene group delete.
+
+## 2026-11-09 — Memory split + Chuẩn bị memory + Dùng trí nhớ
+
+- Spec: `docs/superpowers/specs/2026-11-09-memory-split-design.md`; plan: `docs/superpowers/plans/2026-11-09-memory-split.md`.
+- New Firestore paths: `users/{uid}/prep_memory/coverage` (patterns/words coverage for Chuẩn bị) and `users/{uid}/prep_scene_memory/{prepId}` (key `prep_<prepId>`, role-play facts per kit). `conversation_memory/` now holds Hội thoại/Phỏng vấn groups only.
+- Lazy legacy migration: reads of a kit's scene memory fall back to the old `conversation_memory/prep_*` doc; the next save writes `prep_scene_memory/{prepId}` and deletes the legacy doc (a failed delete is ignored). No batch migration script.
+- Dùng trí nhớ switch: `memoryInConversation`, `memoryInInterview`, `memoryInPrep` settings fields. Off = AI does not read memory; writes still happen after grading/generation.
+- Deploy: web only (App Hosting push). No functions change.
+- Pending owner checks: real AI key runs and iPhone check (README roadmap block 2026-11-09).
+- Task 9: docs (README, spec status + §11 deviations, this log).
