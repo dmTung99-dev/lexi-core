@@ -592,7 +592,7 @@ users/
 - [ ] **iPhone 11, đã đăng nhập** — mở một bộ tài liệu ở `/conversation/prep/[id]`: nút "Luyện nhập vai tình huống này" nằm sát ngay trên tab bar; dòng từ mới cuối cùng không bị che; thanh Kịch bản / Mẫu câu / Từ mới dính dưới tai thỏ khi cuộn; mở sheet "Thêm" thì sheet che được nút luyện nhập vai.
 - [ ] **Chạy thật với AI key** — tạo một bộ tài liệu → nghe/Dịch vài câu → bấm chỗ tô sáng xem có nhảy tới đúng thẻ mẫu câu → lưu 2 từ (kiểm tra trong Ngân hàng từ vựng) → Luyện nhập vai (persona/mục tiêu điền sẵn) → hoàn thành buổi hội thoại.
 - [ ] **Hội thoại "Tại sao?"** — vẫn chưa thử thủ công với AI key thật (xem `.superpowers/sdd/progress.md`, mục 2026-10-19).
-- [ ] *(Tuỳ chọn)* Các góp ý nhỏ còn lại từ review của Chuẩn bị tình huống (không chặn dùng) ghi trong `.superpowers/sdd/progress.md`, mục "Conversation prep — SDD ledger": ví dụ `prepId` vẫn giữ nếu đổi sang tình huống khác sau khi điền sẵn, thanh mục lục không dính trên desktop, chưa kiểm tra kịch bản có ít nhất một lượt "Bạn".
+- [ ] *(Tuỳ chọn)* Các góp ý nhỏ còn lại từ review của Chuẩn bị tình huống (không chặn dùng) ghi trong `.superpowers/sdd/progress.md`, mục "Conversation prep — SDD ledger": ví dụ chưa kiểm tra kịch bản có ít nhất một lượt "Bạn", chỗ tô sáng mẫu câu chưa xét ranh giới từ. (Đã xử lý sau đó: `prepId` cũ bị bỏ khi đổi tình huống — `d9a21e2`; thanh mục lục dính được trên desktop nhờ khung app cố định — `1a503e0`.)
 
 **Việc cần làm tiếp (kiểm tra sau khi làm Trí nhớ người học, 2026-11-04; chỉ web, không cần deploy backend):**
 

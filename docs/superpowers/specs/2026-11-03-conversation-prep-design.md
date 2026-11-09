@@ -5,6 +5,7 @@
 **Covers:** A web-only page where the learner describes an upcoming real-life situation in Vietnamese ("Tôi chuẩn bị báo cáo với khách hàng về task A", "Tôi muốn kể cho bạn bè về kỷ niệm ở thành phố B") and the AI generates a prep kit: a sample English dialogue, the useful sentence patterns/grammar it uses, and new words/phrases to save. From the kit the learner can jump straight into a Hội thoại role-play of the same situation.
 **UI mockup:** https://claude.ai/artifact/QUeMMEJvdw8zbzU4XSRj2Z (iPhone 11 create screen, iPhone 11 kit screen, desktop kit screen).
 **Builds on:** `2026-10-09-conversation-practice-design.md` (Hội thoại) and `2026-10-10-mobile-responsive-web-design.md` (phone mode).
+**Later changes:** 2026-11-04 (`6172e3b`): separate delete error with no create retry, "Không tải được bộ tài liệu" + Thử lại on a load failure. 2026-11-05 (`eac9840`): saving a word goes through the shared `usePhraseVocabSaver` (AI lookup like Tra từ + edit modal, "Lưu tất cả" for 3+ unsaved words) instead of a direct `savePhraseToVocab` call; see §4 step 4. 2026-11-04 (learner memory): `prepId` is dropped when the learner switches to another scenario on Setup.
 
 ---
 
@@ -85,7 +86,7 @@ interface ConversationPrep {
 1. Learner types the situation (or taps a chip that fills the textarea), picks a level (default: the level of the most recent kit, else B1), taps **Tạo kịch bản**.
 2. One `callInterviewAi` call with `buildPrepPrompt`. While waiting the button reads "Đang tạo…", the textarea is locked, and rotating progress lines are shown ("Đang viết kịch bản…", "Đang chọn mẫu câu…", "Đang chọn từ mới…"). These are cosmetic; there is only one call.
 3. `parsePrep` validates; on success `createConversationPrep` writes the doc and the page navigates to `/conversation/prep/[id]`.
-4. On the kit page, each word's saved state is computed on load by checking the vocab bank (as the Hội thoại report does); **Lưu** calls `savePhraseToVocab` and flips to **Đã lưu**.
+4. On the kit page, each word's saved state is computed on load by checking the vocab bank (`isPhraseSaved`, as the Hội thoại report does). *Originally* **Lưu** called `savePhraseToVocab` directly. *Since 2026-11-05* it goes through the shared `usePhraseVocabSaver` / `PhraseSaveBar` (`components/shared/PhraseVocabSaver.tsx`, `lib/phraseEnrich.ts`): the phrase is looked up by AI like Tra từ (IPA, definition, synonyms, topic, CEFR, examples; the kit's example stays first), shown in the vocab edit modal, then saved and flipped to **Đã lưu**; with 3+ unsaved words a **Lưu tất cả** button enriches the whole list in one AI call and saves directly; a failed lookup offers **Lưu bản cơ bản** (the old direct save). `PrepVocabList` still renders the rows.
 5. **Luyện nhập vai tình huống này** navigates to `/conversation?prep=<id>`. Setup loads the kit, sets role-play mode with custom scenario, `topic = title`, `persona`, `goals`, `level` prefilled and editable in `ScenarioPreview`, and **skips the `scenario` call**. The session runs unchanged from there, with `setup.prepId` set.
 6. Opening a saved kit needs no AI key. The role-play needs one; Hội thoại Setup's existing readiness check covers it.
 
@@ -155,8 +156,10 @@ Desktop layout: two columns, dialogue left, patterns + words right.
 | `unclear` | "Hãy mô tả tình huống cụ thể hơn (bạn sẽ nói với ai, về chuyện gì)." |
 | Firestore write fails | Error + **Thử lại** that retries the write with the already-parsed kit (no new AI call) |
 | `/conversation/prep/[id]` missing or deleted | "Không tìm thấy bộ tài liệu" + link back to `/conversation/prep` |
+| `/conversation/prep/[id]` load fails (network, permissions) | "Không tải được bộ tài liệu" + **Thử lại** + link back (added 2026-11-04) |
+| Delete from "Gần đây" fails | Own error line above the list, no retry button (the trash icon retries) (added 2026-11-04) |
 | `/conversation?prep=` with a bad id | Ignore the param, normal Setup |
-| Vocab save fails | Existing `PhraseSaveList` error line; item stays unsaved |
+| Vocab save fails | Error line under the word list; item stays unsaved (since 2026-11-05: a failed AI lookup offers "Lưu bản cơ bản") |
 | TTS fails | Silent (best-effort, as elsewhere) |
 
 ## 8. Testing
