@@ -1,4 +1,5 @@
 import type { ConversationLevel, ConversationPhrase, WhyPoint } from "./conversationTypes";
+import type { LevelMode } from "./levelChoice";
 
 export interface PrepLine {
   speaker: "you" | "partner";
@@ -32,6 +33,8 @@ export interface ConversationPrepContent {
 export interface NewConversationPrep extends ConversationPrepContent {
   situation: string;
   level: ConversationLevel;
+  /** Missing on old kits (= exact level). */
+  levelMode?: LevelMode;
   /** Whether the AI saw learner memory when generating this kit (reference only). Missing on old kits. */
   usedMemory?: boolean;
 }

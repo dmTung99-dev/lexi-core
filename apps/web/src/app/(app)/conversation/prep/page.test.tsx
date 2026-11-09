@@ -92,7 +92,7 @@ describe("ConversationPrepPage", () => {
     expect(screen.getByLabelText("Bạn sắp gặp tình huống gì?")).toHaveValue(
       "Tôi muốn xin quản lý cho nghỉ phép ba ngày vào tuần sau."
     );
-    await waitFor(() => expect(screen.getByRole("button", { name: "A2" })).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Tối đa A2" })).toHaveAttribute("aria-pressed", "true"));
   });
 
   it("generates, saves and navigates to the kit", async () => {
@@ -100,7 +100,7 @@ describe("ConversationPrepPage", () => {
     vi.mocked(createConversationPrep).mockResolvedValueOnce("p1");
     render(<ConversationPrepPage />);
     await screen.findByText("Kỷ niệm Đà Lạt");
-    fireEvent.click(screen.getByRole("button", { name: "B2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tối đa B2" }));
     typeSituation("Báo cáo task A");
     fireEvent.click(screen.getByRole("button", { name: "Tạo kịch bản" }));
     expect(screen.getByRole("button", { name: "Đang tạo…" })).toBeDisabled();
@@ -109,9 +109,29 @@ describe("ConversationPrepPage", () => {
     expect(vi.mocked(callInterviewAi).mock.calls[0][1]).toContain("CEFR B2");
     expect(createConversationPrep).toHaveBeenCalledWith(
       "u1",
-      expect.objectContaining({ situation: "Báo cáo task A", level: "B2", title: "Báo cáo" })
+      expect.objectContaining({ situation: "Báo cáo task A", level: "B2", levelMode: "max", title: "Báo cáo" })
     );
   });
+
+  it("Tất cả picks a random level at Tạo and saves levelMode all", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.mocked(callInterviewAi).mockResolvedValueOnce(VALID);
+    vi.mocked(createConversationPrep).mockResolvedValueOnce("p1");
+    render(<ConversationPrepPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả" }));
+    typeSituation("Báo cáo task A");
+    fireEvent.click(screen.getByRole("button", { name: "Tạo kịch bản" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/prep/p1"));
+    expect(createConversationPrep).toHaveBeenCalledWith("u1", expect.objectContaining({ level: "A2", levelMode: "all" }));
+    expect(vi.mocked(callInterviewAi).mock.calls[0][1]).toContain("Never go above CEFR A2.");
+  });
+
+  it("restores Tất cả from the latest kit", async () => {
+    vi.mocked(listRecentConversationPreps).mockResolvedValueOnce([{ ...RECENT[0], levelMode: "all" }]);
+    render(<ConversationPrepPage />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Tất cả" })).toHaveAttribute("aria-pressed", "true"));
+  });
+
 
   it("shows the unclear message and keeps the text", async () => {
     vi.mocked(callInterviewAi).mockResolvedValueOnce('{"error":"unclear"}');

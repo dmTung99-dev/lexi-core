@@ -182,3 +182,10 @@ describe("buildPrepPrompt with kit memory", () => {
     expect(p).not.toContain("line1\nSITUATION>>>");
   });
 });
+
+describe("buildPrepPrompt level mode", () => {
+  it("adds the mostly-at-this-level sentence for a level mode, not for legacy calls", () => {
+    expect(buildPrepPrompt("Báo cáo task A", "B2", undefined, "max")).toContain("Never go above CEFR B2.");
+    expect(buildPrepPrompt("Báo cáo task A", "B2")).not.toContain("Write mainly at CEFR");
+  });
+});

@@ -15,6 +15,8 @@ import { RecentPreps } from "@/components/conversation/prep/RecentPreps";
 import { useMemoryPreference } from "@/lib/useMemoryPreference";
 import { MemorySwitch } from "@/components/shared/MemorySwitch";
 import { deleteKitMemory, loadKitMemory, recordKitCoverage } from "@/lib/prepMemory";
+import { LevelPicker } from "@/components/shared/LevelPicker";
+import { pickRandomLevel, type LevelMode } from "@/lib/levelChoice";
 
 const PROGRESS = ["Đang viết kịch bản…", "Đang chọn mẫu câu…", "Đang chọn từ mới…"];
 
@@ -24,6 +26,7 @@ export default function ConversationPrepPage() {
   const { settings } = useSettingsContext();
   const [situation, setSituation] = useState("");
   const [level, setLevel] = useState<ConversationLevel>("B1");
+  const [levelMode, setLevelMode] = useState<LevelMode>("max");
   const [recent, setRecent] = useState<ConversationPrep[]>([]);
   const [generating, setGenerating] = useState(false);
   const [step, setStep] = useState(0);
@@ -34,13 +37,18 @@ export default function ConversationPrepPage() {
   const pendingRef = useRef<NewConversationPrep | null>(null);
   // Once the user picks a level or starts generating, the late-arriving "latest kit" default must not change it.
   const levelLockedRef = useRef(false);
+  // The level choice ("all" or the level) the pending kit was generated for.
+  const pendingChoiceRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     listRecentConversationPreps(user.uid)
       .then((list) => {
         setRecent(list);
-        if (list[0] && !levelLockedRef.current) setLevel(list[0].level);
+        if (list[0] && !levelLockedRef.current) {
+          setLevel(list[0].level);
+          setLevelMode(list[0].levelMode === "all" ? "all" : "max");
+        }
       })
       .catch(() => {});
   }, [user]);
@@ -75,12 +83,15 @@ export default function ConversationPrepPage() {
     let phase: "ai" | "save" = "ai";
     try {
       let pending = pendingRef.current;
-      if (!pending || pending.situation !== text || pending.level !== level) {
+      const choiceKey = levelMode === "all" ? "all" : level;
+      if (!pending || pending.situation !== text || pendingChoiceRef.current !== choiceKey) {
+        const kitLevel = levelMode === "all" ? pickRandomLevel(CONVERSATION_LEVELS) : level;
         // Switch off (or a failed read): the kit is generated without memory.
         const memory = useMemory ? await loadKitMemory(user.uid) : undefined;
-        const content = parsePrep(await callInterviewAi(settings, buildPrepPrompt(text, level, memory)), text);
-        pending = { ...content, situation: text, level, usedMemory: memory !== undefined };
+        const content = parsePrep(await callInterviewAi(settings, buildPrepPrompt(text, kitLevel, memory, levelMode)), text);
+        pending = { ...content, situation: text, level: kitLevel, levelMode, usedMemory: memory !== undefined };
         pendingRef.current = pending;
+        pendingChoiceRef.current = choiceKey;
       }
       phase = "save";
       const id = await createConversationPrep(user.uid, pending);
@@ -112,8 +123,6 @@ export default function ConversationPrepPage() {
     }
   }
 
-  const chip = (active: boolean) => (active ? "vb-chip active" : "vb-chip");
-
   return (
     <div className="iv-page prep-page">
       <Link href="/conversation">← Hội thoại</Link>
@@ -142,23 +151,17 @@ export default function ConversationPrepPage() {
               </button>
             ))}
           </div>
-          <div className="prep-chips" role="group" aria-label="Trình độ">
-            {CONVERSATION_LEVELS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                className={chip(level === l)}
-                aria-pressed={level === l}
-                disabled={generating}
-                onClick={() => {
-                  levelLockedRef.current = true;
-                  setLevel(l);
-                }}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+          <LevelPicker
+            scale={CONVERSATION_LEVELS}
+            level={level}
+            mode={levelMode}
+            disabled={generating}
+            onChange={(next) => {
+              levelLockedRef.current = true;
+              setLevel(next.level);
+              setLevelMode(next.mode);
+            }}
+          />
           <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={generating} />
           <button type="button" className="btn-primary" disabled={!canCreate} onClick={() => void handleCreate()}>
             {generating ? "Đang tạo…" : "Tạo kịch bản"}
