@@ -12,6 +12,9 @@ import { CONVERSATION_LEVELS, type ConversationLevel } from "@/lib/conversationT
 import { PREP_SUGGESTIONS, type ConversationPrep, type NewConversationPrep } from "@/lib/conversationPrepTypes";
 import { createConversationPrep, deleteConversationPrep, listRecentConversationPreps } from "@/lib/conversationPreps";
 import { RecentPreps } from "@/components/conversation/prep/RecentPreps";
+import { useMemoryPreference } from "@/lib/useMemoryPreference";
+import { MemorySwitch } from "@/components/shared/MemorySwitch";
+import { deleteKitMemory, loadKitMemory, recordKitCoverage } from "@/lib/prepMemory";
 
 const PROGRESS = ["Đang viết kịch bản…", "Đang chọn mẫu câu…", "Đang chọn từ mới…"];
 
@@ -26,6 +29,7 @@ export default function ConversationPrepPage() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [useMemory, setUseMemory] = useMemoryPreference("memoryInPrep");
   // A parsed kit whose Firestore write failed: Thử lại re-saves it without a new AI call.
   const pendingRef = useRef<NewConversationPrep | null>(null);
   // Once the user picks a level or starts generating, the late-arriving "latest kit" default must not change it.
@@ -72,13 +76,17 @@ export default function ConversationPrepPage() {
     try {
       let pending = pendingRef.current;
       if (!pending || pending.situation !== text || pending.level !== level) {
-        const content = parsePrep(await callInterviewAi(settings, buildPrepPrompt(text, level)), text);
-        pending = { ...content, situation: text, level };
+        // Switch off (or a failed read): the kit is generated without memory.
+        const memory = useMemory ? await loadKitMemory(user.uid) : undefined;
+        const content = parsePrep(await callInterviewAi(settings, buildPrepPrompt(text, level, memory)), text);
+        pending = { ...content, situation: text, level, usedMemory: memory !== undefined };
         pendingRef.current = pending;
       }
       phase = "save";
       const id = await createConversationPrep(user.uid, pending);
       pendingRef.current = null;
+      // What this kit taught is remembered whatever the switch says; best-effort, never awaited by navigation.
+      void recordKitCoverage(user.uid, pending);
       router.push(`/conversation/prep/${id}`);
     } catch (err) {
       setError(
@@ -98,6 +106,7 @@ export default function ConversationPrepPage() {
     try {
       await deleteConversationPrep(user.uid, id);
       setRecent((list) => list.filter((p) => p.id !== id));
+      void deleteKitMemory(user.uid, id);
     } catch {
       setDeleteError("Không xoá được bộ tài liệu — thử lại.");
     }
@@ -110,6 +119,9 @@ export default function ConversationPrepPage() {
       <Link href="/conversation">← Hội thoại</Link>
       <h2 className="scr-title">Chuẩn bị tình huống</h2>
       <p className="scr-sub">Mô tả tình huống sắp tới, AI viết kịch bản mẫu, mẫu câu hay dùng và từ mới cho bạn.</p>
+      <p className="iv-muted">
+        <Link href="/conversation/memory">AI nhớ gì về bạn</Link>
+      </p>
       <div className="prep-layout">
         <section className="iv-card prep-form" aria-label="Tạo bộ tài liệu">
           <label htmlFor="prep-situation" className="prep-label">Bạn sắp gặp tình huống gì?</label>
@@ -147,6 +159,7 @@ export default function ConversationPrepPage() {
               </button>
             ))}
           </div>
+          <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={generating} />
           <button type="button" className="btn-primary" disabled={!canCreate} onClick={() => void handleCreate()}>
             {generating ? "Đang tạo…" : "Tạo kịch bản"}
           </button>
