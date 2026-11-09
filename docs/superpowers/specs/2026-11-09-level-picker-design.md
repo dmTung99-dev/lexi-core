@@ -1,7 +1,7 @@
 # LexiCore — Cumulative, weighted level picker + dropdown overflow fix (web)
 
 **Date:** 2026-11-09
-**Status:** Design approved in brainstorming; spec awaiting owner review.
+**Status:** Implemented (2026-11-09).
 **Covers:** Every web screen with a CEFR level picker gets the same meaning: "Tất cả" (all levels, evenly) or "Tối đa X" (X and every level below it, with levels closer to X appearing more often). Also fixes the shared dropdown popover overflowing the right edge.
 **Branch:** `feat/level-picker`, cut from `feat/memory-split` (both touch the Chuẩn bị and Hội thoại setup pages).
 
@@ -78,3 +78,7 @@ Nothing new can fail: weighting and random picks are pure; invalid or unknown le
 ## 8. Non-goals
 
 Flutter app; Phỏng vấn level; changing the CEFR scales of any screen; per-session weight customisation; mixing several difficulty levels inside one AI-generated piece beyond the "about a quarter easier" instruction.
+
+## 9. Deviations
+
+- Nghe hiểu 'Tất cả' picks the random level once per page load in the first implementation; fixed in the final-review wave to pick per generation (see progress log).

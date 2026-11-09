@@ -2496,3 +2496,19 @@ Plan: docs/superpowers/plans/2026-11-09-memory-split.md. Branch base f292def. Re
 - Deploy: web only (App Hosting push). No functions change.
 - Pending owner checks: real AI key runs and iPhone check (README roadmap block 2026-11-09).
 - Task 9: docs (README, spec status + §11 deviations, this log).
+- Task 9: complete (commits 09c2cc0..f63a9da, controller-checked docs).
+- Final review: Critical (switch toggle during/after failed settings load overwrote settings doc incl. API keys) fixed in cd9d77f + allSettled memory page + sanitised kit prompt; re-review approved. Residual: one-render gap when uid first arrives (needs useSettings change).
+
+## Level picker (feat/level-picker) — SDD ledger
+Plan: docs/superpowers/plans/2026-11-09-level-picker.md. Base ed05a7b (on top of feat/memory-split). Reports: lp-task-N-report.md.
+- Task 1: complete (commits ed05a7b..0a91d69, review clean). Minor: untested edges (max not in scale, all-zero weights, random 0/~1); pickRandomLevel on empty scale returns undefined.
+- Task 2: complete (commits 0a91d69..d32130f, review clean; full suite 1611). Minor: count test title says 'due' but no non-due word; level and word-count triggers can both read 'Tất cả ▾' (ambiguous a11y names).
+- Task 3: complete (commits d32130f..fc19b40, review clean; full suite 1615). TO FIX in final wave: Nghe Tất cả picks the random level once per page load, so 'Bài khác' keeps it — spec §4.2 says per generation. Minor: CEFR_SCALE duplicates listening CEFR_LEVELS.
+- Task 4: complete (commits fc19b40..b9836e7, review clean; full suite 1620). Minor: buildScenarioPrompt ignores levelMode (Tất cả uses stale draft.level); mix sentence also reaches hint/suggest prompts via describeSetup; LevelPicker phone wrapping unverified.
+- Task 5: complete (commits b9836e7..11eea38, review clean; full suite 1623). Minor: no test for a failed save + retry under Tất cả; stray blank lines in prep page test.
+- Task 6: complete (commits 11eea38..bd30ecc, review clean; full suite 1625). TO FIX in final wave: use container.left + clientWidth (exclude scrollbar) for the right edge. Manual check: Nghe hub ~1280px and ~900-1000px, no horizontal scroll; the chip row itself does not wrap on desktop.
+
+## 2026-11-09 — Level picker
+
+- Spec: `docs/superpowers/specs/2026-11-09-level-picker-design.md`; plan: `docs/superpowers/plans/2026-11-09-level-picker.md`.
+- Branch `feat/level-picker` on top of `feat/memory-split`. Web only.

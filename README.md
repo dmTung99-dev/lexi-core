@@ -43,6 +43,7 @@
   - **Flashcard** — luôn dùng cho từ chưa ôn lần nào, khi chưa có API key, và làm fallback khi AI lỗi (kể cả ở chế độ Trộn AI)
 - Phiên luyện tập có điểm số và tổng kết kết quả
 - Bộ lọc luyện tập theo cấp độ CEFR mục tiêu
+- **Chọn trình độ thống nhất (web):** mọi bộ chọn trình độ có **Tất cả** (trộn đều mọi cấp) và **Tối đa X** (gồm X và các cấp thấp hơn, cấp càng gần X càng xuất hiện nhiều — vd Tối đa B2: A1:A2:B1:B2 = 1:2:3:4). Áp dụng cho Ôn tập và Đọc song ngữ (bốc từ), và độ khó nội dung AI viết ở Hội thoại, Chuẩn bị tình huống, Nghe hiểu, Đọc song ngữ (Tất cả = mỗi lần tạo bốc ngẫu nhiên một cấp).
 
 ### Luyện đọc (Reading Practice)
 Hub với 4 tính năng con (truy cập qua tab "Luyện tập" → card "Luyện đọc"). Chọn một loại ngay trên hub sẽ mở luôn các tùy chọn (ngôn ngữ / chủ đề / cấp độ / số từ hoặc Economy Vol) + nút "Tạo bài luyện" / "Lấy bài có sẵn" ngay tại đó — không còn màn hình cài đặt riêng:
@@ -610,6 +611,12 @@ users/
 - [ ] **Chạy thật với AI key** — tạo hai bộ Chuẩn bị gần chủ đề: bộ thứ hai không lặp mẫu câu chính; một lỗi đang đến hạn thành một thẻ mẫu câu; nhập vai từ một bộ hai lần: lần hai đi tiếp cảnh cũ; sau đó phần Hội thoại trên trang "AI nhớ gì về bạn" không có chi tiết bịa từ nhập vai.
 - [ ] **Tắt Dùng trí nhớ** — trên cả ba màn: AI không nhắc gì từ trí nhớ, nhưng sau khi chấm/tạo bộ trang "AI nhớ gì về bạn" vẫn cập nhật; lựa chọn được nhớ ở lần mở sau (cả trên máy khác).
 - [ ] **iPhone** — công tắc Dùng trí nhớ và phần Chuẩn bị tình huống trên trang trí nhớ không tràn ngang, nút Xoá ≥ 44px.
+
+**Việc cần làm tiếp (chọn trình độ thống nhất, 2026-11-09):**
+
+- [ ] **Chạy thật Ôn tập "Tối đa B2"** — thấy từ B2/B1 xuất hiện nhiều hơn A1/A2 trong phiên.
+- [ ] **Nghe hub ở desktop** — mở bộ chọn trình độ không còn cuộn ngang.
+- [ ] **Desktop ~900–1000px**: hàng chip ngữ cảnh ở Nghe không làm trang cuộn ngang.
 
 **Ý tưởng khác đã brainstorm (chưa xếp lịch):**
 
