@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { ConversationSetup } from "./conversationTypes";
 import {
+  applyCoverageUpdate,
   applyMistakeUpdate,
   applyTopicUpdate,
+  coverageKey,
   memoryGroupKey,
   mistakeStatus,
   pickTargets,
+  removeCovered,
 } from "./learnerMemoryMerge";
-import type { TopicMemory, TrackedMistake } from "./learnerMemoryTypes";
+import {
+  MAX_COVERED_PATTERNS,
+  type PrepCoverage,
+  type TopicMemory,
+  type TrackedMistake,
+} from "./learnerMemoryTypes";
 
 const BASE = { level: "B1", voice: "female1", speakAloud: false, reviewTranscript: false } as const;
 const TOPIC = { ...BASE, mode: "topic", topic: "My own topic", persona: null, goals: [] } as ConversationSetup;
@@ -240,5 +248,52 @@ describe("applyTopicUpdate", () => {
   it("uses the given key and label when there is no previous memory", () => {
     const out = applyTopicUpdate(null, "free", "Tự do", [{ fact: "x", asked: [] }], NOW, newId)!;
     expect(out).toMatchObject({ key: "free", label: "Tự do" });
+  });
+});
+
+const EMPTY_COVERAGE: PrepCoverage = { patterns: [], words: [], updatedAt: "" };
+
+describe("coverage", () => {
+  it("normalises case, whitespace and apostrophes for the dedupe key", () => {
+    expect(coverageKey("  We’re  on TRACK to ")).toBe("we're on track to");
+  });
+
+  it("adds new items with now as lastSeenAt, newest first", () => {
+    const now = new Date("2026-11-09T00:00:00.000Z");
+    const out = applyCoverageUpdate(EMPTY_COVERAGE, { patterns: ["I'd like to ___"], words: ["behind schedule", " "] }, now);
+    expect(out.patterns).toEqual([{ text: "I'd like to ___", lastSeenAt: now.toISOString() }]);
+    expect(out.words).toEqual([{ text: "behind schedule", lastSeenAt: now.toISOString() }]);
+    expect(out.updatedAt).toBe(now.toISOString());
+  });
+
+  it("refreshes a repeat instead of duplicating it and keeps the first spelling", () => {
+    const prev: PrepCoverage = {
+      patterns: [{ text: "We're on track to + V", lastSeenAt: "2026-01-01T00:00:00.000Z" }],
+      words: [],
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const now = new Date("2026-11-09T00:00:00.000Z");
+    const out = applyCoverageUpdate(prev, { patterns: ["we’re ON track to + v"], words: [] }, now);
+    expect(out.patterns).toEqual([{ text: "We're on track to + V", lastSeenAt: now.toISOString() }]);
+  });
+
+  it("drops the oldest items over the cap", () => {
+    const prev: PrepCoverage = {
+      patterns: Array.from({ length: MAX_COVERED_PATTERNS }, (_, i) => ({
+        text: `p${i}`,
+        lastSeenAt: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(),
+      })),
+      words: [],
+      updatedAt: "",
+    };
+    const out = applyCoverageUpdate(prev, { patterns: ["new"], words: [] }, new Date("2026-11-09T00:00:00.000Z"));
+    expect(out.patterns).toHaveLength(MAX_COVERED_PATTERNS);
+    expect(out.patterns[0].text).toBe("new");
+    expect(out.patterns.some((p) => p.text === "p0")).toBe(false);
+  });
+
+  it("removes an item by its normalised text", () => {
+    const items = [{ text: "Behind schedule", lastSeenAt: "x" }, { text: "a heads-up", lastSeenAt: "x" }];
+    expect(removeCovered(items, " behind  SCHEDULE")).toEqual([{ text: "a heads-up", lastSeenAt: "x" }]);
   });
 });

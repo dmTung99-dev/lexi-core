@@ -69,3 +69,23 @@ export interface MemoryUpdate {
   found: FoundMistake[];
   topicFacts: { fact: string; asked: string[] }[] | null;
 }
+
+export const MAX_COVERED_PATTERNS = 60;
+export const MAX_COVERED_WORDS = 120;
+/** Due mistakes woven into a new kit. */
+export const KIT_TARGETS = 2;
+/** How many of the most recent covered items the kit prompt sees. */
+export const KIT_PROMPT_PATTERNS = 40;
+export const KIT_PROMPT_WORDS = 80;
+
+/** A pattern or word some earlier Chuẩn bị kit already taught. */
+export interface CoveredItem {
+  text: string;
+  lastSeenAt: string;
+}
+
+export interface PrepCoverage {
+  patterns: CoveredItem[];
+  words: CoveredItem[];
+  updatedAt: string;
+}

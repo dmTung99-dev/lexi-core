@@ -3,10 +3,14 @@ import { ROLEPLAY_PRESETS, TOPIC_CARDS } from "./conversationScenarios";
 import type { ConversationSetup } from "./conversationTypes";
 import {
   KNOWN_REPETITIONS,
+  MAX_COVERED_PATTERNS,
+  MAX_COVERED_WORDS,
   MAX_TOPIC_FACTS,
   MAX_TRACKED_MISTAKES,
+  type CoveredItem,
   type MemoryUpdate,
   type MistakeTarget,
+  type PrepCoverage,
   type TopicMemory,
   type TrackedMistake,
 } from "./learnerMemoryTypes";
@@ -156,4 +160,40 @@ export function applyTopicUpdate(
     facts: facts.slice(-MAX_TOPIC_FACTS),
     updatedAt: nowIso,
   };
+}
+
+/** Dedupe key for covered patterns/words: case, whitespace and apostrophe style do not matter. */
+export function coverageKey(text: string): string {
+  return text.toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, " ").trim();
+}
+
+function mergeCovered(prev: CoveredItem[], added: string[], nowIso: string, cap: number): CoveredItem[] {
+  const byKey = new Map<string, CoveredItem>();
+  for (const item of prev) byKey.set(coverageKey(item.text), item);
+  for (const raw of added) {
+    const text = raw.trim();
+    if (!text) continue;
+    const key = coverageKey(text);
+    byKey.set(key, { text: byKey.get(key)?.text ?? text, lastSeenAt: nowIso });
+  }
+  return [...byKey.values()].sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt)).slice(0, cap);
+}
+
+/** Records what a new kit taught; repeats refresh lastSeenAt, the oldest items fall off past the caps. */
+export function applyCoverageUpdate(
+  prev: PrepCoverage,
+  kit: { patterns: string[]; words: string[] },
+  now: Date
+): PrepCoverage {
+  const nowIso = now.toISOString();
+  return {
+    patterns: mergeCovered(prev.patterns, kit.patterns, nowIso, MAX_COVERED_PATTERNS),
+    words: mergeCovered(prev.words, kit.words, nowIso, MAX_COVERED_WORDS),
+    updatedAt: nowIso,
+  };
+}
+
+export function removeCovered(items: CoveredItem[], text: string): CoveredItem[] {
+  const key = coverageKey(text);
+  return items.filter((i) => coverageKey(i.text) !== key);
 }

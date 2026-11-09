@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
-import type { MistakeMemory, TopicMemory, TrackedMistake } from "./learnerMemoryTypes";
+import type { MistakeMemory, PrepCoverage, TopicMemory, TrackedMistake } from "./learnerMemoryTypes";
+import { removeCovered } from "./learnerMemoryMerge";
 
 function mistakesRef(uid: string) {
   return doc(getFirebaseDb(), "users", uid, "learner_memory", "mistakes");
@@ -110,4 +111,24 @@ export async function deleteTopicMemory(uid: string, key: string): Promise<void>
     return;
   }
   await deleteDoc(topicRef(uid, key));
+}
+
+function coverageRef(uid: string) {
+  return doc(getFirebaseDb(), "users", uid, "prep_memory", "coverage");
+}
+
+export async function getPrepCoverage(uid: string): Promise<PrepCoverage> {
+  const snap = await getDoc(coverageRef(uid));
+  if (!snap.exists()) return { patterns: [], words: [], updatedAt: "" };
+  const data = snap.data() as Partial<PrepCoverage>;
+  return { patterns: data.patterns ?? [], words: data.words ?? [], updatedAt: data.updatedAt ?? "" };
+}
+
+export async function savePrepCoverage(uid: string, coverage: PrepCoverage): Promise<void> {
+  await setDoc(coverageRef(uid), coverage);
+}
+
+export async function deleteCoveredItem(uid: string, kind: "patterns" | "words", text: string): Promise<void> {
+  const coverage = await getPrepCoverage(uid);
+  await savePrepCoverage(uid, { ...coverage, [kind]: removeCovered(coverage[kind], text), updatedAt: new Date().toISOString() });
 }

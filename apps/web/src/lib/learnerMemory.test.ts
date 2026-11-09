@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
 import {
+  deleteCoveredItem,
   deleteTopicFact,
   deleteTopicMemory,
   deleteTrackedMistake,
   getMistakeMemory,
+  getPrepCoverage,
   getTopicMemory,
   isPrepGroupKey,
   listPrepSceneMemories,
   listTopicMemories,
   saveMistakeMemory,
+  savePrepCoverage,
   saveTopicMemory,
 } from "./learnerMemory";
 import type { TopicMemory, TrackedMistake } from "./learnerMemoryTypes";
@@ -220,5 +223,41 @@ describe("prep scene memory routing", () => {
     await deleteTopicFact("u1", "prep_p1", "a");
     expect(deleteDoc).toHaveBeenCalledTimes(2);
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe("prep coverage storage", () => {
+  it("returns empty coverage when the doc is missing", async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as never);
+    expect(await getPrepCoverage("u1")).toEqual({ patterns: [], words: [], updatedAt: "" });
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "prep_memory", "coverage");
+  });
+
+  it("defaults missing lists", async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ updatedAt: "t" }) } as never);
+    expect(await getPrepCoverage("u1")).toEqual({ patterns: [], words: [], updatedAt: "t" });
+  });
+
+  it("saves coverage as-is", async () => {
+    const cov = { patterns: [{ text: "p", lastSeenAt: "t" }], words: [], updatedAt: "t" };
+    await savePrepCoverage("u1", cov);
+    expect(setDoc).toHaveBeenCalledWith("ref", cov);
+  });
+
+  it("deleteCoveredItem removes one word and keeps the patterns", async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        patterns: [{ text: "p", lastSeenAt: "t" }],
+        words: [{ text: "Behind schedule", lastSeenAt: "t" }, { text: "a heads-up", lastSeenAt: "t" }],
+        updatedAt: "t",
+      }),
+    } as never);
+    await deleteCoveredItem("u1", "words", "behind schedule");
+    expect(setDoc).toHaveBeenCalledWith("ref", {
+      patterns: [{ text: "p", lastSeenAt: "t" }],
+      words: [{ text: "a heads-up", lastSeenAt: "t" }],
+      updatedAt: expect.any(String),
+    });
   });
 });
