@@ -15,6 +15,8 @@ import {
 } from "@/lib/interviewSessions";
 import { resumeIndex } from "@/lib/interviewMachine";
 import { loadInterviewTargets } from "@/lib/learnerMemoryGrading";
+import { useMemoryPreference } from "@/lib/useMemoryPreference";
+import { MemorySwitch } from "@/components/shared/MemorySwitch";
 import { getCvProfile } from "@/lib/cvProfile";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
@@ -41,6 +43,7 @@ export default function InterviewSetupPage() {
   const [startError, setStartError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
   const preview = useInterviewAudio(draft.voice);
+  const [useMemory, setUseMemory] = useMemoryPreference("memoryInInterview");
 
   useEffect(() => {
     if (!user) return;
@@ -94,10 +97,11 @@ export default function InterviewSetupPage() {
     setStarting(true);
     setStartError(null);
     try {
-      const targets = await loadInterviewTargets(user.uid);
+      // Switch off: no mistake targets in the plan; grading still writes memory.
+      const targets = useMemory ? await loadInterviewTargets(user.uid) : undefined;
       const id = await createInterviewSession(
         user.uid,
-        { ...draft, role: draft.role.trim(), jd: draft.jd.trim(), cvSummary: cv?.summary ?? null },
+        { ...draft, role: draft.role.trim(), jd: draft.jd.trim(), cvSummary: cv?.summary ?? null, useMemory },
         targets
       );
       router.push(`/interview/${id}`);
@@ -135,6 +139,7 @@ export default function InterviewSetupPage() {
             cvSlot={settings ? <CvUpload uid={user.uid} settings={settings} profile={cv} onChange={setCv} /> : null}
           />
           <div className="iv-row iv-start-row">
+            <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={starting} />
             <button type="button" className="btn-primary" disabled={!canStart} onClick={() => void handleStart()}>
               Bắt đầu phỏng vấn
             </button>

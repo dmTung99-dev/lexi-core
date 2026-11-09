@@ -38,6 +38,8 @@ export interface InterviewSetup {
   jd: string;
   cvSummary: string | null;
   reviewTranscript: boolean;
+  /** "Dùng trí nhớ" at Start. false = no mistake targets (grading still writes memory). Missing on old sessions = true. */
+  useMemory?: boolean;
 }
 
 /** A planned main question with its Vietnamese translation prepared up front

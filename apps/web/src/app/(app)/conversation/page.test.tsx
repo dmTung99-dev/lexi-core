@@ -45,7 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useAuthUser).mockReturnValue({ user: { uid: "u1" }, loading: false } as never);
-  vi.mocked(useSettingsContext).mockReturnValue({ settings: DEFAULT_SETTINGS } as never);
+  vi.mocked(useSettingsContext).mockReturnValue({ settings: DEFAULT_SETTINGS, loading: false, error: null, save: vi.fn().mockResolvedValue(undefined) } as never);
 });
 
 describe("ConversationSetupPage", () => {
@@ -104,6 +104,31 @@ describe("ConversationSetupPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu trò chuyện" }));
     await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
     expect(createConversationSession).toHaveBeenCalledWith("u1", expect.anything(), undefined);
+  });
+
+  it("skips the memory snapshot when Dùng trí nhớ is off, and remembers the choice", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useSettingsContext).mockReturnValue({ settings: DEFAULT_SETTINGS, loading: false, error: null, save } as never);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    fireEvent.change(screen.getByPlaceholderText(/chuẩn bị họp/), { target: { value: "Football" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Dùng trí nhớ/ }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ memoryInConversation: false }));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu trò chuyện" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    expect(loadSessionSnapshot).not.toHaveBeenCalled();
+    expect(createConversationSession).toHaveBeenCalledWith("u1", expect.objectContaining({ useMemory: false }), undefined);
+  });
+
+  it("starts with the remembered choice and stores useMemory: true when on", async () => {
+    vi.mocked(loadSessionSnapshot).mockResolvedValueOnce(undefined);
+    vi.mocked(createConversationSession).mockResolvedValueOnce("s1");
+    render(<ConversationSetupPage />);
+    expect(screen.getByRole("checkbox", { name: /Dùng trí nhớ/ })).toBeChecked();
+    fireEvent.change(screen.getByPlaceholderText(/chuẩn bị họp/), { target: { value: "Football" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu trò chuyện" }));
+    await waitFor(() => expect(ROUTER.push).toHaveBeenCalledWith("/conversation/s1"));
+    expect(createConversationSession).toHaveBeenCalledWith("u1", expect.objectContaining({ useMemory: true }), undefined);
   });
 
   it("drops the stale prepId after picking a built-in preset", async () => {

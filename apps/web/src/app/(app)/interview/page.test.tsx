@@ -89,7 +89,7 @@ describe("InterviewSetupPage", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/new-id"));
     expect(createInterviewSession).toHaveBeenCalledWith(
       "u1",
-      expect.objectContaining({ role: "Software Engineer", cvSummary: "CV SUMMARY", questionCount: 5 }),
+      expect.objectContaining({ role: "Software Engineer", cvSummary: "CV SUMMARY", questionCount: 5, useMemory: true }),
       undefined
     );
   });
@@ -103,6 +103,19 @@ describe("InterviewSetupPage", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/new-id"));
     expect(loadInterviewTargets).toHaveBeenCalledWith("u1");
     expect(createInterviewSession).toHaveBeenCalledWith("u1", expect.anything(), targets);
+  });
+
+  it("skips mistake targets when Dùng trí nhớ is off", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useAuthUser).mockReturnValue({ user: { uid: "u1" }, loading: false } as never);
+    vi.mocked(useSettingsContext).mockReturnValue({ settings: { ...WITH_KEY, memoryInInterview: false }, loading: false, error: null, save });
+    render(<InterviewSetupPage />);
+    expect(screen.getByRole("checkbox", { name: /Dùng trí nhớ/ })).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText("Vị trí ứng tuyển"), { target: { value: "SE" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu phỏng vấn" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/interview/new-id"));
+    expect(loadInterviewTargets).not.toHaveBeenCalled();
+    expect(createInterviewSession).toHaveBeenCalledWith("u1", expect.objectContaining({ useMemory: false }), undefined);
   });
 
   it("shows no Đang dở section when nothing is unfinished", async () => {

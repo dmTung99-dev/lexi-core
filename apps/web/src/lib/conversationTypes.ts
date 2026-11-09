@@ -28,6 +28,8 @@ export interface ConversationSetup {
   goals: string[];
   /** Set when the role-play was started from a Chuẩn bị tình huống kit (reference only). */
   prepId?: string;
+  /** "Dùng trí nhớ" at Start. false = no memory snapshot (grading still writes memory). Missing on old sessions = true. */
+  useMemory?: boolean;
   /** Built-in topic card / role-play preset id (or "custom") the session was started from; drives the learner-memory group. */
   presetId?: string;
 }

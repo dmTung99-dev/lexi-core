@@ -15,6 +15,8 @@ import {
 } from "@/lib/conversationSessions";
 import { buildScenarioPrompt, parseScenario } from "@/lib/conversationPrompts";
 import { loadSessionSnapshot } from "@/lib/learnerMemoryGrading";
+import { useMemoryPreference } from "@/lib/useMemoryPreference";
+import { MemorySwitch } from "@/components/shared/MemorySwitch";
 import { getConversationPrep } from "@/lib/conversationPreps";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
@@ -51,6 +53,7 @@ function ConversationSetupContent() {
   const preview = useInterviewAudio(draft.voice);
   const prepParam = useSearchParams().get("prep");
   const [prepId, setPrepId] = useState<string | null>(null);
+  const [useMemory, setUseMemory] = useMemoryPreference("memoryInConversation");
 
   // A prep kit only describes the custom role-play it prefilled; picking anything
   // else, switching mode, or rewriting the description means it no longer applies.
@@ -147,8 +150,10 @@ function ConversationSetupContent() {
     setStartError(null);
     try {
       const setup = draftToSetup(draft);
-      const finalSetup = prepId && setup.mode === "roleplay" ? { ...setup, prepId } : setup;
-      const memory = await loadSessionSnapshot(user.uid, finalSetup);
+      const withPrep = prepId && setup.mode === "roleplay" ? { ...setup, prepId } : setup;
+      const finalSetup = { ...withPrep, useMemory };
+      // Switch off: the AI sees no memory; grading still writes it.
+      const memory = useMemory ? await loadSessionSnapshot(user.uid, finalSetup) : undefined;
       const id = await createConversationSession(user.uid, finalSetup, memory);
       router.push(`/conversation/${id}`);
     } catch (err) {
@@ -183,6 +188,7 @@ function ConversationSetupContent() {
             buildError={buildError}
           />
           <div className="iv-row iv-start-row">
+            <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={starting} />
             <button type="button" className="btn-primary" disabled={!canStart} onClick={() => void handleStart()}>
               {draft.mode === "roleplay" ? "Bắt đầu nhập vai" : "Bắt đầu trò chuyện"}
             </button>
