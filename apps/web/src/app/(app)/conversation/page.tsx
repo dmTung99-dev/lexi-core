@@ -79,6 +79,7 @@ function ConversationSetupContent() {
           persona: p.persona,
           goals: [...p.goals],
           level: p.level,
+          levelMode: "max",
         }));
       })
       .catch(() => {});

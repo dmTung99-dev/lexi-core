@@ -55,6 +55,12 @@ describe("opening", () => {
     expect(buildOpeningPrompt(TOPIC)).toContain("Travel");
     expect(buildOpeningPrompt(ROLE)).toContain("A friendly waiter");
   });
+  it("adds the mostly-at-this-level sentence when levelMode is set, and not for legacy setups", () => {
+    const withMode = buildOpeningPrompt({ ...TOPIC, level: "B2", levelMode: "max" });
+    expect(withMode).toContain("Never go above CEFR B2.");
+    const legacy = buildOpeningPrompt({ ...TOPIC, level: "B2" });
+    expect(legacy).not.toContain("Write mainly at CEFR");
+  });
   it("parses say, rejects empty", () => {
     expect(parseOpening('{"say":" Hi there! "}')).toEqual({ say: "Hi there!", vi: "" });
     expect(() => parseOpening('{"say":""}')).toThrow();

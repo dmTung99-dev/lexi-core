@@ -92,11 +92,18 @@ describe("ConversationSetupForm", () => {
 
   it("toggles level and the two switches", () => {
     const { onChange } = setup();
-    fireEvent.click(screen.getByRole("button", { name: "B2" }));
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ level: "B2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tối đa B2" }));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ level: "B2", levelMode: "max" }));
     fireEvent.click(screen.getByLabelText("AI đọc to câu trả lời"));
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ speakAloud: false }));
     fireEvent.click(screen.getByLabelText("Xem lại bản chép lời trước khi gửi"));
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ reviewTranscript: false }));
+  });
+
+  it("draftToSetup always writes levelMode and picks a random level for Tất cả", () => {
+    const base = { ...DEFAULT_CONVERSATION_DRAFT, topic: "Travel" };
+    expect(draftToSetup({ ...base, level: "B2", levelMode: "max" })).toMatchObject({ level: "B2", levelMode: "max" });
+    expect(draftToSetup({ ...base, levelMode: "all" }, () => 0.999)).toMatchObject({ level: "C1", levelMode: "all" });
+    expect(draftToSetup({ ...base, levelMode: "all" }, () => 0)).toMatchObject({ level: "A2", levelMode: "all" });
   });
 });

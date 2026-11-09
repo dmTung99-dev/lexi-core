@@ -1,5 +1,7 @@
 import { CONVERSATION_LEVELS, type ConversationMode, type ConversationSetup } from "@/lib/conversationTypes";
 import type { RoleplayPreset, TopicCard } from "@/lib/conversationScenarios";
+import { LevelPicker } from "@/components/shared/LevelPicker";
+import { pickRandomLevel, type LevelMode } from "@/lib/levelChoice";
 import { INTERVIEW_VOICES, type InterviewVoice } from "@/lib/interviewTypes";
 import { ModeTabs } from "./ModeTabs";
 import { CUSTOM_PRESET_ID, ScenarioCards } from "./ScenarioCards";
@@ -14,6 +16,7 @@ export interface ConversationDraft {
   persona: string;
   goals: string[];
   level: ConversationSetup["level"];
+  levelMode: LevelMode;
   voice: InterviewVoice;
   speakAloud: boolean;
   reviewTranscript: boolean;
@@ -26,6 +29,7 @@ export const DEFAULT_CONVERSATION_DRAFT: ConversationDraft = {
   persona: "",
   goals: [],
   level: "B1",
+  levelMode: "max",
   voice: "female1",
   speakAloud: true,
   reviewTranscript: true,
@@ -36,12 +40,13 @@ export function isDraftReady(d: ConversationDraft): boolean {
   return d.mode === "topic" || (d.persona.trim().length > 0 && d.goals.some((g) => g.trim().length > 0));
 }
 
-export function draftToSetup(d: ConversationDraft): ConversationSetup {
+export function draftToSetup(d: ConversationDraft, random: () => number = Math.random): ConversationSetup {
   const roleplay = d.mode === "roleplay";
   return {
     mode: d.mode,
     topic: d.topic.trim(),
-    level: d.level,
+    level: d.levelMode === "all" ? pickRandomLevel(CONVERSATION_LEVELS, random) : d.level,
+    levelMode: d.levelMode,
     voice: d.voice,
     speakAloud: d.speakAloud,
     reviewTranscript: d.reviewTranscript,
@@ -63,7 +68,6 @@ export interface ConversationSetupFormProps {
 export function ConversationSetupForm(props: ConversationSetupFormProps) {
   const { value, onChange } = props;
   const set = <K extends keyof ConversationDraft>(key: K, v: ConversationDraft[K]) => onChange({ ...value, [key]: v });
-  const chip = (active: boolean) => (active ? "vb-chip active" : "vb-chip");
   const isCustom = value.mode === "roleplay" && value.presetId === CUSTOM_PRESET_ID;
   const showPreview = value.mode === "roleplay" && (value.persona.length > 0 || value.goals.length > 0);
 
@@ -136,13 +140,12 @@ export function ConversationSetupForm(props: ConversationSetupFormProps) {
 
       <div className="iv-field">
         <span className="iv-label">Trình độ</span>
-        <div className="iv-row">
-          {CONVERSATION_LEVELS.map((l) => (
-            <button key={l} type="button" className={chip(value.level === l)} aria-pressed={value.level === l} onClick={() => set("level", l)}>
-              {l}
-            </button>
-          ))}
-        </div>
+        <LevelPicker
+          scale={CONVERSATION_LEVELS}
+          level={value.level}
+          mode={value.levelMode}
+          onChange={(next) => onChange({ ...value, level: next.level, levelMode: next.mode })}
+        />
       </div>
 
       <div className="iv-field">

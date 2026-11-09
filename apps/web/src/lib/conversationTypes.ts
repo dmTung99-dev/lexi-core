@@ -1,4 +1,5 @@
 import type { InterviewVoice } from "./interviewTypes";
+import type { LevelMode } from "./levelChoice";
 import type { SessionMemorySnapshot } from "./learnerMemoryTypes";
 export type ConversationMode = "topic" | "roleplay";
 export type ConversationLevel = "A2" | "B1" | "B2" | "C1";
@@ -19,6 +20,8 @@ export interface ConversationSetup {
   /** Topic text, or the scenario title/description in role-play. */
   topic: string;
   level: ConversationLevel;
+  /** "max" = Tối đa level; "all" = Tất cả (level was picked at random at Start). Missing (old sessions) = exact level. */
+  levelMode?: LevelMode;
   voice: InterviewVoice;
   speakAloud: boolean;
   reviewTranscript: boolean;

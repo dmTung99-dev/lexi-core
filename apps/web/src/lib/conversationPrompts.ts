@@ -1,4 +1,5 @@
 import { InterviewAiError, parseJson, str, strList } from "./interviewPrompts";
+import { levelMixSentence } from "./levelChoice";
 import { practiceTargetsSection, topicMemorySection } from "./learnerMemoryPrompt";
 import type { SessionMemorySnapshot } from "./learnerMemoryTypes";
 import type {
@@ -22,7 +23,9 @@ export function formatTranscript(messages: ConversationMessage[]): string {
 }
 
 function describeSetup(setup: ConversationSetup): string {
-  const lines = [`Learner level: ${LEVEL_GUIDE[setup.level]}`];
+  const lines = [
+    `Learner level: ${LEVEL_GUIDE[setup.level]}${setup.levelMode ? ` ${levelMixSentence(setup.level)}` : ""}`,
+  ];
   if (setup.mode === "roleplay") {
     lines.push(`Mode: role-play. Scenario: ${setup.topic}`);
     lines.push(`You play: ${setup.persona ?? "a friendly conversation partner"}`);
