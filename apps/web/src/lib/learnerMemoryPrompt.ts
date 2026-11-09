@@ -72,7 +72,7 @@ Add a top-level key "mistakeChecks": [{"id": "<tracked id>", "result": "correct"
     parts.push(`${scope}
 ${prev}
 
-Add a top-level key "topicFacts": [{"fact": "...", "asked": ["..."]}] — the FULL updated list for this topic: the previous facts merged with what the learner revealed in this session, each rewritten short, in English, at most 12.${keep} "asked" lists the angles the AI has already covered for that fact (short English words). The transcription-error caveat above applies to facts too: do not record a fact built on a misheard word.`);
+Add a top-level key "topicFacts": [{"fact": "...", "asked": ["..."]}] — the FULL updated list for this topic: the previous facts merged with what the learner revealed in this session, each rewritten short, in English, at most 12. Keep one line per subject; when this session contradicts an earlier fact, replace the earlier fact with the newer information and never keep both versions.${keep} "asked" lists the angles the AI has already covered for that fact (short English words). The transcription-error caveat above applies to facts too: do not record a fact built on a misheard word.`);
   }
   return parts.join("\n\n");
 }

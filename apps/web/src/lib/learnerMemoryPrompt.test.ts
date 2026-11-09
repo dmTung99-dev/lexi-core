@@ -90,6 +90,11 @@ describe("reportMemorySection", () => {
   it("omits topicFacts when facts is null", () => {
     expect(reportMemorySection({ tracked, facts: null }, "conversation")).not.toContain("topicFacts");
   });
+  it("tells the grader to replace contradicted facts with the newer information", () => {
+    const s = reportMemorySection({ tracked: [], facts: [FACT] }, "conversation");
+    expect(s).toContain("Keep one line per subject");
+    expect(s).toContain("replace the earlier fact with the newer information and never keep both versions");
+  });
 });
 
 describe("parseMemoryUpdate", () => {
