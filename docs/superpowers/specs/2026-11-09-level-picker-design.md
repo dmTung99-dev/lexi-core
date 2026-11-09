@@ -71,8 +71,8 @@ Nothing new can fail: weighting and random picks are pure; invalid or unknown le
 ## 7. Testing
 
 - **Unit:** weighted order never includes levels above X, puts higher-weight levels first more often (seeded `random`, deterministic expectations), "Tất cả" stays uniform, due-first and `count` truncation unchanged; level-instruction helper for exact / max / all; random level pick stays inside the scale (seeded); conversation, prep, listening and reading prompts with each mode, and unchanged text for missing `levelMode` / null `maxCefr`.
-- **Pages:** new picker labels ("Tất cả", "Tối đa …") on Hội thoại, Chuẩn bị, Nghe, Ôn tập, Luyện đọc; Hội thoại Start and Chuẩn bị Tạo store `levelMode` and a concrete `level`; Nghe with no level no longer generates at B1 (seeded random); Chuẩn bị restores the latest kit's mode.
-- **SimpleDropdown:** opens with `align-end` when the measured space on the right is too small, without it otherwise (mock `getBoundingClientRect`).
+- **Pages:** new picker labels ("Tất cả", "Tối đa …") on Hội thoại, Chuẩn bị, Nghe, Ôn tập, Luyện đọc; Hội thoại Start and Chuẩn bị Tạo store `levelMode` and a concrete `level`; Nghe with no level no longer generates at B1 (random level per generation); Chuẩn bị restores the latest kit's mode.
+- **SimpleDropdown:** opens with `align-end` when the measured space on the right is too small, without it otherwise (mock `getBoundingClientRect`, `clientWidth` and `clientLeft`).
 - **Manual:** the Nghe hub screenshot case at desktop width shows no horizontal scroll; a "Tối đa B2" Ôn tập session visibly favours B2/B1 words.
 
 ## 8. Non-goals
