@@ -78,6 +78,15 @@ describe("SimpleDropdown", () => {
   });
 });
 
+function mockMainBox(clientWidth: number, clientLeft = 0) {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+    return this.classList.contains("main") ? clientWidth : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientLeft", "get").mockImplementation(function (this: HTMLElement) {
+    return this.classList.contains("main") ? clientLeft : 0;
+  });
+}
+
 function rect(left: number, right: number): DOMRect {
   return { left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0, toJSON: () => ({}) } as DOMRect;
 }
@@ -89,6 +98,7 @@ describe("SimpleDropdown placement", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       return this.classList.contains("main") ? rect(0, 1000) : rect(800, 900);
     });
+    mockMainBox(985);
     render(
       <div className="main">
         <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />
@@ -102,6 +112,37 @@ describe("SimpleDropdown placement", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       return this.classList.contains("main") ? rect(0, 1000) : rect(100, 200);
     });
+    mockMainBox(985);
+    render(
+      <div className="main">
+        <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />
+      </div>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
+    expect(screen.getByRole("listbox", { name: "Trình độ" })).not.toHaveClass("align-end");
+  });
+
+  it("ignores the container's vertical scrollbar when measuring the right edge", () => {
+    // Trigger left 680 + 320 = 1000: fits against the 1000px border box, but not against the 985px client box.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("main") ? rect(0, 1000) : rect(680, 780);
+    });
+    mockMainBox(985);
+    render(
+      <div className="main">
+        <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />
+      </div>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
+    expect(screen.getByRole("listbox", { name: "Trình độ" })).toHaveClass("align-end");
+  });
+
+  it("keeps left alignment when right alignment would overflow on the left too", () => {
+    // Container is only 300px wide: neither side fits the 320px popover, so stay left-aligned.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("main") ? rect(0, 300) : rect(200, 280);
+    });
+    mockMainBox(300);
     render(
       <div className="main">
         <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />

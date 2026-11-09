@@ -352,4 +352,41 @@ describe("ComprehensionPage (result + save/reuse)", () => {
     expect(await screen.findByText("Lượt 1/2 — Người nói A")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nộp bài" })).toBeInTheDocument();
   });
+
+  it("'Tất cả' picks a fresh random level for every generation, including 'Bài khác'", async () => {
+    mockSignedIn();
+    setSearchParams({ context: "general", action: "generate" });
+    let second = false;
+    vi.spyOn(Math, "random").mockImplementation(() => (second ? 0.999 : 0));
+    await completeSession();
+    second = true;
+    fireEvent.click(screen.getByRole("button", { name: "Bài khác" }));
+    await screen.findByRole("button", { name: "Nộp bài" });
+
+    const prompts = vi
+      .mocked(generateContent)
+      .mock.calls.map((c) => c[0].prompt)
+      .filter((p) => p.includes("Never go above CEFR"));
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain("Never go above CEFR A1.");
+    expect(prompts[1]).toContain("Never go above CEFR C2.");
+  });
+
+  it("'Tất cả' saves the generated passage's own level, not a page-level one", async () => {
+    mockSignedIn();
+    setSearchParams({ context: "general", action: "generate" });
+    vi.spyOn(Math, "random").mockReturnValue(0.999);
+    vi.mocked(saveListeningExercise).mockResolvedValue("new-id");
+    await completeSession();
+    fireEvent.click(screen.getByRole("button", { name: "Lưu bài" }));
+    await waitFor(() =>
+      expect(saveListeningExercise).toHaveBeenCalledWith(
+        "u1",
+        "comprehension",
+        expect.objectContaining({ kind: "conversation" }),
+        { context: "general", level: "c2" },
+        "english"
+      )
+    );
+  });
 });

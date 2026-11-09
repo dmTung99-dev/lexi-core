@@ -36,11 +36,19 @@ export function SimpleDropdown<T extends string>({
         onClick={() => {
           if (!open && wrapRef.current) {
             // The popover is 320px wide (narrower on phones) and opens from the trigger's left edge;
-            // right-align it when that would pass the scroll container's right edge.
+            // right-align it when that would pass the scroll container's visible right edge (excluding
+            // its vertical scrollbar) — but only if right-aligned it would still fit on the left.
             const width = Math.min(320, window.innerWidth - 32);
             const container = wrapRef.current.closest(".main") as HTMLElement | null;
-            const rightEdge = container ? container.getBoundingClientRect().right : window.innerWidth;
-            setAlignEnd(wrapRef.current.getBoundingClientRect().left + width > rightEdge);
+            let containerLeft = 0;
+            let rightEdge = document.documentElement.clientWidth;
+            if (container) {
+              const rect = container.getBoundingClientRect();
+              containerLeft = rect.left + container.clientLeft;
+              rightEdge = containerLeft + container.clientWidth;
+            }
+            const trigger = wrapRef.current.getBoundingClientRect();
+            setAlignEnd(trigger.left + width > rightEdge && trigger.right - width >= containerLeft);
           }
           setOpen((o) => !o);
         }}

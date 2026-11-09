@@ -81,4 +81,5 @@ Flutter app; Phỏng vấn level; changing the CEFR scales of any screen; per-se
 
 ## 9. Deviations
 
-- Nghe hiểu 'Tất cả' picks the random level once per page load in the first implementation; fixed in the final-review wave to pick per generation (see progress log).
+- Nghe hiểu 'Tất cả' initially picked its random level once per page load; fixed in the final-review wave: the level is picked per generation (including "Bài khác"), and saved exercises store the generated passage's own level.
+- A kit's role-play prefill always uses levelMode 'max' at the kit's level.

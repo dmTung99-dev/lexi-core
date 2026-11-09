@@ -78,6 +78,7 @@ function ConversationSetupContent() {
           topic: p.title,
           persona: p.persona,
           goals: [...p.goals],
+          // A kit's role-play always uses "Tối đa <kit level>" (levelMode "max"), even for kits made under Tất cả or old exact-level kits.
           level: p.level,
           levelMode: "max",
         }));
