@@ -1,4 +1,5 @@
 import type { VocabRecord } from "./vocabRecords";
+import { levelWeight, weightedOrder } from "./levelChoice";
 
 export const CEFR_ORDER: readonly VocabRecord["cefrLevel"][] = ["a1", "a2", "b1", "b2", "c1", "c2"];
 
@@ -35,14 +36,20 @@ function shuffle<T>(items: T[]): T[] {
 
 // Due words matching the filters, if any exist; otherwise every matching
 // word regardless of due date (never leaves the user with an empty session).
+// "Tối đa X": words nearer X tend to come first (weighted order); "Tất cả": uniform shuffle.
 export function selectSessionWords(
   records: VocabRecord[],
   filters: SessionWordFilters,
-  now: Date = new Date()
+  now: Date = new Date(),
+  random: () => number = Math.random
 ): VocabRecord[] {
   const matching = records.filter((r) => matchesFilters(r, filters));
   const due = matching.filter((r) => isDue(r, now));
   const pool = due.length > 0 ? due : matching;
-  const shuffled = shuffle(pool);
-  return filters.count === null ? shuffled : shuffled.slice(0, filters.count);
+  const max = filters.maxCefr;
+  const ordered =
+    max === null
+      ? shuffle(pool)
+      : weightedOrder(pool, (r) => Math.max(1, levelWeight(CEFR_ORDER, r.cefrLevel, max)), random);
+  return filters.count === null ? ordered : ordered.slice(0, filters.count);
 }

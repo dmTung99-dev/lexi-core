@@ -19,7 +19,7 @@ const DEFAULT_WORD_COUNT = 10;
 const MIN_VOCAB_WORDS = 5;
 
 const CEFR_DROPDOWN_OPTIONS: SimpleDropdownOption<string>[] = [
-  { value: "", label: "Mọi trình độ" },
+  { value: "", label: "Tất cả" },
   ...CEFR_LEVELS.map((level) => ({ value: level as string, label: `Tối đa ${level.toUpperCase()}` })),
 ];
 
@@ -160,7 +160,7 @@ export default function ReadingHubPage() {
       {mode === "bilingual" && (
         <div className="practice-filters">
           <SimpleDropdown
-            triggerLabel={maxCefr ? `Tối đa ${maxCefr.toUpperCase()}` : "Mọi trình độ"}
+            triggerLabel={maxCefr ? `Tối đa ${maxCefr.toUpperCase()}` : "Tất cả"}
             ariaLabel="Chọn trình độ tối đa"
             options={CEFR_DROPDOWN_OPTIONS}
             value={maxCefr ?? ""}

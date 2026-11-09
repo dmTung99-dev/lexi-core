@@ -92,7 +92,7 @@ describe("ReadingHubPage (mode picker)", () => {
 
     expect(await screen.findByRole("button", { name: "🔀 Lấy bài có sẵn" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Tạo bài luyện" })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: "Mọi trình độ ▾" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tất cả ▾" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "10 từ ▾" })).toBeInTheDocument();
   });
 
@@ -214,7 +214,7 @@ describe("ReadingHubPage (navigation)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "💼 Business" }));
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
     fireEvent.click(await screen.findByRole("button", { name: /Đọc & gõ/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Mọi trình độ ▾" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
     fireEvent.click(screen.getByRole("option", { name: "Tối đa B1" }));
     fireEvent.click(screen.getByRole("button", { name: "Tạo bài luyện" }));
 

@@ -27,7 +27,7 @@ const WORD_COUNT_OPTIONS = [5, 10, 20, null] as const;
 const DEFAULT_WORD_COUNT = 10;
 
 const CEFR_DROPDOWN_OPTIONS: SimpleDropdownOption<string>[] = [
-  { value: "", label: "Mọi trình độ" },
+  { value: "", label: "Tất cả" },
   ...CEFR_LEVELS.map((level) => ({ value: level as string, label: `Tối đa ${level.toUpperCase()}` })),
 ];
 
@@ -247,7 +247,7 @@ function PracticePageContent() {
             onApply={setSelectedTopicIds}
           />
           <SimpleDropdown
-            triggerLabel={maxCefr ? `Tối đa ${maxCefr.toUpperCase()}` : "Mọi trình độ"}
+            triggerLabel={maxCefr ? `Tối đa ${maxCefr.toUpperCase()}` : "Tất cả"}
             ariaLabel="Chọn trình độ tối đa"
             options={CEFR_DROPDOWN_OPTIONS}
             value={maxCefr ?? ""}

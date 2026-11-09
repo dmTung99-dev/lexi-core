@@ -126,6 +126,30 @@ describe("selectSessionWords", () => {
       randomSpy.mockRestore();
     }
   });
+
+  it("with a maximum level, orders the pool so words nearer the maximum tend to come first", () => {
+    const words = [
+      makeRecord({ id: "easy", cefrLevel: "a1", nextReviewAt: null }),
+      makeRecord({ id: "hard", cefrLevel: "b2", nextReviewAt: null }),
+    ];
+    // weights a1=1, b2=4 → total 5; r=0.3 → 1.5 ≥ 1 → "hard" first
+    const out = selectSessionWords(words, { topicIds: new Set(), maxCefr: "b2", count: null }, new Date(), () => 0.3);
+    expect(out.map((r) => r.id)).toEqual(["hard", "easy"]);
+    // r=0.1 → 0.5 < 1 → "easy" first
+    const low = selectSessionWords(words, { topicIds: new Set(), maxCefr: "b2", count: null }, new Date(), () => 0.1);
+    expect(low.map((r) => r.id)).toEqual(["easy", "hard"]);
+  });
+
+  it("with a maximum level and a count, still returns only allowed due words", () => {
+    const words = [
+      makeRecord({ id: "a", cefrLevel: "a1", nextReviewAt: null }),
+      makeRecord({ id: "b", cefrLevel: "b1", nextReviewAt: null }),
+      makeRecord({ id: "too-hard", cefrLevel: "c1", nextReviewAt: null }),
+    ];
+    const out = selectSessionWords(words, { topicIds: new Set(), maxCefr: "b1", count: 1 }, new Date(), () => 0.99);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe("b");
+  });
 });
 
 describe("CEFR_ORDER", () => {

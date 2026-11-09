@@ -127,7 +127,7 @@ describe("PracticePage (setup phase)", () => {
     render(<PracticePage />);
     await screen.findByText("2 từ khớp bộ lọc hiện tại.");
 
-    fireEvent.click(screen.getByRole("button", { name: "Mọi trình độ ▾" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
     fireEvent.click(screen.getByRole("option", { name: "Tối đa A1" }));
 
     expect(await screen.findByText("1 từ khớp bộ lọc hiện tại.")).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("PracticePage (setup phase)", () => {
     vi.mocked(getTopics).mockResolvedValue([]);
 
     render(<PracticePage />);
-    const cefrTrigger = await screen.findByRole("button", { name: "Mọi trình độ ▾" });
+    const cefrTrigger = await screen.findByRole("button", { name: "Tất cả ▾" });
     const countTrigger = screen.getByRole("button", { name: "10 từ ▾" });
     expect(cefrTrigger).not.toHaveClass("active");
     expect(countTrigger).not.toHaveClass("active");
