@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SimpleDropdown } from "./SimpleDropdown";
 
@@ -75,5 +75,39 @@ describe("SimpleDropdown", () => {
       />
     );
     expect(screen.getByRole("button", { name: "Tối đa A1 ▾" })).toHaveClass("active");
+  });
+});
+
+function rect(left: number, right: number): DOMRect {
+  return { left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0, toJSON: () => ({}) } as DOMRect;
+}
+
+describe("SimpleDropdown placement", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("right-aligns the popover when there is not enough room on the right", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("main") ? rect(0, 1000) : rect(800, 900);
+    });
+    render(
+      <div className="main">
+        <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />
+      </div>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
+    expect(screen.getByRole("listbox", { name: "Trình độ" })).toHaveClass("align-end");
+  });
+
+  it("keeps left alignment when there is room", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("main") ? rect(0, 1000) : rect(100, 200);
+    });
+    render(
+      <div className="main">
+        <SimpleDropdown triggerLabel="Tất cả" ariaLabel="Trình độ" options={OPTIONS} value="" onChange={vi.fn()} active={false} />
+      </div>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
+    expect(screen.getByRole("listbox", { name: "Trình độ" })).not.toHaveClass("align-end");
   });
 });

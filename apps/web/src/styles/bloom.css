@@ -761,6 +761,16 @@ p.scr-sub {
   overflow-y: auto;
 }
 
+.vb-topic-popover.align-end {
+  left: auto;
+  right: 0;
+}
+
+/* SimpleDropdown has no "Áp dụng" button under its options, so no gap below them. */
+.simple-dropdown-opts {
+  margin-bottom: 0;
+}
+
 .vb-topic-popover-apply {
   width: 100%;
   font-size: calc(16.5px * var(--type-scale));
