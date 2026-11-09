@@ -6,6 +6,8 @@ import {
   deleteTrackedMistake,
   getMistakeMemory,
   getTopicMemory,
+  isPrepGroupKey,
+  listPrepSceneMemories,
   listTopicMemories,
   saveMistakeMemory,
   saveTopicMemory,
@@ -123,5 +125,100 @@ describe("learnerMemory", () => {
   it("deleteTopicMemory deletes the doc", async () => {
     await deleteTopicMemory("u1", "free");
     expect(deleteDoc).toHaveBeenCalledWith("ref");
+  });
+});
+
+function scene(prepId: string, factIds: string[], updatedAt = "2026-01-01T00:00:00.000Z"): TopicMemory {
+  return {
+    key: `prep_${prepId}`, label: "Kit", updatedAt,
+    facts: factIds.map((id) => ({ id, fact: "f", asked: [], updatedAt })),
+  };
+}
+
+describe("prep scene memory routing", () => {
+  it("recognises prep group keys", () => {
+    expect(isPrepGroupKey("prep_p1")).toBe(true);
+    expect(isPrepGroupKey("topic_travel")).toBe(false);
+    expect(isPrepGroupKey("free")).toBe(false);
+  });
+
+  it("reads a kit's scene memory from prep_scene_memory", async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => scene("p1", ["a"]) } as never);
+    expect(await getTopicMemory("u1", "prep_p1")).toEqual(scene("p1", ["a"]));
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "prep_scene_memory", "p1");
+    expect(getDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the legacy conversation_memory doc", async () => {
+    vi.mocked(getDoc)
+      .mockResolvedValueOnce({ exists: () => false } as never)
+      .mockResolvedValueOnce({ exists: () => true, data: () => scene("p1", ["old"]) } as never);
+    expect(await getTopicMemory("u1", "prep_p1")).toEqual(scene("p1", ["old"]));
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "conversation_memory", "prep_p1");
+  });
+
+  it("returns null when neither doc exists", async () => {
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => false } as never);
+    expect(await getTopicMemory("u1", "prep_p1")).toBeNull();
+  });
+
+  it("saves to prep_scene_memory and removes the legacy doc", async () => {
+    await saveTopicMemory("u1", scene("p1", ["a"]));
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "prep_scene_memory", "p1");
+    expect(setDoc).toHaveBeenCalledWith("ref", scene("p1", ["a"]));
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "conversation_memory", "prep_p1");
+    expect(deleteDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it("still resolves when removing the legacy doc fails", async () => {
+    vi.mocked(deleteDoc).mockRejectedValueOnce(new Error("nope"));
+    await expect(saveTopicMemory("u1", scene("p1", ["a"]))).resolves.toBeUndefined();
+  });
+
+  it("keeps non-prep keys in conversation_memory", async () => {
+    await saveTopicMemory("u1", topic(["a"]));
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "conversation_memory", "free");
+    expect(deleteDoc).not.toHaveBeenCalled();
+  });
+
+  it("listTopicMemories leaves out prep groups", async () => {
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      docs: [{ data: () => topic(["a"]) }, { data: () => scene("p1", ["b"]) }],
+    } as never);
+    expect((await listTopicMemories("u1")).map((m) => m.key)).toEqual(["free"]);
+  });
+
+  it("listPrepSceneMemories merges new and legacy docs, new wins, newest first", async () => {
+    vi.mocked(getDocs)
+      .mockResolvedValueOnce({
+        docs: [{ data: () => scene("p1", ["new"], "2026-01-02T00:00:00.000Z") }],
+      } as never)
+      .mockResolvedValueOnce({
+        docs: [
+          { data: () => scene("p1", ["legacy"], "2026-01-01T00:00:00.000Z") },
+          { data: () => scene("p2", ["legacy2"], "2026-01-03T00:00:00.000Z") },
+          { data: () => topic(["a"]) },
+        ],
+      } as never);
+    const list = await listPrepSceneMemories("u1");
+    expect(list.map((m) => [m.key, m.facts[0].id])).toEqual([
+      ["prep_p2", "legacy2"],
+      ["prep_p1", "new"],
+    ]);
+    expect(collection).toHaveBeenCalledWith("db", "users", "u1", "prep_scene_memory");
+  });
+
+  it("deleteTopicMemory for a prep key removes the new and the legacy doc", async () => {
+    await deleteTopicMemory("u1", "prep_p1");
+    expect(deleteDoc).toHaveBeenCalledTimes(2);
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "prep_scene_memory", "p1");
+    expect(doc).toHaveBeenCalledWith("db", "users", "u1", "conversation_memory", "prep_p1");
+  });
+
+  it("deleteTopicFact on the last prep fact removes both docs", async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => scene("p1", ["a"]) } as never);
+    await deleteTopicFact("u1", "prep_p1", "a");
+    expect(deleteDoc).toHaveBeenCalledTimes(2);
+    expect(setDoc).not.toHaveBeenCalled();
   });
 });
