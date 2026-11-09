@@ -109,6 +109,19 @@ describe("ComprehensionPage (generate + session)", () => {
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
+  it("generates at a random level instead of always B1 when the URL has no level", async () => {
+    mockSignedIn();
+    vi.spyOn(Math, "random").mockReturnValue(0.999);
+    setSearchParams({ context: "general", action: "generate" });
+    render(<ComprehensionPage />);
+    await screen.findByText("Lượt 1/2 — Người nói A");
+
+    expect(generateContent).toHaveBeenCalledTimes(1);
+    const prompt = vi.mocked(generateContent).mock.calls[0][0].prompt;
+    expect(prompt).toContain("C2 level");
+    expect(prompt).toContain("Never go above CEFR C2");
+  });
+
   it("shows all 3 questions together and gates Nộp bài on all being answered, with no listen requirement", async () => {
     mockSignedIn();
     render(<ComprehensionPage />);

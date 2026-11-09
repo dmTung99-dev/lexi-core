@@ -1,4 +1,5 @@
 import { LANGUAGE_LABELS, type TargetLanguage } from "./languages";
+import { levelMixSentence } from "./levelChoice";
 import { APP_CONTEXT_LABELS, type AppContext } from "./appContext";
 import type { VocabRecord } from "./vocabRecords";
 
@@ -55,7 +56,7 @@ export function buildListeningPassagePrompt(
   return (
     `You are creating a TOEIC-style listening exercise for a Vietnamese speaker ` +
     `learning ${languageLabel}, at ${levelLabel} level, in a ${contextLabel} ` +
-    `register/setting. ` +
+    `register/setting. ${levelMixSentence(level)} ` +
     `Randomly choose ONE of these two formats: ` +
     `(1) a CONVERSATION between exactly two speakers. In the JSON, label them "A" and "B" ` +
     `(these are internal labels for voice selection only). The letters "A" and "B" must NEVER ` +

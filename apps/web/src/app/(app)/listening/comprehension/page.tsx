@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
@@ -9,6 +9,7 @@ import { getVocabRecords, type VocabRecord } from "@/lib/vocabRecords";
 import { getTopics, type Topic } from "@/lib/topics";
 import { recordDailyActivity } from "@/lib/dailyActivity";
 import { generateContent } from "@/lib/generateContent";
+import { pickRandomLevel } from "@/lib/levelChoice";
 import { parseAiJsonObject } from "@/lib/parseAiJson";
 import {
   buildListeningPassagePrompt,
@@ -31,6 +32,7 @@ import { VocabSuggestionsSection } from "@/components/shared/VocabSuggestionsSec
 
 type Phase = "loading" | "session" | "result";
 type CefrLevel = VocabRecord["cefrLevel"];
+const CEFR_SCALE = ["a1", "a2", "b1", "b2", "c1", "c2"] as const;
 const MIN_SPEED = 0.5;
 const MAX_SPEED = 2;
 const SPEED_STEP = 0.05;
@@ -52,12 +54,16 @@ function ComprehensionPageContent() {
   const contextParamRaw = searchParams.get("context");
   const contextParam: AppContext = isAppContext(contextParamRaw) ? contextParamRaw : "general";
   const levelParam = searchParams.get("level");
-  // `level` (defaulted to "b1") feeds GENERATION only — an LLM prompt needs
-  // *some* level. The saved-exercise LOOKUP path must NOT coerce an absent
-  // level to "b1" (that would make saved exercises at any other level
-  // unreachable via "Lấy bài có sẵn") — it uses `savedLevelFilter` instead,
-  // which stays null when the URL has no level param.
-  const level: CefrLevel = isCefrLevel(levelParam) ? levelParam : "b1";
+  // `level` feeds GENERATION only — an LLM prompt needs *some* level. With no
+  // level param ("Tất cả") each page load generates at one random level,
+  // stable across re-renders. The saved-exercise LOOKUP path must NOT use it
+  // (that would make saved exercises at other levels unreachable via
+  // "Lấy bài có sẵn") — it uses `savedLevelFilter` instead, which stays null
+  // when the URL has no level param.
+  const level: CefrLevel = useMemo(
+    () => (isCefrLevel(levelParam) ? levelParam : pickRandomLevel(CEFR_SCALE)),
+    [levelParam]
+  );
   const savedLevelFilter: CefrLevel | null = isCefrLevel(levelParam) ? levelParam : null;
   const action = searchParams.get("action");
 

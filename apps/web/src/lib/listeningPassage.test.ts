@@ -15,6 +15,12 @@ describe("buildListeningPassagePrompt", () => {
     expect(prompt).toContain("English");
   });
 
+  it("adds the mostly-at-this-level instruction", () => {
+    expect(buildListeningPassagePrompt("b1", "general", "english")).toContain(
+      "Write mainly at CEFR B1. About a quarter of the sentences and words may be easier, for variety. Never go above CEFR B1."
+    );
+  });
+
   it("instructs the AI to declare a gender per turn, consistent per speaker", () => {
     const prompt = buildListeningPassagePrompt("b1", "general", "english");
     expect(prompt).toContain("gender");

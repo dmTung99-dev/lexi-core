@@ -1,4 +1,5 @@
 import { LANGUAGE_LABELS, type TargetLanguage } from "./languages";
+import { levelMixSentence } from "./levelChoice";
 import { normalizeTypography } from "./normalizeTypography";
 import type { VocabRecord } from "./vocabRecords";
 
@@ -31,9 +32,7 @@ export function buildReadingPassagePrompt(
 ): string {
   const languageLabel = LANGUAGE_LABELS[targetLanguage];
   const sentenceCount = Math.min(12, Math.max(6, Math.ceil(headwords.length * 0.75)));
-  const levelClause = maxCefr
-    ? `Keep the difficulty at or below CEFR level ${maxCefr.toUpperCase()}. `
-    : "";
+  const levelClause = maxCefr ? `${levelMixSentence(maxCefr)} ` : "";
   return (
     `You are a language learning assistant helping a Vietnamese speaker learn ${languageLabel}. ` +
     `Write one coherent short story in ${languageLabel} of about ${sentenceCount} sentences, ` +

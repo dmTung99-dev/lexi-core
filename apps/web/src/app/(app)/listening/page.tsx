@@ -23,7 +23,7 @@ const DIFFICULTY_OPTIONS: { value: DictationDifficulty; label: string }[] = [
 
 const CEFR_DROPDOWN_OPTIONS: SimpleDropdownOption<string>[] = [
   { value: "", label: "Tất cả" },
-  ...CEFR_LEVELS.map((level) => ({ value: level as string, label: level.toUpperCase() })),
+  ...CEFR_LEVELS.map((level) => ({ value: level as string, label: `Tối đa ${level.toUpperCase()}` })),
 ];
 
 type Mode = "dictation" | "comprehension";
@@ -146,7 +146,7 @@ export default function ListeningHubPage() {
             </button>
           ))}
           <SimpleDropdown
-            triggerLabel={level ? level.toUpperCase() : "Tất cả"}
+            triggerLabel={level ? `Tối đa ${level.toUpperCase()}` : "Tất cả"}
             ariaLabel="Chọn cấp độ"
             options={CEFR_DROPDOWN_OPTIONS}
             value={level ?? ""}

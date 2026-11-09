@@ -221,7 +221,7 @@ describe("ListeningHubPage (navigation)", () => {
     render(<ListeningHubPage />);
     fireEvent.click(await screen.findByText("🎧 Nghe hiểu"));
     fireEvent.click(screen.getByRole("button", { name: "Tất cả ▾" }));
-    fireEvent.click(screen.getByRole("option", { name: "C1" }));
+    fireEvent.click(screen.getByRole("option", { name: "Tối đa C1" }));
     fireEvent.click(screen.getByRole("button", { name: "Tạo bài luyện" }));
 
     expect(pushMock).toHaveBeenCalledWith("/listening/comprehension?context=general&level=c1&action=generate");

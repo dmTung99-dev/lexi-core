@@ -49,7 +49,17 @@ describe("buildReadingPassagePrompt", () => {
 
   it("tells the AI to cap difficulty at the given max CEFR level when one is set", () => {
     const prompt = buildReadingPassagePrompt(["word"], "english", "b1");
-    expect(prompt).toContain("Keep the difficulty at or below CEFR level B1.");
+    expect(prompt).toContain("Write mainly at CEFR B1. About a quarter of the sentences and words may be easier, for variety. Never go above CEFR B1.");
+  });
+
+  it("asks mainly for the maximum level with some easier text", () => {
+    const p = buildReadingPassagePrompt(["apple"], "english", "b2");
+    expect(p).toContain("Write mainly at CEFR B2. About a quarter of the sentences and words may be easier, for variety. Never go above CEFR B2.");
+    expect(p).not.toContain("at or below CEFR level");
+  });
+
+  it("adds no level sentence for Tất cả", () => {
+    expect(buildReadingPassagePrompt(["apple"], "english", null)).not.toContain("Write mainly at CEFR");
   });
 
   it("omits the CEFR clause entirely when maxCefr is null", () => {
