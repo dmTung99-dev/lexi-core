@@ -32,6 +32,8 @@ export interface ConversationPrepContent {
 export interface NewConversationPrep extends ConversationPrepContent {
   situation: string;
   level: ConversationLevel;
+  /** Whether the AI saw learner memory when generating this kit (reference only). Missing on old kits. */
+  usedMemory?: boolean;
 }
 
 export interface ConversationPrep extends NewConversationPrep {

@@ -134,3 +134,39 @@ describe("parsePrep", () => {
     expect(parsePrep(JSON.stringify(kit({ title: "" })), `  ${long}`).title).toBe("x".repeat(60));
   });
 });
+
+describe("buildPrepPrompt with kit memory", () => {
+  const MEMORY = {
+    patterns: ["I'd like to walk you through ___"],
+    words: ["behind schedule"],
+    targets: [{ id: "m1", pattern: "Sai thì quá khứ", rule: "Dùng V2 cho việc đã xảy ra.", example: { said: "I go there", better: "I went there" } }],
+  };
+
+  it("has no memory sections without memory", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1");
+    expect(p).not.toContain("Already taught");
+    expect(p).not.toContain("Practice targets");
+  });
+
+  it("lists covered items and forbids reusing them as main items", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", MEMORY);
+    expect(p).toContain("Already taught in this learner's earlier kits");
+    expect(p).toContain("I'd like to walk you through ___");
+    expect(p).toContain("behind schedule");
+    expect(p).toContain('do NOT use these as this kit\'s "patterns" or "vocab" items');
+  });
+
+  it("turns each target into one pattern card without mentioning the mistake", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", MEMORY);
+    expect(p).toContain("Practice targets");
+    expect(p).toContain('- Sai thì quá khứ: Dùng V2 cho việc đã xảy ra. (said "I go there", better "I went there")');
+    expect(p).toContain("Turn EACH target into exactly one item");
+    expect(p).toContain("Never say or hint that it is a past mistake");
+  });
+
+  it("skips empty memory parts", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", { patterns: [], words: [], targets: [] });
+    expect(p).not.toContain("Already taught");
+    expect(p).not.toContain("Practice targets");
+  });
+});
