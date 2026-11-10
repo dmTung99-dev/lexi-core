@@ -2512,3 +2512,5 @@ Plan: docs/superpowers/plans/2026-11-09-level-picker.md. Base ed05a7b (on top of
 
 - Spec: `docs/superpowers/specs/2026-11-09-level-picker-design.md`; plan: `docs/superpowers/plans/2026-11-09-level-picker.md`.
 - Branch `feat/level-picker` on top of `feat/memory-split`. Web only.
+- Task 7: complete (commits bd30ecc..7d48e74, docs).
+- Final review: Important (Nghe per-generation level; dropdown scrollbar edge) fixed in 8a64dfd + left-fit check; re-review approved.
