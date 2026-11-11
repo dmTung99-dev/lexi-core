@@ -20,3 +20,15 @@ export function kitSummary(prep: Pick<ConversationPrep, "title" | "situation" | 
   ].map((p) => p.replace(/[.\s]+$/, "")).filter(Boolean);
   return collapse(pieces.join(". ")).slice(0, PREP_SUMMARY_MAX);
 }
+
+/** Lowercase, accent-stripped form for search (NFD does not decompose "đ", so it is mapped by hand). */
+export function foldText(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d");
+}
+
+/** Case- and diacritic-insensitive substring match over a kit's title, situation and summary; blank query matches all. */
+export function matchesPrepQuery(prep: Pick<ConversationPrep, "title" | "situation" | "summary">, query: string): boolean {
+  const q = foldText(query).trim();
+  if (!q) return true;
+  return foldText(`${prep.title}\n${prep.situation}\n${prep.summary ?? ""}`).includes(q);
+}

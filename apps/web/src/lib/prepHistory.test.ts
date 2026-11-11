@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kitSummary } from "./prepHistory";
+import { foldText, kitSummary, matchesPrepQuery } from "./prepHistory";
 
 describe("kitSummary", () => {
   it("returns the stored summary when present", () => {
@@ -14,5 +14,23 @@ describe("kitSummary", () => {
 
   it("caps at 400 chars", () => {
     expect(kitSummary({ title: "T", situation: "x".repeat(900), persona: "", goals: [] }).length).toBe(400);
+  });
+});
+
+describe("matchesPrepQuery", () => {
+  it("ignores case and diacritics, and folds đ", () => {
+    expect(matchesPrepQuery({ title: "Lập trình game", situation: "", summary: undefined }, "lap trinh")).toBe(true);
+    expect(matchesPrepQuery({ title: "Đi Đà Lạt", situation: "", summary: undefined }, "da lat")).toBe(true);
+    expect(foldText("Đà Lạt")).toBe("da lat");
+  });
+
+  it("matches on situation and summary", () => {
+    expect(matchesPrepQuery({ title: "A", situation: "Tôi đi phỏng vấn", summary: undefined }, "phong van")).toBe(true);
+    expect(matchesPrepQuery({ title: "A", situation: "", summary: "A trip to Tokyo." }, "TOKYO")).toBe(true);
+  });
+
+  it("treats a blank query as a match and rejects non-matches", () => {
+    expect(matchesPrepQuery({ title: "Lập trình game", situation: "", summary: undefined }, "  ")).toBe(true);
+    expect(matchesPrepQuery({ title: "Lập trình game", situation: "", summary: undefined }, "tokyo")).toBe(false);
   });
 });

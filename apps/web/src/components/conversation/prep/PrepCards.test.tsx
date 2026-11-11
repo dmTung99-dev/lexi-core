@@ -100,5 +100,55 @@ describe("RecentPreps", () => {
   it("shows an empty state", () => {
     render(<RecentPreps preps={[]} onDelete={vi.fn()} />);
     expect(screen.getByText("Chưa có bộ tài liệu nào.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Tìm bộ tài liệu")).not.toBeInTheDocument();
+  });
+
+  describe("paging and search", () => {
+    // 45 kits; every 5th (and the last) is a "game" kit, so some matches sit beyond the first page.
+    const MANY = Array.from({ length: 45 }, (_, i) => ({
+      id: `k${i}`,
+      title: i % 5 === 0 || i === 44 ? `Lập trình game ${i}` : `Kit ${i}`,
+      situation: "",
+      level: "B1",
+      createdAt: "2026-11-03T08:00:00.000Z",
+    })) as ConversationPrep[];
+    const rows = () => screen.getAllByRole("link");
+
+    it("has the Lịch sử heading and pages 20 at a time", () => {
+      render(<RecentPreps preps={MANY} onDelete={vi.fn()} />);
+      expect(screen.getByRole("heading", { name: "Lịch sử" })).toBeInTheDocument();
+      expect(rows()).toHaveLength(20);
+      fireEvent.click(screen.getByRole("button", { name: "Xem thêm" }));
+      expect(rows()).toHaveLength(40);
+      fireEvent.click(screen.getByRole("button", { name: "Xem thêm" }));
+      expect(rows()).toHaveLength(45);
+      expect(screen.queryByRole("button", { name: "Xem thêm" })).not.toBeInTheDocument();
+    });
+
+    it("searches every kit, shows a no-match note and restores the page on clear", () => {
+      render(<RecentPreps preps={MANY} onDelete={vi.fn()} />);
+      const box = screen.getByLabelText("Tìm bộ tài liệu");
+      expect(box).toHaveAttribute("placeholder", "Tìm bộ tài liệu…");
+      fireEvent.change(box, { target: { value: "game" } });
+      // i = 0,5,...,40 (9 kits) plus 44.
+      expect(rows()).toHaveLength(10);
+      expect(screen.getByText("Lập trình game 44")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Xem thêm" })).not.toBeInTheDocument();
+      fireEvent.change(box, { target: { value: "zzz" } });
+      expect(screen.getByText("Không tìm thấy bộ tài liệu nào.")).toBeInTheDocument();
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Xoá tìm kiếm" }));
+      expect(rows()).toHaveLength(20);
+      expect(screen.getByRole("button", { name: "Xem thêm" })).toBeInTheDocument();
+    });
+
+    it("goes back to the first page when the query changes", () => {
+      render(<RecentPreps preps={MANY} onDelete={vi.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: "Xem thêm" }));
+      expect(rows()).toHaveLength(40);
+      fireEvent.change(screen.getByLabelText("Tìm bộ tài liệu"), { target: { value: "kit" } });
+      fireEvent.click(screen.getByRole("button", { name: "Xoá tìm kiếm" }));
+      expect(rows()).toHaveLength(20);
+    });
   });
 });

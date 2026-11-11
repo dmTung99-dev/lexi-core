@@ -3026,6 +3026,8 @@ button[aria-busy="true"]:disabled {
 .prep-progress { margin: 0; color: var(--ink-soft); font-size: max(var(--type-min), calc(14px * var(--type-scale))); }
 .prep-entry-card { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--ink); }
 .prep-entry-card:hover { border-color: var(--accent); }
+.prep-page .iv-card .vb-search { margin: 8px 0; }
+.prep-more { min-height: 44px; align-self: flex-start; margin-top: 10px; }
 .prep-recent-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
 .prep-recent-row:last-child { border-bottom: 0; }
 .prep-recent-link { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 8px 0; text-decoration: none; color: var(--ink); }

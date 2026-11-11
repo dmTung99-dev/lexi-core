@@ -164,6 +164,23 @@ describe("ConversationPrepPage", () => {
     expect(deleteConversationPrep).toHaveBeenCalledWith("u1", "p9");
   });
 
+  it("loads the whole history (uid only) and a deleted kit leaves active search results", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(deleteConversationPrep).mockResolvedValueOnce();
+    vi.mocked(listRecentConversationPreps).mockResolvedValueOnce([
+      ...RECENT,
+      { id: "p8", title: "Lập trình game", level: "B1", situation: "", createdAt: "2026-10-30T08:00:00.000Z" } as ConversationPrep,
+    ]);
+    render(<ConversationPrepPage />);
+    await screen.findByText("Lập trình game");
+    expect(listRecentConversationPreps).toHaveBeenCalledWith("u1");
+    fireEvent.change(screen.getByLabelText("Tìm bộ tài liệu"), { target: { value: "lap trinh" } });
+    expect(screen.queryByText("Kỷ niệm Đà Lạt")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Xoá Lập trình game" }));
+    await waitFor(() => expect(screen.queryByText("Lập trình game")).not.toBeInTheDocument());
+    expect(screen.getByText("Không tìm thấy bộ tài liệu nào.")).toBeInTheDocument();
+  });
+
   it("shows a delete error without offering a create retry", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(deleteConversationPrep).mockRejectedValueOnce(new Error("offline"));

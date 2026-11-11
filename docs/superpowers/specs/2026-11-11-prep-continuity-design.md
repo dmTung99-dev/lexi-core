@@ -1,7 +1,7 @@
 # LexiCore — Chuẩn bị tình huống: continuity across kits + full, searchable history (web)
 
 **Date:** 2026-11-11
-**Status:** Approved (2026-11-11).
+**Status:** Implemented (2026-11-11).
 **Covers:** (1) A new Chuẩn bị kit knows what happened in the learner's earlier kits (via short summaries) and continues a related story, using only what is relevant to the new situation. (2) The "Gần đây" history shows every kit (not just the latest 10) and gets a search box.
 **Out of scope:** Hội thoại and Phỏng vấn (owner: "chưa cần cho hội thoại"). A page to read the summaries (owner: not needed — the history already exists). Filters other than text search (level, date).
 

@@ -2514,3 +2514,16 @@ Plan: docs/superpowers/plans/2026-11-09-level-picker.md. Base ed05a7b (on top of
 - Branch `feat/level-picker` on top of `feat/memory-split`. Web only.
 - Task 7: complete (commits bd30ecc..7d48e74, docs).
 - Final review: Important (Nghe per-generation level; dropdown scrollbar edge) fixed in 8a64dfd + left-fit check; re-review approved.
+
+## Prep continuity (master) — SDD ledger
+Plan: docs/superpowers/plans/2026-11-11-prep-continuity.md. Base 6b4ed2c, run on master. Reports: pc-task-N-report.md.
+- Task 1: complete (commits 6b4ed2c..9250f01, review clean). Minor: fallback strip eats trailing '...'; 400 slice may cut a surrogate pair; stored summary not whitespace-collapsed.
+- Task 2: complete (commits 9250f01..c28fe93, review clean; full suite 1648). Minor: history title not length-capped; a malformed kit (no goals) makes kitSummary throw → all kit memory dropped (?? [] would be gentler); reads all kits per generation.
+- Task 3: complete (history paging 20 + "Xem thêm", diacritic-insensitive search via foldText/matchesPrepQuery, docs).
+
+## 2026-11-11 — Chuẩn bị continuity + searchable history
+
+- Spec: `docs/superpowers/specs/2026-11-11-prep-continuity-design.md`; plan: `docs/superpowers/plans/2026-11-11-prep-continuity.md`. Web only, run on master.
+- Kits store a short English story summary (`summary`, <= 400 chars); new kits see up to 50 earlier kits' summaries (with Dùng trí nhớ on) and continue only related ones.
+- "Lịch sử" lists every kit, 20 per page with Xem thêm, plus a case- and diacritic-insensitive search (đ -> d) over title, situation and summary.
+- Tasks 1-3 complete; README and spec status updated.
