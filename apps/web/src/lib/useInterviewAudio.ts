@@ -6,7 +6,10 @@ import { synthesizeSpeech, toAudioDataUrl } from "./synthesizeSpeechClient";
 import type { InterviewVoice } from "./interviewTypes";
 
 export interface InterviewAudio {
-  speak(text: string): Promise<boolean>;
+  /** `onStarted` fires once the first clip actually starts playing (or the
+   * call ends without playing), so callers can show a loading state for
+   * the synthesis wait. */
+  speak(text: string, onStarted?: () => void): Promise<boolean>;
   prefetch(key: string, text: string): void;
   playPrefetched(key: string, text: string): Promise<boolean>;
   stop(): void;
@@ -51,7 +54,7 @@ export function useInterviewAudio(voice: InterviewVoice): InterviewAudio {
   }, []);
 
   const playClips = useCallback(
-    async (clips: Clip[]): Promise<boolean> => {
+    async (clips: Clip[], onStarted?: () => void): Promise<boolean> => {
       // A new play call supersedes whatever is currently playing/pending:
       // force-settle it (resolving its caller's promise with false) before
       // starting anything new, so no in-flight play() is ever left hanging.
@@ -60,14 +63,26 @@ export function useInterviewAudio(voice: InterviewVoice): InterviewAudio {
       cancelCurrentRef.current?.();
 
       const generation = generationRef.current;
-      if (clips.length === 0) return false;
-      for (const clip of clips) {
-        const url = await clip;
-        if (generation !== generationRef.current || !url) return false;
-        const ok = await playUrl(url);
-        if (!ok || generation !== generationRef.current) return false;
+      let started = false;
+      const markStarted = () => {
+        if (started) return;
+        started = true;
+        onStarted?.();
+      };
+      try {
+        if (clips.length === 0) return false;
+        for (const clip of clips) {
+          const url = await clip;
+          if (generation !== generationRef.current || !url) return false;
+          const playing = playUrl(url);
+          markStarted();
+          const ok = await playing;
+          if (!ok || generation !== generationRef.current) return false;
+        }
+        return true;
+      } finally {
+        markStarted();
       }
-      return true;
     },
     [playUrl]
   );
@@ -82,7 +97,7 @@ export function useInterviewAudio(voice: InterviewVoice): InterviewAudio {
 
   return useMemo(
     () => ({
-      speak: (text: string) => playClips(synthesize(text)),
+      speak: (text: string, onStarted?: () => void) => playClips(synthesize(text), onStarted),
       prefetch: (key: string, text: string) => {
         if (!prefetchedRef.current.has(key)) prefetchedRef.current.set(key, synthesize(text));
       },

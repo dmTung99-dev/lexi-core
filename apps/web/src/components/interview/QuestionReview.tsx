@@ -1,5 +1,6 @@
 import type { InterviewPhrase, InterviewReportQuestion } from "@/lib/interviewTypes";
 import { WordDiff } from "./WordDiff";
+import { Spinner } from "@/components/shared/Spinner";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
 
@@ -17,7 +18,13 @@ export interface QuestionReviewProps {
   expanded: boolean;
   onToggle(): void;
   onPlayModel(text: string): void;
+  /** True while the model answer's audio is being synthesized. */
+  modelLoading?: boolean;
   savedPhrases: Set<string>;
+  /** Text of the phrase whose save is in flight. */
+  savingPhrase?: string | null;
+  /** True while any phrase save runs. */
+  saveDisabled?: boolean;
   onSavePhrase(phrase: InterviewPhrase, example: string): void;
   /** Recording keys of this question's turns (main + follow-ups), in order. */
   recordingKeys?: string[];
@@ -60,7 +67,15 @@ export function QuestionReview(props: QuestionReviewProps) {
               <div className="iv-model">
                 <div className="iv-row iv-model-head">
                   <span className="iv-caps">Câu trả lời gợi ý</span>
-                  <button type="button" className="btn-secondary" onClick={() => props.onPlayModel(item.modelAnswer)}>Nghe câu gợi ý</button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    aria-busy={props.modelLoading ?? false}
+                    onClick={() => props.onPlayModel(item.modelAnswer)}
+                  >
+                    {props.modelLoading && <Spinner inline />}
+                    Nghe câu gợi ý
+                  </button>
                 </div>
                 <p>{item.modelAnswer}</p>
               </div>
@@ -69,15 +84,18 @@ export function QuestionReview(props: QuestionReviewProps) {
                   <span className="iv-label">Từ nên dùng:</span>
                   {item.phrases.map((p, i) => {
                     const saved = props.savedPhrases.has(p.text);
+                    const saving = props.savingPhrase === p.text;
                     return (
                       <button
                         key={i}
                         type="button"
                         className={saved ? "iv-phrase iv-phrase-saved" : "iv-phrase"}
-                        disabled={saved}
+                        disabled={saved || (props.saveDisabled ?? false)}
+                        aria-busy={saving}
                         title={p.meaning}
                         onClick={() => props.onSavePhrase(p, sentenceContaining(item.modelAnswer, p.text))}
                       >
+                        {saving && <Spinner inline />}
                         {saved ? `${p.text} ✓ đã lưu` : `${p.text} ＋`}
                       </button>
                     );

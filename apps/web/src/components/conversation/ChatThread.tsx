@@ -4,6 +4,7 @@ import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
 import { useScrollToEnd } from "@/lib/useScrollToEnd";
 import { HintBubble } from "./HintBubble";
+import { Spinner } from "@/components/shared/Spinner";
 
 export interface ChatThreadProps {
   messages: ConversationMessage[];
@@ -12,6 +13,8 @@ export interface ChatThreadProps {
   translations: Record<number, string>;
   translatingIndex: number | null;
   canReplay: boolean;
+  /** Index of the AI message whose replay audio is still loading. */
+  replayLoadingIndex?: number | null;
   onReplay(index: number): void;
   onTranslate(index: number): void;
   onHint(index: number): void;
@@ -46,8 +49,26 @@ export function ChatThread(props: ChatThreadProps) {
               <p className="cv-bubble cv-bubble-ai">{m.text}</p>
               {props.translations[i] && <p className="cv-translation">{props.translations[i]}</p>}
               <div className="cv-actions">
-                <button type="button" className="cv-link" disabled={!props.canReplay} onClick={() => props.onReplay(i)}>Nghe lại</button>
-                <button type="button" className="cv-link" disabled={props.translatingIndex === i} onClick={() => props.onTranslate(i)}>Dịch sang tiếng Việt</button>
+                <button
+                  type="button"
+                  className="cv-link"
+                  disabled={!props.canReplay}
+                  aria-busy={props.replayLoadingIndex === i}
+                  onClick={() => props.onReplay(i)}
+                >
+                  {props.replayLoadingIndex === i && <Spinner inline />}
+                  Nghe lại
+                </button>
+                <button
+                  type="button"
+                  className="cv-link"
+                  disabled={props.translatingIndex === i}
+                  aria-busy={props.translatingIndex === i}
+                  onClick={() => props.onTranslate(i)}
+                >
+                  {props.translatingIndex === i && <Spinner inline />}
+                  {props.translatingIndex === i ? "Đang dịch…" : "Dịch sang tiếng Việt"}
+                </button>
               </div>
             </div>
           </div>
@@ -60,7 +81,16 @@ export function ChatThread(props: ChatThreadProps) {
                 <div className="cv-actions cv-actions-me">
                   {recordingKey(i) && <PlayMyVoiceButton recordingKey={recordingKey(i) as string} />}
                   {!m.hint && (
-                    <button type="button" className="cv-link" disabled={props.hintLoadingIndex === i} onClick={() => props.onHint(i)}>Gợi ý sửa</button>
+                    <button
+                      type="button"
+                      className="cv-link"
+                      disabled={props.hintLoadingIndex === i}
+                      aria-busy={props.hintLoadingIndex === i}
+                      onClick={() => props.onHint(i)}
+                    >
+                      {props.hintLoadingIndex === i && <Spinner inline />}
+                      {props.hintLoadingIndex === i ? "Đang gợi ý…" : "Gợi ý sửa"}
+                    </button>
                   )}
                 </div>
               )}

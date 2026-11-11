@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPronunciationUrl, type TtsLanguage } from "@/lib/pronunciation";
+import { Spinner } from "@/components/shared/Spinner";
 
 interface PronunciationButtonProps {
   text: string;
@@ -45,10 +46,11 @@ export function PronunciationButton({ text, language, tier }: PronunciationButto
       className="pron-btn"
       onClick={() => void handlePlay(language)}
       disabled={loading}
+      aria-busy={loading}
       aria-label={`Nghe phát âm: ${text}`}
       title="Nghe phát âm"
     >
-      {loading ? "…" : error ? "⚠️" : "🔊"}
+      {loading ? <Spinner /> : error ? "⚠️" : "🔊"}
     </button>
   );
 }

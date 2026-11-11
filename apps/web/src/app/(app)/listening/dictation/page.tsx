@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/shared/Spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
@@ -346,7 +347,8 @@ function DictationPageContent() {
         </div>
         {audio.error && <p role="alert">{audio.error}</p>}
         <div className="dictation-controls">
-          <button type="button" className="btn-primary" onClick={() => void audio.play()} disabled={audio.isLoading}>
+          <button type="button" className="btn-primary" onClick={() => void audio.play()} disabled={audio.isLoading} aria-busy={audio.isLoading}>
+            {audio.isLoading && <Spinner inline />}
             {audio.hasPlayedOnce ? `▶ Nghe lại (${audio.replayCount})` : "▶ Phát"}
           </button>
           <div className="dictation-speed-selector">

@@ -11,6 +11,7 @@ import type { ConversationLevel } from "@/lib/conversationTypes";
 import type { UserSettings } from "@/lib/settings";
 import type { WordPhraseResult } from "@/lib/lookup";
 import { EditVocabModal } from "@/components/vocab-bank/EditVocabModal";
+import { Spinner } from "@/components/shared/Spinner";
 
 /** "Lưu tất cả" shows once at least this many phrases are still unsaved. */
 export const SAVE_ALL_MIN = 3;
@@ -29,6 +30,8 @@ export interface PhraseSaver {
   saved: Set<string>;
   markSaved(texts: string[]): void;
   busy: boolean;
+  /** Text of the phrase being saved one-by-one (Lưu / Lưu bản cơ bản). */
+  pendingText: string | null;
   message: string | null;
   error: string | null;
   /** The phrase whose lookup failed, offered for a basic (unenriched) save. */
@@ -53,6 +56,7 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
   const { uid, settings, level, note, activeContext = "general" } = opts;
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [pendingText, setPendingText] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fallback, setFallback] = useState<PhraseSource | null>(null);
@@ -77,10 +81,11 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
     return { ...buildVocabRecordDraft(result, t, "english"), personalNotes: note, activeContext };
   }
 
-  async function run(task: () => Promise<void>) {
+  async function run(task: () => Promise<void>, pending: string | null = null) {
     if (busyRef.current || !uid || !settings) return;
     busyRef.current = true;
     setBusy(true);
+    setPendingText(pending);
     setError(null);
     setMessage(null);
     setFallback(null);
@@ -89,6 +94,7 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
     } finally {
       busyRef.current = false;
       setBusy(false);
+      setPendingText(null);
     }
   }
 
@@ -112,7 +118,7 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
         return;
       }
       setEditing({ item, draft: toDraft(result, await loadTopics()) });
-    });
+    }, item.text);
 
   const saveAll = (items: PhraseSource[]) =>
     run(async () => {
@@ -155,7 +161,7 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
         setError("Không lưu được từ — thử lại.");
         setFallback(item);
       }
-    });
+    }, item.text);
 
   async function confirmEdit(updates: VocabRecordUpdate) {
     if (!editing || !uid) return;
@@ -170,7 +176,7 @@ export function usePhraseVocabSaver(opts: PhraseSaverOptions): PhraseSaver {
     <EditVocabModal record={editing.draft} topics={topics} mode="create" onClose={() => setEditing(null)} onSave={confirmEdit} />
   ) : null;
 
-  return { saved, markSaved, busy, message, error, fallback, saveOne, saveAll, saveBasic, modal };
+  return { saved, markSaved, busy, pendingText, message, error, fallback, saveOne, saveAll, saveBasic, modal };
 }
 
 /** Status line + "Lưu tất cả" + the basic-save fallback, shared by the three
@@ -182,7 +188,14 @@ export function PhraseSaveBar({ saver, items }: { saver: PhraseSaver; items: Phr
   return (
     <div className="phrase-save-bar">
       {showAll && (
-        <button type="button" className="btn-secondary" disabled={saver.busy} onClick={() => void saver.saveAll(items)}>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={saver.busy}
+          aria-busy={saver.busy && saver.pendingText === null}
+          onClick={() => void saver.saveAll(items)}
+        >
+          {saver.busy && saver.pendingText === null && <Spinner inline />}
           {`Lưu tất cả (${unsaved})`}
         </button>
       )}

@@ -151,7 +151,13 @@ export default function ConversationReportPage({ params }: { params: Promise<{ i
             items={report.corrections}
             recordingKeyFor={(i) => conversationRecordingKey(session.id, i)}
           />
-          <PhraseSaveList phrases={report.phrases} saved={saver.saved} onSave={(p) => void saver.saveOne(p)} />
+          <PhraseSaveList
+            phrases={report.phrases}
+            saved={saver.saved}
+            savingText={saver.pendingText}
+            saveDisabled={saver.busy}
+            onSave={(p) => void saver.saveOne(p)}
+          />
           <PhraseSaveBar saver={saver} items={report.phrases} />
           {saver.modal}
         </>

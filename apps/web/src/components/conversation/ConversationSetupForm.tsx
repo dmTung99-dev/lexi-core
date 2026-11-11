@@ -1,4 +1,5 @@
 import { CONVERSATION_LEVELS, type ConversationMode, type ConversationSetup } from "@/lib/conversationTypes";
+import { Spinner } from "@/components/shared/Spinner";
 import type { RoleplayPreset, TopicCard } from "@/lib/conversationScenarios";
 import { LevelPicker } from "@/components/shared/LevelPicker";
 import { pickRandomLevel, type LevelMode } from "@/lib/levelChoice";
@@ -60,6 +61,8 @@ export interface ConversationSetupFormProps {
   value: ConversationDraft;
   onChange(next: ConversationDraft): void;
   onPreviewVoice(voice: InterviewVoice): void;
+  /** Voice whose sample is still being synthesized. */
+  previewingVoice?: string | null;
   onBuildScenario(): void;
   building: boolean;
   buildError: string | null;
@@ -120,10 +123,16 @@ export function ConversationSetupForm(props: ConversationSetupFormProps) {
             onChange={(e) => set("topic", e.target.value)}
           />
           <div className="iv-row">
-            <button type="button" className="btn-secondary" disabled={props.building || !value.topic.trim()} onClick={props.onBuildScenario}>
-              Dựng tình huống
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={props.building || !value.topic.trim()}
+              aria-busy={props.building ?? false}
+              onClick={props.onBuildScenario}
+            >
+              {props.building && <Spinner inline />}
+              {props.building ? "Đang dựng…" : "Dựng tình huống"}
             </button>
-            {props.building && <span className="iv-muted">Đang dựng…</span>}
           </div>
           {props.buildError && <p className="iv-error" role="alert">{props.buildError}</p>}
         </div>
@@ -157,7 +166,15 @@ export function ConversationSetupForm(props: ConversationSetupFormProps) {
                 <strong>{v.label}</strong>
                 <span className="iv-muted">{v.sub}</span>
               </button>
-              <button type="button" className="iv-icon-btn" aria-label="Nghe thử giọng" onClick={() => props.onPreviewVoice(v.id)}>▶</button>
+              <button
+                type="button"
+                className="iv-icon-btn"
+                aria-label="Nghe thử giọng"
+                aria-busy={props.previewingVoice === v.id}
+                onClick={() => props.onPreviewVoice(v.id)}
+              >
+                {props.previewingVoice === v.id ? <Spinner /> : "▶"}
+              </button>
             </div>
           ))}
         </div>

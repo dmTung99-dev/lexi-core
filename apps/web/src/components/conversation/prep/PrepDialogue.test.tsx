@@ -28,7 +28,7 @@ describe("PrepDialogue", () => {
   it("speaks a line", () => {
     const { onSpeak } = setup();
     fireEvent.click(screen.getAllByRole("button", { name: "Nghe câu này" })[0]);
-    expect(onSpeak).toHaveBeenCalledWith("How is it going?");
+    expect(onSpeak).toHaveBeenCalledWith("How is it going?", "dialogue-0");
   });
 
   it("toggles the translation, and has no toggle for a line without one", () => {

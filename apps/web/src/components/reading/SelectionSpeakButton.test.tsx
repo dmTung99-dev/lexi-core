@@ -37,11 +37,12 @@ describe("SelectionSpeakButton", () => {
     );
     render(<SelectionSpeakButton text="favorable" rect={rect} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Nghe phát âm/ }));
-    expect(await screen.findByText("…")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /Nghe phát âm/ });
+    fireEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute("aria-busy", "true"));
 
     resolvePromise({ audioBase64: "AAAA" });
-    await waitFor(() => expect(screen.queryByText("…")).toBeNull());
+    await waitFor(() => expect(button).toHaveAttribute("aria-busy", "false"));
   });
 
   it("shows a warning icon after a failed request, and stays clickable to retry", async () => {

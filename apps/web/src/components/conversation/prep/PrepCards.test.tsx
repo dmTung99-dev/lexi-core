@@ -27,7 +27,7 @@ describe("PrepPatternCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ẩn giải thích" }));
     expect(screen.queryByText(/Lịch sự hơn\./)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Nghe ví dụ" }));
-    expect(onSpeak).toHaveBeenCalledWith("I'd like to walk you through the plan.");
+    expect(onSpeak).toHaveBeenCalledWith("I'd like to walk you through the plan.", "pattern-2");
   });
 
   it("hides the why toggle and example row when empty, and marks the ringed card", () => {
@@ -55,7 +55,27 @@ describe("PrepVocabList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lưu a heads-up" }));
     expect(onSave).toHaveBeenCalledWith(ITEMS[1]);
     fireEvent.click(screen.getByRole("button", { name: "Nghe behind schedule" }));
-    expect(onSpeak).toHaveBeenCalledWith("behind schedule");
+    expect(onSpeak).toHaveBeenCalledWith("behind schedule", "vocab-0");
+  });
+
+  it("shows a busy speaker and a busy Lưu while their requests run", () => {
+    render(
+      <PrepVocabList
+        items={ITEMS}
+        saved={new Set()}
+        savingText="a heads-up"
+        saveDisabled
+        onSave={vi.fn()}
+        onSpeak={vi.fn()}
+        speakingKey="vocab-0"
+      />
+    );
+    expect(screen.getByRole("button", { name: "Nghe behind schedule" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "Nghe a heads-up" })).toHaveAttribute("aria-busy", "false");
+    const saving = screen.getByRole("button", { name: "Lưu a heads-up" });
+    expect(saving).toHaveAttribute("aria-busy", "true");
+    expect(saving).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Lưu behind schedule" })).toBeDisabled();
   });
 });
 

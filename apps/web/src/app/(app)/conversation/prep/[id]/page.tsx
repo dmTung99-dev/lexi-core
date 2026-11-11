@@ -6,6 +6,7 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import { useSettingsContext } from "@/lib/SettingsContext";
 import { useRouteParams } from "@/lib/useRouteParams";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { useSpeakPending } from "@/lib/useSpeakPending";
 import { SignInButton } from "@/components/SignInButton";
 import { getConversationPrep } from "@/lib/conversationPreps";
 import { isPhraseSaved } from "@/lib/savePhraseToVocab";
@@ -26,6 +27,7 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
   const [ringed, setRinged] = useState<number | null>(null);
   const ringTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audio = useInterviewAudio("female1");
+  const speaker = useSpeakPending(audio);
   const { settings } = useSettingsContext();
   const saver = usePhraseVocabSaver({
     uid: user?.uid ?? null,
@@ -101,10 +103,7 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
   }
   if (!prep) return <p>Đang tải…</p>;
 
-  function speak(text: string) {
-    audio.stop();
-    void audio.speak(text);
-  }
+  const speak = speaker.speak;
 
   function showPattern(index: number) {
     document.getElementById(`prep-pattern-${index}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
@@ -140,18 +139,26 @@ export default function ConversationPrepKitPage({ params }: { params: Promise<{ 
       <div className="prep-kit-grid">
         <section id="prep-dialogue" className="iv-card prep-section">
           <h3 className="iv-card-title prep-section-title">Kịch bản mẫu</h3>
-          <PrepDialogue lines={prep.dialogue} patterns={prep.patterns} onSpeak={speak} onPatternClick={showPattern} />
+          <PrepDialogue lines={prep.dialogue} patterns={prep.patterns} onSpeak={speak} speakingKey={speaker.pendingKey} onPatternClick={showPattern} />
         </section>
         <div className="prep-kit-side">
           <section id="prep-patterns" className="iv-card prep-section">
             <h3 className="iv-card-title prep-section-title">Mẫu câu hay dùng</h3>
             {prep.patterns.map((p, i) => (
-              <PrepPatternCard key={i} pattern={p} index={i} ringed={ringed === i} onSpeak={speak} />
+              <PrepPatternCard key={i} pattern={p} index={i} ringed={ringed === i} onSpeak={speak} speakingKey={speaker.pendingKey} />
             ))}
           </section>
           <section id="prep-vocab" className="iv-card prep-section">
             <h3 className="iv-card-title prep-section-title">Từ/cụm từ mới</h3>
-            <PrepVocabList items={prep.vocab} saved={saver.saved} onSave={(item) => void saver.saveOne(item)} onSpeak={speak} />
+            <PrepVocabList
+              items={prep.vocab}
+              saved={saver.saved}
+              savingText={saver.pendingText}
+              saveDisabled={saver.busy}
+              onSave={(item) => void saver.saveOne(item)}
+              onSpeak={speak}
+              speakingKey={speaker.pendingKey}
+            />
             <PhraseSaveBar saver={saver} items={prep.vocab} />
             {saver.modal}
             <p className="iv-muted">→ lưu vào Ngân hàng từ vựng</p>

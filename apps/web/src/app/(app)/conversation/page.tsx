@@ -21,6 +21,8 @@ import { getConversationPrep } from "@/lib/conversationPreps";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { useSpeakPending } from "@/lib/useSpeakPending";
+import { Spinner } from "@/components/shared/Spinner";
 import type { InterviewVoice } from "@/lib/interviewTypes";
 import { MAX_USER_TURNS, userTurnCount, type ConversationSession } from "@/lib/conversationTypes";
 import {
@@ -51,6 +53,7 @@ function ConversationSetupContent() {
   const [buildError, setBuildError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
   const preview = useInterviewAudio(draft.voice);
+  const previewSpeaker = useSpeakPending(preview);
   const prepParam = useSearchParams().get("prep");
   const [prepId, setPrepId] = useState<string | null>(null);
   const [useMemory, setUseMemory] = useMemoryPreference("memoryInConversation");
@@ -101,8 +104,7 @@ function ConversationSetupContent() {
   // hook's voice ref is already current.
   useEffect(() => {
     if (previewNonce === 0) return;
-    preview.stop();
-    void preview.speak(VOICE_SAMPLE);
+    previewSpeaker.speak(VOICE_SAMPLE, draft.voice);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewNonce]);
 
@@ -185,14 +187,16 @@ function ConversationSetupContent() {
             value={draft}
             onChange={handleDraftChange}
             onPreviewVoice={handlePreviewVoice}
+            previewingVoice={previewSpeaker.pendingKey}
             onBuildScenario={() => void handleBuildScenario()}
             building={building}
             buildError={buildError}
           />
           <div className="iv-row iv-start-row">
             <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={starting} />
-            <button type="button" className="btn-primary" disabled={!canStart} onClick={() => void handleStart()}>
-              {draft.mode === "roleplay" ? "Bắt đầu nhập vai" : "Bắt đầu trò chuyện"}
+            <button type="button" className="btn-primary" disabled={!canStart} aria-busy={starting} onClick={() => void handleStart()}>
+              {starting && <Spinner inline />}
+              {starting ? "Đang chuẩn bị…" : draft.mode === "roleplay" ? "Bắt đầu nhập vai" : "Bắt đầu trò chuyện"}
             </button>
             {startError && <p className="iv-error" role="alert">{startError}</p>}
           </div>

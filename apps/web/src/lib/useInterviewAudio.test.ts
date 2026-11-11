@@ -63,6 +63,31 @@ describe("useInterviewAudio", () => {
     });
   });
 
+  it("calls onStarted once, when the first clip starts playing", async () => {
+    autoEnd = false;
+    let resolveSynth!: (v: { audioBase64: string }) => void;
+    vi.mocked(synthesizeSpeech).mockReturnValue(new Promise((r) => (resolveSynth = r)));
+    const onStarted = vi.fn();
+    const { result } = renderHook(() => useInterviewAudio("male1"));
+    await act(async () => {
+      void result.current.speak("Hello.", onStarted);
+    });
+    expect(onStarted).not.toHaveBeenCalled();
+    await act(async () => resolveSynth({ audioBase64: "Hello." }));
+    expect(played).toEqual(["data:Hello."]);
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onStarted when synthesis fails, so a loading state never sticks", async () => {
+    vi.mocked(synthesizeSpeech).mockRejectedValue(new Error("down"));
+    const onStarted = vi.fn();
+    const { result } = renderHook(() => useInterviewAudio("male1"));
+    await act(async () => {
+      await result.current.speak("Hello.", onStarted);
+    });
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
   it("reuses prefetched clips", async () => {
     const { result } = renderHook(() => useInterviewAudio("male1"));
     act(() => result.current.prefetch("main-1", "Next question?"));

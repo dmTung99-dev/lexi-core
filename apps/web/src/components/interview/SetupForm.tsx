@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Spinner } from "@/components/shared/Spinner";
 import {
   INTERVIEW_LEVELS,
   INTERVIEW_TYPES,
@@ -24,10 +25,12 @@ export interface SetupFormProps {
   value: SetupDraft;
   onChange(next: SetupDraft): void;
   onPreviewVoice(voice: InterviewVoice): void;
+  /** Voice whose sample is still being synthesized. */
+  previewingVoice?: string | null;
   cvSlot: ReactNode;
 }
 
-export function SetupForm({ value, onChange, onPreviewVoice, cvSlot }: SetupFormProps) {
+export function SetupForm({ value, onChange, onPreviewVoice, previewingVoice = null, cvSlot }: SetupFormProps) {
   const set = <K extends keyof SetupDraft>(key: K, v: SetupDraft[K]) => onChange({ ...value, [key]: v });
   const chip = (active: boolean) => (active ? "vb-chip active" : "vb-chip");
 
@@ -82,7 +85,15 @@ export function SetupForm({ value, onChange, onPreviewVoice, cvSlot }: SetupForm
                 <strong>{v.label}</strong>
                 <span className="iv-muted">{v.sub}</span>
               </button>
-              <button type="button" className="iv-icon-btn" aria-label="Nghe thử giọng" onClick={() => onPreviewVoice(v.id)}>▶</button>
+              <button
+                type="button"
+                className="iv-icon-btn"
+                aria-label="Nghe thử giọng"
+                aria-busy={previewingVoice === v.id}
+                onClick={() => onPreviewVoice(v.id)}
+              >
+                {previewingVoice === v.id ? <Spinner /> : "▶"}
+              </button>
             </div>
           ))}
         </div>

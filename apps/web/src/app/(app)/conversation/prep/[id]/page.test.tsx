@@ -97,7 +97,7 @@ describe("ConversationPrepKitPage", () => {
     renderPage();
     fireEvent.click((await screen.findAllByRole("button", { name: "Nghe câu này" }))[0]);
     expect(AUDIO.stop).toHaveBeenCalled();
-    expect(AUDIO.speak).toHaveBeenCalledWith("How is it going?");
+    expect(AUDIO.speak).toHaveBeenCalledWith("How is it going?", expect.any(Function));
   });
 
   it("scrolls to and rings the pattern card when a highlight is tapped", async () => {

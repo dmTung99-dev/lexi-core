@@ -1,4 +1,5 @@
 import type { InterviewTurn } from "@/lib/interviewTypes";
+import { Spinner } from "@/components/shared/Spinner";
 import { PlayMyVoiceButton } from "@/components/PlayMyVoiceButton";
 import { hasRecordings } from "@/lib/recordedAudioStore";
 import { useScrollToEnd } from "@/lib/useScrollToEnd";
@@ -44,7 +45,16 @@ export function SessionThread(props: SessionThreadProps) {
             {props.translation && <p className="iv-muted">{props.translation}</p>}
             <div className="iv-row">
               <button type="button" className="btn-secondary" disabled={props.replayDisabled} onClick={props.onReplay}>Nghe lại</button>
-              <button type="button" className="btn-secondary" disabled={props.translating} onClick={props.onTranslate}>Dịch sang tiếng Việt</button>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={props.translating}
+                aria-busy={props.translating}
+                onClick={props.onTranslate}
+              >
+                {props.translating && <Spinner inline />}
+                {props.translating ? "Đang dịch…" : "Dịch sang tiếng Việt"}
+              </button>
             </div>
           </div>
         </div>

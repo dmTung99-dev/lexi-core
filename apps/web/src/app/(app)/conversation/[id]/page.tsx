@@ -45,6 +45,7 @@ import {
 import { MAX_USER_TURNS, userTurnCount, type ConversationMessage, type ConversationReport, type ConversationSession, type ConversationSuggestion } from "@/lib/conversationTypes";
 import { MAX_ANSWER_SECONDS } from "@/lib/interviewTypes";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { useSpeakPending } from "@/lib/useSpeakPending";
 import { useRecorder, type RecordedAudio } from "@/lib/useRecorder";
 import { conversationSttPrompt } from "@/lib/sttPrompt";
 import { transcribeAudio } from "@/lib/transcribeAudioClient";
@@ -89,6 +90,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   const stoppingRef = useRef(false);
   const unmountedRef = useRef(false);
   const audio = useInterviewAudio(session?.setup.voice ?? "female1");
+  const replaySpeaker = useSpeakPending(audio);
   const { start: startRecorder, stop: stopRecorder, cancel: cancelRecorder, elapsed, error: micError } = useRecorder();
 
   // Mirrors `state.phase` for handleStart's post-await check (see the
@@ -477,8 +479,7 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
   function handleReplay(index: number) {
     const m = messagesRef.current[index];
     if (!m) return;
-    audio.stop();
-    void audio.speak(m.text);
+    replaySpeaker.speak(m.text, `msg-${index}`);
   }
 
   async function handleTranslate(index: number) {
@@ -581,6 +582,9 @@ export default function ConversationSessionPage({ params }: { params: Promise<{ 
             translations={translations}
             translatingIndex={translatingIndex}
             canReplay={canReplay}
+            replayLoadingIndex={
+              replaySpeaker.pendingKey?.startsWith("msg-") ? Number(replaySpeaker.pendingKey.slice(4)) : null
+            }
             onReplay={handleReplay}
             onTranslate={(i) => void handleTranslate(i)}
             onHint={(i) => void handleHint(i)}

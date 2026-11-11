@@ -21,6 +21,8 @@ import { getCvProfile } from "@/lib/cvProfile";
 import { warmUpSpeech } from "@/lib/warmUpSpeechClient";
 import { getMicPermission, requestMicPermission, type MicPermission } from "@/lib/micPermission";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { useSpeakPending } from "@/lib/useSpeakPending";
+import { Spinner } from "@/components/shared/Spinner";
 import { INTERVIEW_TYPES, type InterviewCvProfile, type InterviewSession, type InterviewVoice } from "@/lib/interviewTypes";
 import { DEFAULT_SETUP_DRAFT, SetupForm, type SetupDraft } from "@/components/interview/SetupForm";
 import { CvUpload } from "@/components/interview/CvUpload";
@@ -43,6 +45,7 @@ export default function InterviewSetupPage() {
   const [startError, setStartError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
   const preview = useInterviewAudio(draft.voice);
+  const previewSpeaker = useSpeakPending(preview);
   const [useMemory, setUseMemory] = useMemoryPreference("memoryInInterview");
 
   useEffect(() => {
@@ -58,8 +61,7 @@ export default function InterviewSetupPage() {
   // audio hook's voice ref is already current.
   useEffect(() => {
     if (previewNonce === 0) return;
-    preview.stop();
-    void preview.speak(VOICE_SAMPLE);
+    previewSpeaker.speak(VOICE_SAMPLE, draft.voice);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewNonce]);
 
@@ -136,12 +138,14 @@ export default function InterviewSetupPage() {
             value={draft}
             onChange={setDraft}
             onPreviewVoice={handlePreviewVoice}
+            previewingVoice={previewSpeaker.pendingKey}
             cvSlot={settings ? <CvUpload uid={user.uid} settings={settings} profile={cv} onChange={setCv} /> : null}
           />
           <div className="iv-row iv-start-row">
             <MemorySwitch checked={useMemory} onChange={setUseMemory} disabled={starting} />
-            <button type="button" className="btn-primary" disabled={!canStart} onClick={() => void handleStart()}>
-              Bắt đầu phỏng vấn
+            <button type="button" className="btn-primary" disabled={!canStart} aria-busy={starting} onClick={() => void handleStart()}>
+              {starting && <Spinner inline />}
+              {starting ? "Đang chuẩn bị…" : "Bắt đầu phỏng vấn"}
             </button>
             {startError && <p className="iv-error" role="alert">{startError}</p>}
           </div>

@@ -1576,6 +1576,40 @@ button.btn-google svg {
   cursor: not-allowed;
 }
 
+/* Loading spinner for buttons waiting on an API call (AI, TTS, save). A ring
+   in the button's own text colour, sized to the surrounding text (1em), so
+   it fits icon buttons and pill/text buttons alike. */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  animation: spinner-rot 0.7s linear infinite;
+}
+
+.spinner-inline {
+  margin-right: 6px;
+}
+
+@keyframes spinner-rot {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 1.6s; }
+}
+
+/* A busy button keeps full colour (it is working, not unavailable). */
+button[aria-busy="true"],
+button[aria-busy="true"]:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
 .reading-passage-wrap {
   max-width: 640px;
   margin: 0 auto;
@@ -2935,6 +2969,7 @@ button.btn-google svg {
 .iv-model-head { justify-content: space-between; }
 .iv-phrase { font: inherit; font-size: max(var(--type-min), calc(14px * var(--type-scale))); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
 .iv-phrase-saved { background: var(--sage-bg); border-color: var(--sage-bg); color: var(--success); cursor: default; }
+.iv-phrase:disabled:not(.iv-phrase-saved) { opacity: 0.55; cursor: default; }
 /* "Lưu tất cả" + status under the Hội thoại / Chuẩn bị tình huống / Phỏng vấn phrase lists. */
 .phrase-save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
 .phrase-save-bar .iv-error { margin: 0; flex-basis: 100%; }
@@ -3041,6 +3076,7 @@ button.btn-google svg {
 .prep-vocab-meaning { color: var(--ink-soft); font-size: max(var(--type-min), calc(13px * var(--type-scale))); }
 .prep-vocab-example { font-style: italic; line-height: 1.5; font-size: max(var(--type-min), calc(13px * var(--type-scale))); }
 .prep-save-btn { min-height: 44px; padding: 0 16px; flex-shrink: 0; border: 1px solid var(--accent); border-radius: 999px; background: var(--surface); color: var(--accent); font-family: inherit; font-weight: 600; font-size: max(var(--type-min), calc(14px * var(--type-scale))); cursor: pointer; }
+.prep-save-btn:disabled { opacity: 0.55; cursor: default; }
 .prep-saved { min-height: 44px; display: inline-flex; align-items: center; padding: 0 8px; flex-shrink: 0; color: var(--success); font-size: max(var(--type-min), calc(13px * var(--type-scale))); }
 .prep-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; text-decoration: none; }
 .cv-rule { margin: 2px 0 4px; font-size: max(var(--type-min), calc(14px * var(--type-scale))); color: var(--ink-soft); }

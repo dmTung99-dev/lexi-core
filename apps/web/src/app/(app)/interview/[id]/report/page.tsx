@@ -15,6 +15,7 @@ import { parseMemoryUpdate } from "@/lib/learnerMemoryPrompt";
 import { isPhraseSaved } from "@/lib/savePhraseToVocab";
 import type { PhraseSource } from "@/lib/phraseEnrich";
 import { useInterviewAudio } from "@/lib/useInterviewAudio";
+import { useSpeakPending } from "@/lib/useSpeakPending";
 import { interviewRecordingKey } from "@/lib/recordedAudioStore";
 import {
   INTERVIEW_LEVELS,
@@ -76,6 +77,7 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
     };
   }, [user, phraseItems, markSaved]);
   const audio = useInterviewAudio(session?.setup.voice ?? "male2");
+  const speaker = useSpeakPending(audio);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -197,11 +199,11 @@ export default function InterviewReportPage({ params }: { params: Promise<{ id: 
             item={report?.questions.find((q) => q.mainIndex === i)}
             expanded={expanded === i}
             onToggle={() => setExpanded(expanded === i ? null : i)}
-            onPlayModel={(text) => {
-              audio.stop();
-              void audio.speak(text);
-            }}
+            onPlayModel={(text) => speaker.speak(text, `model-${i}`)}
+            modelLoading={speaker.pendingKey === `model-${i}`}
             savedPhrases={saver.saved}
+            savingPhrase={saver.pendingText}
+            saveDisabled={saver.busy}
             onSavePhrase={(p, ex) => void saver.saveOne({ text: p.text, meaning: p.meaning, example: ex })}
             recordingKeys={session.turns.flatMap((t, ti) =>
               t.mainIndex === i && !t.skipped ? [interviewRecordingKey(session.id, ti)] : []

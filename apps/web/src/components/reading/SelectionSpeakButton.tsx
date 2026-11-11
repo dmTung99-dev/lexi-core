@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { synthesizeSpeech, toAudioDataUrl } from "@/lib/synthesizeSpeechClient";
+import { Spinner } from "@/components/shared/Spinner";
 
 interface SelectionSpeakButtonProps {
   text: string;
@@ -100,10 +101,11 @@ export function SelectionSpeakButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={tooLong ? undefined : () => void handlePlay()}
       disabled={loading || tooLong}
+      aria-busy={loading}
       aria-label={tooLong ? title : `Nghe phát âm: ${text}`}
       title={title}
     >
-      {tooLong ? "🔇" : loading ? "…" : error ? "⚠️" : "🔊"}
+      {tooLong ? "🔇" : loading ? <Spinner /> : error ? "⚠️" : "🔊"}
     </button>
   );
 }
