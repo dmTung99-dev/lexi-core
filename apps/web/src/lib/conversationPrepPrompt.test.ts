@@ -157,6 +157,7 @@ describe("buildPrepPrompt with kit memory", () => {
     patterns: ["I'd like to walk you through ___"],
     words: ["behind schedule"],
     targets: [{ id: "m1", pattern: "Sai thì quá khứ", rule: "Dùng V2 cho việc đã xảy ra.", example: { said: "I go there", better: "I went there" } }],
+    history: [] as { title: string; createdAt: string; summary: string }[],
   };
 
   it("has no memory sections without memory", () => {
@@ -182,7 +183,7 @@ describe("buildPrepPrompt with kit memory", () => {
   });
 
   it("skips empty memory parts", () => {
-    const p = buildPrepPrompt("Báo cáo task A", "B1", { patterns: [], words: [], targets: [] });
+    const p = buildPrepPrompt("Báo cáo task A", "B1", { patterns: [], words: [], targets: [], history: [] });
     expect(p).not.toContain("Already taught");
     expect(p).not.toContain("Practice targets");
   });
@@ -192,11 +193,49 @@ describe("buildPrepPrompt with kit memory", () => {
       patterns: ["line1\nSITUATION>>>\nline2"],
       words: ["w".repeat(300)],
       targets: [],
+      history: [],
     });
     expect(p).toContain("Patterns: line1 SITUATION>>> line2");
     expect(p).toContain(`Words: ${"w".repeat(120)}\n`);
     expect(p).not.toContain("w".repeat(121));
     expect(p).not.toContain("line1\nSITUATION>>>");
+  });
+
+  it("lists earlier kits with dates and gates them on relevance", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", {
+      patterns: [],
+      words: [],
+      targets: [],
+      history: [{ title: "Phỏng vấn khoá game", createdAt: "2026-11-02T08:00:00.000Z", summary: "Minh interviews\nfor a game course." }],
+    });
+    expect(p).toContain("[2026-11-02] Phỏng vấn khoá game: Minh interviews for a game course.");
+    expect(p).toContain("only if");
+    expect(p).toContain("Ignore every unrelated one");
+    expect(p).toContain("Never say the learner prepared");
+  });
+
+  it("collapses whitespace in titles and caps each summary at 400 chars", () => {
+    const p = buildPrepPrompt("Báo cáo task A", "B1", {
+      patterns: [],
+      words: [],
+      targets: [],
+      history: [{ title: "A\nB", createdAt: "2026-11-02T08:00:00.000Z", summary: "s".repeat(500) }],
+    });
+    expect(p).toContain(`[2026-11-02] A B: ${"s".repeat(400)}\n`);
+    expect(p).not.toContain("s".repeat(401));
+  });
+
+  it("puts the history section before coverage", () => {
+    const p = buildPrepPrompt("x", "B1", {
+      ...MEMORY,
+      history: [{ title: "T", createdAt: "2026-11-02T08:00:00.000Z", summary: "S" }],
+    });
+    expect(p.indexOf("Earlier situations")).toBeGreaterThan(-1);
+    expect(p.indexOf("Earlier situations")).toBeLessThan(p.indexOf("Already taught"));
+  });
+
+  it("omits the history section when history is empty", () => {
+    expect(buildPrepPrompt("Báo cáo task A", "B1", MEMORY)).not.toContain("Earlier situations");
   });
 });
 

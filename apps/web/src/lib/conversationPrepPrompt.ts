@@ -22,9 +22,21 @@ function clean(s: string): string {
   return s.replace(/\s+/g, " ").trim().slice(0, MEMORY_STRING_MAX);
 }
 
+function collapse(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
 function kitMemorySection(memory?: KitMemory): string {
   if (!memory) return "";
   const parts: string[] = [];
+  if (memory.history.length > 0) {
+    const lines = memory.history
+      .map((h) => `- [${h.createdAt.slice(0, 10)}] ${collapse(h.title)}: ${collapse(h.summary).slice(0, PREP_SUMMARY_MAX)}`)
+      .join("\n");
+    parts.push(`Earlier situations this learner prepared (newest first). Some may belong to the same ongoing story as the new situation (the same course, job, trip or people); most will not.
+${lines}
+If — and only if — the new situation clearly continues or refers to one of these, keep its people, names and facts consistent and build on what already happened instead of repeating it. Ignore every unrelated one completely and never mention it. Never say the learner prepared anything before.`);
+  }
   if (memory.patterns.length > 0 || memory.words.length > 0) {
     parts.push(`Already taught in this learner's earlier kits (do NOT use these as this kit's "patterns" or "vocab" items; they may appear again inside the dialogue as natural review):
 Patterns: ${memory.patterns.length > 0 ? memory.patterns.map(clean).join(" | ") : "(none)"}

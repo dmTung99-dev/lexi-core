@@ -24,8 +24,10 @@ export async function getConversationPrep(uid: string, id: string): Promise<Conv
   return { ...(snap.data() as ConversationPrep), id: snap.id };
 }
 
-export async function listRecentConversationPreps(uid: string, max = 10): Promise<ConversationPrep[]> {
-  const snap = await getDocs(query(prepsCol(uid), orderBy("createdAt", "desc"), limit(max)));
+/** Newest first. With no `max` every kit is returned. */
+export async function listRecentConversationPreps(uid: string, max?: number): Promise<ConversationPrep[]> {
+  const newestFirst = orderBy("createdAt", "desc");
+  const snap = await getDocs(max === undefined ? query(prepsCol(uid), newestFirst) : query(prepsCol(uid), newestFirst, limit(max)));
   return snap.docs.map((d) => ({ ...(d.data() as ConversationPrep), id: d.id }));
 }
 

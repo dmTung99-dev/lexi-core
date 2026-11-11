@@ -177,7 +177,7 @@ describe("ConversationPrepPage", () => {
   });
 
   it("sends kit memory to the prompt, saves usedMemory and records coverage", async () => {
-    vi.mocked(loadKitMemory).mockResolvedValueOnce({ patterns: ["I'd like to ___"], words: ["behind schedule"], targets: [] });
+    vi.mocked(loadKitMemory).mockResolvedValueOnce({ patterns: ["I'd like to ___"], words: ["behind schedule"], targets: [], history: [] });
     vi.mocked(callInterviewAi).mockResolvedValueOnce(VALID);
     vi.mocked(createConversationPrep).mockResolvedValueOnce("p1");
     render(<ConversationPrepPage />);

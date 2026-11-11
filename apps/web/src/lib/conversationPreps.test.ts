@@ -65,6 +65,20 @@ describe("conversationPreps", () => {
     expect(limit).toHaveBeenCalledWith(5);
   });
 
+  it("lists every kit without a limit when no max is given", async () => {
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      docs: [
+        { id: "a", data: () => ({ title: "A" }) },
+        { id: "b", data: () => ({ title: "B" }) },
+        { id: "c", data: () => ({ title: "C" }) },
+      ],
+    } as never);
+    const all = await listRecentConversationPreps("u1");
+    expect(all.map((p) => p.id)).toEqual(["a", "b", "c"]);
+    expect(orderBy).toHaveBeenCalledWith("createdAt", "desc");
+    expect(limit).not.toHaveBeenCalled();
+  });
+
   it("deletes a kit", async () => {
     await deleteConversationPrep("u1", "p1");
     expect(deleteDoc).toHaveBeenCalledTimes(1);

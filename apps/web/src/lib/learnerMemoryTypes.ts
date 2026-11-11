@@ -77,6 +77,8 @@ export const KIT_TARGETS = 2;
 /** How many of the most recent covered items the kit prompt sees. */
 export const KIT_PROMPT_PATTERNS = 40;
 export const KIT_PROMPT_WORDS = 80;
+/** How many of the newest earlier kits (with their summaries) a new kit's prompt sees. */
+export const KIT_PROMPT_HISTORY = 50;
 
 /** A pattern or word some earlier Chuẩn bị kit already taught. */
 export interface CoveredItem {

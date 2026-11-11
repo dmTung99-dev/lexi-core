@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteTopicMemory, getMistakeMemory, getPrepCoverage, savePrepCoverage } from "./learnerMemory";
 import { deleteKitMemory, loadKitMemory, recordKitCoverage } from "./prepMemory";
 import type { TrackedMistake } from "./learnerMemoryTypes";
+import { listRecentConversationPreps } from "./conversationPreps";
+import { kitSummary } from "./prepHistory";
+import type { ConversationPrep } from "./conversationPrepTypes";
 
 vi.mock("./learnerMemory", () => ({
   getPrepCoverage: vi.fn(),
@@ -9,6 +12,16 @@ vi.mock("./learnerMemory", () => ({
   getMistakeMemory: vi.fn(),
   deleteTopicMemory: vi.fn(),
 }));
+
+vi.mock("./conversationPreps", () => ({ listRecentConversationPreps: vi.fn() }));
+
+function prep(i: number): ConversationPrep {
+  return {
+    id: `k${i}`, situation: `situation ${i}`, level: "B1", title: `Title ${i}`, persona: "A client.", goals: ["g"],
+    dialogue: [], patterns: [], vocab: [], createdAt: new Date(Date.UTC(2026, 10, 1, 0, 100 - i)).toISOString(),
+    ...(i % 2 === 0 ? { summary: `Story ${i}.` } : {}),
+  } as ConversationPrep;
+}
 
 const NOW = new Date("2026-11-09T00:00:00.000Z");
 
@@ -20,7 +33,10 @@ function mistake(id: string, nextReviewAt: string): TrackedMistake {
   };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(listRecentConversationPreps).mockResolvedValue([]);
+});
 
 describe("loadKitMemory", () => {
   it("returns the most recent covered items and up to 2 due mistakes", async () => {
@@ -39,6 +55,29 @@ describe("loadKitMemory", () => {
     expect(mem?.patterns).not.toContain("p0");
     expect(mem?.words).toEqual(["w1"]);
     expect(mem?.targets.map((t) => t.id)).toEqual(["a", "b"]);
+  });
+
+  it("includes the 50 newest earlier kits as history, newest first", async () => {
+    const kits = Array.from({ length: 55 }, (_, i) => prep(i));
+    vi.mocked(listRecentConversationPreps).mockResolvedValueOnce(kits);
+    vi.mocked(getPrepCoverage).mockResolvedValueOnce({ patterns: [], words: [], updatedAt: "" });
+    vi.mocked(getMistakeMemory).mockResolvedValueOnce({ items: [], updatedAt: "" });
+    const mem = await loadKitMemory("u1", NOW);
+    expect(listRecentConversationPreps).toHaveBeenCalledWith("u1");
+    expect(mem?.history).toHaveLength(50);
+    expect(mem?.history[0].title).toBe(kits[0].title);
+    expect(mem?.history[49].title).toBe(kits[49].title);
+    mem?.history.forEach((h, i) => {
+      expect(h.summary).toBe(kitSummary(kits[i]));
+      expect(h.createdAt).toBe(kits[i].createdAt);
+    });
+  });
+
+  it("returns undefined when the kit history read fails", async () => {
+    vi.mocked(getPrepCoverage).mockResolvedValueOnce({ patterns: [], words: [], updatedAt: "" });
+    vi.mocked(getMistakeMemory).mockResolvedValueOnce({ items: [], updatedAt: "" });
+    vi.mocked(listRecentConversationPreps).mockRejectedValueOnce(new Error("offline"));
+    expect(await loadKitMemory("u1", NOW)).toBeUndefined();
   });
 
   it("returns undefined when a read fails", async () => {
