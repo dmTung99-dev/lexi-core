@@ -2527,3 +2527,5 @@ Plan: docs/superpowers/plans/2026-11-11-prep-continuity.md. Base 6b4ed2c, run on
 - Kits store a short English story summary (`summary`, <= 400 chars); new kits see up to 50 earlier kits' summaries (with Dùng trí nhớ on) and continue only related ones.
 - "Lịch sử" lists every kit, 20 per page with Xem thêm, plus a case- and diacritic-insensitive search (đ -> d) over title, situation and summary.
 - Tasks 1-3 complete; README and spec status updated.
+- Task 3: review clean (commits c28fe93..bd46339; full suite 1655). Minor: .vb-search input lacks min-width:0 (possible overflow ~320px); row-count tests use getAllByRole('link').
+- Final review: Ready to push, no Critical/Important. Optional hardening: clean(h.title); ?? []/?? '' in kitSummary.
