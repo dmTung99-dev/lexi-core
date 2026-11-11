@@ -44,6 +44,12 @@ describe("buildPrepPrompt", () => {
     expect(p).toContain('"dialogue"');
   });
 
+  it("asks for a story summary in the kit JSON", () => {
+    const p = buildPrepPrompt("Tôi đi phỏng vấn khoá học làm game", "B1");
+    expect(p).toContain('"summary"');
+    expect(p).toMatch(/"summary": .*English/);
+  });
+
   it("caps the situation at 800 characters", () => {
     const p = buildPrepPrompt("a".repeat(900), "B1");
     expect(p).toContain(`<<<SITUATION\n${"a".repeat(800)}\nSITUATION>>>`);
@@ -60,6 +66,17 @@ describe("parsePrep", () => {
     expect(out.dialogue[1]).not.toHaveProperty("partnerRole");
     expect(out.patterns[0].why).toEqual([{ part: "I'd like to", reason: "Lịch sự hơn I want to." }]);
     expect(out.vocab).toEqual([{ text: "behind schedule", meaning: "chậm tiến độ", example: "We're behind schedule." }]);
+  });
+
+  it("parses the summary, trimmed to 400 chars", () => {
+    const out = parsePrep(JSON.stringify(kit({ summary: "  A".padEnd(500, "x") })), "s");
+    expect(out.summary).toHaveLength(400);
+  });
+
+  it("saves a kit without a summary", () => {
+    const out = parsePrep(JSON.stringify(kit({ summary: 42 })), "s");
+    expect(out.summary).toBeUndefined();
+    expect(out).not.toHaveProperty("summary");
   });
 
   it("throws PrepUnclearError for the unclear escape", () => {

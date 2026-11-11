@@ -4,6 +4,7 @@ import type { ConversationLevel, ConversationPhrase } from "./conversationTypes"
 import { PREP_LIMITS, type ConversationPrepContent, type PrepLine, type PrepPattern } from "./conversationPrepTypes";
 import type { KitMemory } from "./prepMemory";
 import { levelMixSentence, type LevelMode } from "./levelChoice";
+import { PREP_SUMMARY_MAX } from "./prepHistory";
 
 const SITUATION_MAX = 800;
 
@@ -53,14 +54,15 @@ SITUATION>>>${kitMemorySection(memory)}
 If this is not a usable communicative situation (gibberish, a single word, nothing to say to anyone), return exactly {"error":"unclear"}.
 
 Otherwise return ONLY a JSON object, no prose:
-{"title": "...", "persona": "...", "goals": ["..."], "dialogue": [{"speaker": "partner", "partnerRole": "...", "en": "...", "vi": "..."}], "patterns": [{"pattern": "...", "meaning": "...", "example": "...", "why": [{"part": "...", "reason": "..."}]}], "vocab": [{"text": "...", "meaning": "...", "example": "..."}]}
+{"title": "...", "persona": "...", "goals": ["..."], "dialogue": [{"speaker": "partner", "partnerRole": "...", "en": "...", "vi": "..."}], "patterns": [{"pattern": "...", "meaning": "...", "example": "...", "why": [{"part": "...", "reason": "..."}]}], "vocab": [{"text": "...", "meaning": "...", "example": "..."}], "summary": "..."}
 
 - "title": a short VIETNAMESE title for this situation (max 8 words).
 - "dialogue": 8 to 14 turns of natural spoken English for this situation. "speaker" is "you" (the learner) or "partner" (the other person); turns alternate. "partnerRole" is a short VIETNAMESE label for the other person (e.g. "Khách hàng", "Bạn thân") on every partner turn. "en" is the line, at the learner's level. "vi" is a natural Vietnamese translation.
 - "patterns": 5 to 8 reusable sentence patterns that the learner's ("you") lines actually use. "pattern" is the reusable frame with a blank, e.g. "I'd like to walk you through ___" or "We're on track to + V". "meaning" is ONE short VIETNAMESE sentence on what it does and when to use it. "example" is copied VERBATIM from one dialogue "en" line that contains the pattern. "why": 0 to 3 points; ${WHY_RULES}
 - "vocab": 6 to 10 words or phrases useful for this situation; prefer collocations and phrases over single words; skip words too basic for the level. "text" is the English word or phrase, "meaning" a short VIETNAMESE meaning, "example" one short English sentence using it.
 - "persona": in English, one sentence: who the other person is and how they behave, so an AI can play them in a role-play (e.g. "A busy client who wants a clear status update and asks follow-up questions").
-- "goals": 3 or 4 short goals IN VIETNAMESE (max 12 words each) the learner should accomplish in this conversation, in order, consistent with the dialogue.`;
+- "goals": 3 or 4 short goals IN VIETNAMESE (max 12 words each) the learner should accomplish in this conversation, in order, consistent with the dialogue.
+- "summary": in English, 1 to 3 sentences of story facts a later situation could continue from — what happens, who is involved (names/roles as in the dialogue), and the main thing the learner practises. No Vietnamese, no talk about the learner preparing or the app.`;
 }
 
 function records(value: unknown): Record<string, unknown>[] {
@@ -102,5 +104,6 @@ export function parsePrep(raw: string, situation: string): ConversationPrepConte
     throw new InterviewAiError("AI không tạo được bộ tài liệu — thử lại.");
   }
   const title = str(json.title) || situation.trim().slice(0, 60);
-  return { title, persona, goals, dialogue, patterns, vocab };
+  const summary = str(json.summary).slice(0, PREP_SUMMARY_MAX);
+  return { title, persona, goals, dialogue, patterns, vocab, ...(summary ? { summary } : {}) };
 }

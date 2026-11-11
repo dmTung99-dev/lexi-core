@@ -28,6 +28,8 @@ export interface ConversationPrepContent {
   dialogue: PrepLine[];
   patterns: PrepPattern[];
   vocab: ConversationPhrase[];
+  /** English, 1-3 sentences of story facts a later kit can continue from. Missing on old kits and when the AI gave none. */
+  summary?: string;
 }
 
 export interface NewConversationPrep extends ConversationPrepContent {
