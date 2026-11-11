@@ -208,7 +208,8 @@ describe("ListeningHubPage (navigation)", () => {
 
     render(<ListeningHubPage />);
     fireEvent.click(await screen.findByText("🎧 Nghe hiểu"));
-    fireEvent.click(screen.getByText(/Business/));
+    fireEvent.click(screen.getByRole("button", { name: "🌐 General ▾" }));
+    fireEvent.click(screen.getByRole("option", { name: "💼 Business" }));
     fireEvent.click(screen.getByRole("button", { name: "🔀 Lấy bài có sẵn" }));
 
     expect(pushMock).toHaveBeenCalledWith("/listening/comprehension?context=business&action=existing");

@@ -26,7 +26,12 @@ const CEFR_DROPDOWN_OPTIONS: SimpleDropdownOption<string>[] = [
   ...CEFR_LEVELS.map((level) => ({ value: level as string, label: `Tối đa ${level.toUpperCase()}` })),
 ];
 
-type Mode = "dictation" | "comprehension";
+const CONTEXT_DROPDOWN_OPTIONS: SimpleDropdownOption<AppContext>[] = APP_CONTEXTS.map((ctx) => ({
+  value: ctx,
+  label: `${APP_CONTEXT_EMOJI[ctx]} ${APP_CONTEXT_LABELS[ctx]}`,
+}));
+
+type Mode ="dictation" | "comprehension";
 
 export default function ListeningHubPage() {
   const { user, loading: authLoading } = useAuthUser();
@@ -135,16 +140,14 @@ export default function ListeningHubPage() {
 
       {mode === "comprehension" && (
         <div className="practice-filters">
-          {APP_CONTEXTS.map((ctx) => (
-            <button
-              key={ctx}
-              type="button"
-              className={`vb-chip${context === ctx ? " active" : ""}`}
-              onClick={() => setContext(ctx)}
-            >
-              {APP_CONTEXT_EMOJI[ctx]} {APP_CONTEXT_LABELS[ctx]}
-            </button>
-          ))}
+          <SimpleDropdown
+            triggerLabel={`${APP_CONTEXT_EMOJI[context]} ${APP_CONTEXT_LABELS[context]}`}
+            ariaLabel="Chọn chủ đề"
+            options={CONTEXT_DROPDOWN_OPTIONS}
+            value={context}
+            onChange={setContext}
+            active={context !== "general"}
+          />
           <SimpleDropdown
             triggerLabel={level ? `Tối đa ${level.toUpperCase()}` : "Tất cả"}
             ariaLabel="Chọn cấp độ"
