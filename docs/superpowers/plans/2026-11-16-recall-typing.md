@@ -123,10 +123,10 @@ it("maskHeadword hides the word and simple inflections", () => {
 - Test: `apps/web/src/components/practice/RecallTypingCard.test.tsx`
 
 **Interfaces:**
-- Consumes: everything from Task 1; `PronunciationButton`, `ttsLanguageCode`, `splitMeaningSenses` (as FlashcardCard uses).
+- Consumes: everything from Task 1; `getPronunciationUrl({ text, language, tier: "word" })` from `@/lib/pronunciation`, `ttsLanguageCode`, `splitMeaningSenses` (as FlashcardCard uses).
 - Produces: `export function RecallTypingCard(props: { record: VocabRecord; onDone(outcome: RecallOutcome): void }): JSX.Element`. Calls `onDone` exactly once, after the delay.
 
-Layout per the mockup: level badge (`record.cefrLevel.toUpperCase()`), meaning (masked), definition (masked, italic, omitted when empty), pattern line (`aria-label="Gợi ý độ dài"`, slots from `fillSlots`, overflow chars after the last slot in danger colour), labelled input (`aria-label="Gõ từ tiếng Anh"`, autofocus, `autoComplete="off"`, `autoCapitalize="off"`, `autoCorrect="off"`, `spellCheck={false}`), buttons `Gợi ý (n)` and `Bỏ qua`. Result states: correct → input wrapper `.recall-ok` + "✓ Chính xác" + headword/IPA/🔊; wrong/skipped → "Đáp án" box above input with headword/IPA/🔊, input wrapper `.recall-bad` + "✗ Chưa đúng" (skipped: no ✗ label).
+Layout per the mockup: level badge (`record.cefrLevel.toUpperCase()`), meaning (masked), definition (masked, italic, omitted when empty), pattern line (`aria-label="Gợi ý độ dài"`, slots from `fillSlots`, overflow chars after the last slot in danger colour), labelled input (`aria-label="Gõ từ tiếng Anh"`, autofocus, `autoComplete="off"`, `autoCapitalize="off"`, `autoCorrect="off"`, `spellCheck={false}`), buttons `Gợi ý (n)` and `Bỏ qua`. Result states: correct → input wrapper `.recall-ok` + "✓ Chính xác" + headword/IPA; wrong/skipped → "Đáp án" box above input with headword/IPA, input wrapper `.recall-bad` + "✗ Chưa đúng" (skipped: no ✗ label).
 
 - [ ] **Step 1: Write failing tests** (use `vi.useFakeTimers()`; a B2 record `behind schedule`, meaning "chậm tiến độ", definition "The project is behind schedule.")
   - `"masks the headword in the definition"` → text "The project is ___." present; "behind schedule" absent before answering.
@@ -137,10 +137,13 @@ Layout per the mockup: level badge (`record.cefrLevel.toUpperCase()`), meaning (
   - `"Enter twice and Enter during the pause report once"` → type correct, Enter, Enter, advance 1200 ms → `onDone` called once; input is read-only after submit.
   - `"typed letters fill the pattern"` → type "beh"; the pattern's first three slots show b, e, h.
   - `"empty Enter does nothing"`.
+  - `"preloads the pronunciation on show and plays it once on reveal"` → mock `getPronunciationUrl` resolving `"u1"` and a stub `Audio` class recording `play()` calls; on mount `getPronunciationUrl` called once with the headword; no `play()` before Enter; after a wrong Enter exactly one `play()`; no speaker button (`queryByRole("button", { name: /Nghe phát âm/ })` is null).
+  - `"plays when the audio arrives late, but not after the card is gone"` → URL promise resolves after Enter → plays once; unmount before it resolves → never plays.
+  - `"audio failure is silent"` → `getPronunciationUrl` rejects → reveal still works, no error text.
 
 - [ ] **Step 2: Run** `npx vitest run src/components/practice/RecallTypingCard.test.tsx` — FAIL.
 
-- [ ] **Step 3: Implement** the component (state: `typed`, `revealed` (init `initialReveal`), `hintsLeft` (init `RECALL_HINTS`), `usedHint`, `result: null | RecallOutcome`; a timer ref cleared on unmount; submit guarded by `result !== null`). Hint button disabled when `hintsLeft === 0 || !hintAvailable(...)`. Add `.recall-*` CSS with `--type-scale` font sizes, mono font for slots/input, 16px input on phones.
+- [ ] **Step 3: Implement** the component. Audio: on mount (when `ttsLanguageCode(record.targetLanguage)` is non-null) start `getPronunciationUrl` and keep a preloaded `new Audio(url)` (`preload = "auto"`) in a ref; on reveal call `play()` once (if not ready, mark `playWhenReady`; play on arrival only if still mounted); swallow errors; do not pause it on unmount. State: `typed`, `revealed` (init `initialReveal`), `hintsLeft` (init `RECALL_HINTS`), `usedHint`, `result: null | RecallOutcome`; a timer ref cleared on unmount; submit guarded by `result !== null`). Hint button disabled when `hintsLeft === 0 || !hintAvailable(...)`. Add `.recall-*` CSS with `--type-scale` font sizes, mono font for slots/input, 16px input on phones.
 
 - [ ] **Step 4: Run** the test file and `src/styles/bloom.fontSize.test.ts` — PASS; `npx tsc --noEmit -p .` — clean.
 

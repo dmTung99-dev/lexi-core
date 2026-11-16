@@ -48,7 +48,7 @@
 - **Live fill (owner-approved):** as the learner types, the typed characters fill the pattern's letter slots in order, crossword-style (separators in the input align with separator slots; typed text is laid over the slots character by character). A slot shows the typed character when there is one, else its revealed letter, else `_`. **No per-letter right/wrong colouring while typing** — judging happens only on Enter. Characters typed beyond the pattern's length show in the danger colour after the last slot.
 - **Input:** single-line text, autofocus, 16px on phones, `autocapitalize="off"`, `autocorrect="off"`, `spellcheck=false`. Enter submits; empty input does nothing.
 - **Buttons:** "Gợi ý (n)" (n = presses left) and "Bỏ qua" (enabled only after the hints are used up).
-- 🔊 pronunciation button appears only once the answer is revealed (correct / wrong / skipped); no autoplay.
+- **Pronunciation (owner-approved, replaces a 🔊 button):** no speaker button on the card. When the card appears, the headword's pronunciation audio is fetched and preloaded (same cached Storage audio as the 🔊 buttons elsewhere). When the answer is revealed — correct, wrong or skipped — it **plays once automatically**. If the audio is not ready yet it plays as soon as it is, but only while that card is still showing; a failure is silent. Advancing to the next word does not cut audio that is already playing.
 
 ### 3.3 Pre-revealed letters by level
 Fraction of letters (not separators) shown at the start, deterministic per headword (same word → same pattern every session, so the pattern itself becomes a memory cue):
@@ -95,7 +95,8 @@ Count = `round(fraction × letters)`, at least 1 for B1+ when the word has ≥ 4
 - Pattern deterministic per word.
 - Separators always shown; case-insensitive; apostrophe/dash variants equal.
 - Definition shown with the headword masked; examples not shown; sentences excluded.
-- Timings 1.2 s (correct) and 2 s (wrong/skipped); 🔊 only after reveal, no autoplay.
+- Timings 1.2 s (correct) and 2 s (wrong/skipped).
+- (Owner) No 🔊 on the card; pronunciation preloaded on show and auto-played once on reveal. The summary keeps its 🔊 buttons.
 - "Ôn tập lại ngay" keeps "Gõ từ".
 
 ## 6. Left to the builder
