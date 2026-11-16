@@ -1453,7 +1453,7 @@ button.btn-primary:disabled {
 }
 
 .practice-result-item-hint {
-  color: var(--warning, var(--text));
+  color: var(--amber);
 }
 
 .practice-result-group {
