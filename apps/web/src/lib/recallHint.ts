@@ -133,10 +133,10 @@ export function fillSlots(
   for (let i = 0; i < h.length; i++) {
     if (isSeparator(h[i])) {
       slots.push({ kind: "sep", ch: h[i], source: "revealed" });
-    } else if (revealed.has(i)) {
-      slots.push({ kind: "letter", ch: h[i], source: "revealed" });
     } else if (i < t.length) {
       slots.push({ kind: "letter", ch: t[i], source: "typed" });
+    } else if (revealed.has(i)) {
+      slots.push({ kind: "letter", ch: h[i], source: "revealed" });
     } else {
       slots.push({ kind: "letter", ch: "", source: "empty" });
     }
@@ -161,7 +161,7 @@ export function answersMatch(input: string, headword: string): boolean {
 export function maskHeadword(text: string, headword: string): string {
   const h = collapse(headword);
   if (!h) return text;
-  const escaped = h.replace(/[.*+?^${}()|[\]\\\/-]/g, "\\$&").replace(/ /g, "\\s+");
+  const escaped = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
   const single = !h.includes(" ");
   const suffix = single ? "(?:es|ed|ing|s|d)?" : "";
   const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}${suffix}(?![\\p{L}\\p{N}])`, "giu");

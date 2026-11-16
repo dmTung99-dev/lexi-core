@@ -55,4 +55,11 @@ describe("recallHint", () => {
     expect(maskHeadword("The project is behind schedule.", "behind schedule")).toBe("The project is ___.");
     expect(maskHeadword("schedules", "schedule")).toBe("___");
   });
+  it("maskHeadword handles hyphenated headwords", () => {
+    expect(maskHeadword("a heads-up call", "heads-up")).toBe("a ___ call");
+  });
+  it("fillSlots: typed char wins over revealed letter", () => {
+    expect(fillSlots("borrow", new Set([1]), "bx").slots[1]).toEqual({ kind: "letter", ch: "x", source: "typed" });
+    expect(fillSlots("borrow", new Set([1]), "b").slots[1]).toEqual({ kind: "letter", ch: "o", source: "revealed" });
+  });
 });
