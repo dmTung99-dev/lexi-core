@@ -36,6 +36,7 @@
 - **Kiểu bài chọn mỗi phiên tại màn Ôn tập** (không lưu, luôn mặc định Flashcard khi mở lại) — cả 2 nền tảng:
   - **Flashcard** (mặc định) — toàn bộ phiên chỉ dùng flashcard, không gọi AI
   - **Trộn AI** — mỗi phiên tự bốc ngẫu nhiên 1 tỉ lệ AI trong khoảng 20–80%, dùng cố định cho cả phiên đó
+  - **Gõ từ** (chỉ web) — xem nghĩa + định nghĩa (che từ) rồi gõ đầy đủ từ/cụm từ; dòng gợi ý độ dài, lộ sẵn chữ theo trình độ (A1–A2 không lộ), chữ gõ lấp vào dòng gợi ý; 3 lần Gợi ý chữ rồi Nghe phát âm (nghe lại được) và Bỏ qua; đúng hiện xanh 1,2 s / sai hiện đỏ + đáp án 2 s, tự phát âm khi lộ đáp án; dùng gợi ý = tính chưa nhớ; thống kê cuối phiên chia 3 nhóm (Tự nhớ được / Đúng nhờ gợi ý / Sai hoặc bỏ qua); không gồm câu (sentence)
 - Khi ở chế độ Trộn AI, tự động tạo bài tập bằng AI theo cấp độ CEFR của từng từ — **giống nhau trên cả app Flutter và web**:
   - **Multiple Choice** (A1/A2)
   - **Fill in the Blank** (B1/B2)

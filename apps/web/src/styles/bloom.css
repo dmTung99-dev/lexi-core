@@ -1452,6 +1452,20 @@ button.btn-primary:disabled {
   color: var(--danger);
 }
 
+.practice-result-item-hint {
+  color: var(--warning, var(--text));
+}
+
+.practice-result-group {
+  margin-top: 16px;
+}
+
+.practice-result-group-title {
+  margin: 0 0 6px;
+  font-size: calc(15px * var(--type-scale));
+  font-weight: 700;
+}
+
 .practice-result-headword {
   font-weight: 700;
   color: var(--ink);

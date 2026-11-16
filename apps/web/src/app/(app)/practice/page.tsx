@@ -19,6 +19,8 @@ import { generateExercise, type PracticeExercise } from "@/lib/practiceExercise"
 import { drawSessionAiRatio, shouldUseFlashcard } from "@/lib/pickExercise";
 import { PronunciationButton } from "@/components/shared/PronunciationButton";
 import { ttsLanguageCode } from "@/lib/pronunciation";
+import { RecallTypingCard } from "@/components/practice/RecallTypingCard";
+import type { RecallOutcome } from "@/lib/recallHint";
 import { computeSm2, type Sm2Fields } from "@/lib/sm2";
 
 type CefrLevel = VocabRecord["cefrLevel"];
@@ -41,6 +43,14 @@ type Phase = "setup" | "session" | "result";
 export interface SessionGradeResult {
   vocabRecordId: string;
   quality: 1 | 5;
+  outcome?: RecallOutcome;
+}
+
+type PracticeMode = "flashcard" | "mixed" | "recall";
+
+// Recall (Gõ từ) needs a typeable headword, so sentence records are out of its pool.
+function poolFor(records: VocabRecord[], mode: PracticeMode): VocabRecord[] {
+  return mode === "recall" ? records.filter((r) => r.inputType !== "sentence") : records;
 }
 
 function PracticePageContent() {
@@ -74,7 +84,7 @@ function PracticePageContent() {
   const [exercises, setExercises] = useState<(PracticeExercise | null)[]>([]);
   const exercisesRef = useRef<(PracticeExercise | null)[]>([]);
   const sessionTokenRef = useRef(0);
-  const [practiceMode, setPracticeMode] = useState<"flashcard" | "mixed">("flashcard");
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>("flashcard");
   const aiRatioRef = useRef(0);
 
   useEffect(() => {
@@ -177,27 +187,28 @@ function PracticePageContent() {
   // session honors the reset immediately — `setPracticeMode` is async, so the
   // `practiceMode` closure here would otherwise still read the stale value in
   // the same tick a sibling `setPracticeMode("flashcard")` call is made.
-  function handleStart(mode: "flashcard" | "mixed" = practiceMode) {
+  function handleStart(mode: PracticeMode = practiceMode) {
     if (!records) return;
     const filters: SessionWordFilters = { topicIds: selectedTopicIds, maxCefr, count: wordCount };
-    const words = selectSessionWords(records, filters);
+    const words = selectSessionWords(poolFor(records, mode), filters);
     if (words.length === 0) return;
     setSessionWords(words);
     setCurrentIndex(0);
     setSessionResults([]);
     sm2WrittenRef.current = false;
     setPhase("session");
-    aiRatioRef.current = mode === "flashcard" ? 0 : drawSessionAiRatio();
+    aiRatioRef.current = mode !== "mixed" ? 0 : drawSessionAiRatio();
     const token = ++sessionTokenRef.current;
     setExercises(new Array(words.length).fill(null));
     exercisesRef.current = new Array(words.length).fill(null);
+    if (mode === "recall") return; // recall sessions need no AI exercises
     void generateAt(0, words, token);
     void generateAt(1, words, token);
   }
 
-  function handleGrade(quality: 1 | 5) {
+  function handleGrade(quality: 1 | 5, outcome?: RecallOutcome) {
     const current = sessionWords[currentIndex];
-    const nextResults = [...sessionResults, { vocabRecordId: current.id, quality }];
+    const nextResults = [...sessionResults, { vocabRecordId: current.id, quality, outcome }];
     setSessionResults(nextResults);
 
     if (currentIndex + 1 < sessionWords.length) {
@@ -207,11 +218,15 @@ function PracticePageContent() {
       // or by the previous grade). Only the new lookahead slot needs seeding —
       // firing `+1` again could start a duplicate in-flight generateExercise
       // while its first call is still pending (the exercisesRef guard is null).
-      void generateAt(currentIndex + 2, sessionWords, token);
+      if (practiceMode !== "recall") void generateAt(currentIndex + 2, sessionWords, token);
     } else {
       setPhase("result");
       // The batch SM-2 update runs in the useEffect above once phase becomes "result".
     }
+  }
+
+  function handleRecallDone(outcome: RecallOutcome) {
+    handleGrade(outcome === "clean" ? 5 : 1, outcome);
   }
 
   if (authLoading) return <p>Đang tải…</p>;
@@ -231,7 +246,7 @@ function PracticePageContent() {
 
   if (phase === "setup") {
     const previewWords = selectSessionWords(
-      records,
+      poolFor(records, practiceMode),
       { topicIds: selectedTopicIds, maxCefr, count: wordCount },
       new Date()
     );
@@ -280,6 +295,14 @@ function PracticePageContent() {
           >
             Trộn AI
           </button>
+          <button
+            type="button"
+            className={`vb-chip${practiceMode === "recall" ? " active" : ""}`}
+            aria-pressed={practiceMode === "recall"}
+            onClick={() => setPracticeMode("recall")}
+          >
+            Gõ từ
+          </button>
         </div>
         <p className="practice-preview-count">{previewWords.length} từ khớp bộ lọc hiện tại.</p>
         <button className="btn-primary" onClick={() => handleStart()} disabled={previewWords.length === 0}>
@@ -304,7 +327,9 @@ function PracticePageContent() {
         <div className="practice-progress-track">
           <div className="practice-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
-        {ex === null ? (
+        {practiceMode === "recall" ? (
+          <RecallTypingCard key={word.id} record={word} onDone={handleRecallDone} />
+        ) : ex === null ? (
           <p className="pe-loading" role="status">Đang tạo bài tập…</p>
         ) : ex.type === "flashcard" ? (
           <FlashcardCard key={word.id} record={word} onGrade={handleGrade} />
@@ -319,6 +344,43 @@ function PracticePageContent() {
     );
   }
 
+  const isRecall = sessionResults.some((r) => r.outcome !== undefined);
+  const recallGroups: { title: string; className: string; mark: string; items: SessionGradeResult[] }[] = [
+    {
+      title: "Tự nhớ được",
+      className: "practice-result-item-ok",
+      mark: "✔",
+      items: sessionResults.filter((r) => r.outcome === "clean"),
+    },
+    {
+      title: "Đúng nhờ gợi ý",
+      className: "practice-result-item-hint",
+      mark: "💡",
+      items: sessionResults.filter((r) => r.outcome === "hinted"),
+    },
+    {
+      title: "Sai / bỏ qua",
+      className: "practice-result-item-no",
+      mark: "✘",
+      items: sessionResults.filter((r) => r.outcome === "wrong" || r.outcome === "skipped"),
+    },
+  ];
+  const renderResultRow = (result: SessionGradeResult, className: string, mark: string) => {
+    const record = sessionWords.find((w) => w.id === result.vocabRecordId);
+    if (!record) return null;
+    return (
+      <li key={result.vocabRecordId} className={className}>
+        <span>{mark}</span>
+        <span className="practice-result-headword">{record.headword}</span>
+        <span className="practice-result-meaning">{record.meaning}</span>
+        <PronunciationButton
+          text={record.headword}
+          language={ttsLanguageCode(record.targetLanguage)}
+          tier="word"
+        />
+      </li>
+    );
+  };
   const correctCount = sessionResults.filter((r) => r.quality === 5).length;
   const totalCount = sessionResults.length;
   const percent = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
@@ -332,27 +394,28 @@ function PracticePageContent() {
       <p className="practice-result-sub">
         Đúng {correctCount} / {totalCount} từ
       </p>
-      <ul className="practice-result-list">
-        {sessionResults.map((result) => {
-          const record = sessionWords.find((w) => w.id === result.vocabRecordId);
-          if (!record) return null;
-          return (
-            <li
-              key={result.vocabRecordId}
-              className={result.quality === 5 ? "practice-result-item-ok" : "practice-result-item-no"}
-            >
-              <span>{result.quality === 5 ? "✔" : "✘"}</span>
-              <span className="practice-result-headword">{record.headword}</span>
-              <span className="practice-result-meaning">{record.meaning}</span>
-              <PronunciationButton
-                text={record.headword}
-                language={ttsLanguageCode(record.targetLanguage)}
-                tier="word"
-              />
-            </li>
-          );
-        })}
-      </ul>
+      {isRecall ? (
+        recallGroups
+          .filter((g) => g.items.length > 0)
+          .map((g) => (
+            <section key={g.title} className="practice-result-group">
+              <h3 className="practice-result-group-title">{g.title}</h3>
+              <ul className="practice-result-list">
+                {g.items.map((result) => renderResultRow(result, g.className, g.mark))}
+              </ul>
+            </section>
+          ))
+      ) : (
+        <ul className="practice-result-list">
+          {sessionResults.map((result) =>
+            renderResultRow(
+              result,
+              result.quality === 5 ? "practice-result-item-ok" : "practice-result-item-no",
+              result.quality === 5 ? "✔" : "✘"
+            )
+          )}
+        </ul>
+      )}
       <div className="practice-result-actions">
         <button
           type="button"
@@ -368,8 +431,9 @@ function PracticePageContent() {
           type="button"
           className="btn-primary"
           onClick={() => {
-            setPracticeMode("flashcard");
-            handleStart("flashcard");
+            const next: PracticeMode = isRecall ? "recall" : "flashcard";
+            setPracticeMode(next);
+            handleStart(next);
           }}
         >
           Ôn tập lại ngay

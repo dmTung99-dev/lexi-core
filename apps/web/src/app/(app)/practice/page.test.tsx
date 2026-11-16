@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import PracticePage from "./page";
 import { useAuthUser } from "@/lib/useAuthUser";
@@ -9,6 +9,7 @@ import { computeSm2 } from "@/lib/sm2";
 import { recordDailyActivity } from "@/lib/dailyActivity";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { generateExercise } from "@/lib/practiceExercise";
+import { getPronunciationUrl } from "@/lib/pronunciation";
 
 vi.mock("@/lib/useAuthUser", () => ({ useAuthUser: vi.fn() }));
 vi.mock("@/lib/SettingsContext", () => ({ useSettingsContext: vi.fn() }));
@@ -20,6 +21,11 @@ vi.mock("@/lib/dailyActivity", () => ({ recordDailyActivity: vi.fn() }));
 // stays REAL — the picker's short-circuits (never-reviewed word / no AI key)
 // are part of what these tests exercise.
 vi.mock("@/lib/practiceExercise", () => ({ generateExercise: vi.fn() }));
+
+vi.mock("@/lib/pronunciation", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/pronunciation")>("@/lib/pronunciation");
+  return { ...actual, getPronunciationUrl: vi.fn() };
+});
 
 let mockSearchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -660,5 +666,100 @@ describe("PracticePage (AI exercise types)", () => {
     expect(generateExercise).not.toHaveBeenCalled();
 
     randomSpy.mockRestore();
+  });
+});
+
+describe("PracticePage (Gõ từ recall mode)", () => {
+  class StubAudio {
+    preload = "";
+    currentTime = 0;
+    play = vi.fn().mockResolvedValue(undefined);
+  }
+  beforeEach(() => {
+    vi.stubGlobal("Audio", StubAudio);
+    vi.mocked(getPronunciationUrl).mockResolvedValue("u1");
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function setupRecall(records: VocabRecord[]) {
+    mockSignedIn();
+    vi.mocked(getVocabRecords).mockResolvedValue(records);
+    vi.mocked(getTopics).mockResolvedValue([]);
+    render(<PracticePage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Gõ từ" }));
+  }
+  const answerInput = () => screen.findByLabelText("Gõ từ tiếng Anh");
+  async function typeAnswer(value: string) {
+    const el = await answerInput();
+    fireEvent.change(el, { target: { value } });
+    fireEvent.keyDown(el, { key: "Enter" });
+  }
+  async function playCleanThenHinted() {
+    await typeAnswer("alpha");
+    // wait for the next card (the first card unmounts after its pause)
+    await screen.findByText("Từ 2 / 2", {}, { timeout: 3000 });
+    fireEvent.click(await screen.findByRole("button", { name: /Gợi ý/ }));
+    await typeAnswer("alpha");
+    await screen.findByText("Kết quả ôn tập", {}, { timeout: 3000 });
+  }
+  const two = () => [
+    makeRecord({ id: "1", headword: "alpha", cefrLevel: "b2" }),
+    makeRecord({ id: "2", headword: "alpha", cefrLevel: "b2" }),
+  ];
+
+  it("Gõ từ chip starts a recall session", async () => {
+    await setupRecall([makeRecord({ id: "1", headword: "alpha" })]);
+    expect(screen.getByRole("button", { name: "Gõ từ" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(await answerInput()).toBeInTheDocument();
+    expect(generateExercise).not.toHaveBeenCalled();
+  });
+
+  it("recall mode excludes sentences from the pool and the preview count", async () => {
+    await setupRecall([
+      makeRecord({ id: "1" }),
+      makeRecord({ id: "2" }),
+      makeRecord({ id: "3", inputType: "sentence" }),
+    ]);
+    expect(await screen.findByText("2 từ khớp bộ lọc hiện tại.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Flashcard" }));
+    expect(await screen.findByText("3 từ khớp bộ lọc hiện tại.")).toBeInTheDocument();
+  });
+
+  it("disables Bắt đầu when every record is a sentence", async () => {
+    await setupRecall([makeRecord({ id: "3", inputType: "sentence" })]);
+    expect(await screen.findByText("0 từ khớp bộ lọc hiện tại.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  });
+
+  it("recall outcomes write SM-2 quality 5 only for clean", async () => {
+    await setupRecall(two());
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await playCleanThenHinted();
+    await waitFor(() => expect(computeSm2).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(computeSm2).mock.calls[0][1]).toBe(5);
+    expect(vi.mocked(computeSm2).mock.calls[1][1]).toBe(1);
+    expect(updateVocabRecordSm2).toHaveBeenCalledTimes(2);
+  });
+
+  it("recall summary groups words", async () => {
+    await setupRecall(two());
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await playCleanThenHinted();
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("Đúng 1 / 2 từ")).toBeInTheDocument();
+    expect(screen.getByText("Tự nhớ được")).toBeInTheDocument();
+    expect(screen.getByText("Đúng nhờ gợi ý")).toBeInTheDocument();
+    expect(screen.queryByText("Sai / bỏ qua")).toBeNull();
+  });
+
+  it('"Ôn tập lại ngay" keeps Gõ từ', async () => {
+    await setupRecall(two());
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await playCleanThenHinted();
+    fireEvent.click(screen.getByRole("button", { name: "Ôn tập lại ngay" }));
+    expect(await answerInput()).toBeInTheDocument();
   });
 });

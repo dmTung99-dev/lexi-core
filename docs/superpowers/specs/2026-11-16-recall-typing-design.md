@@ -1,7 +1,7 @@
 # LexiCore — Ôn tập: "Gõ từ" recall mode (web)
 
 **Date:** 2026-11-16
-**Status:** Approved (2026-11-16). UI mockup: https://claude.ai/artifact/GugcoAjCHd6sWoryfc4bSA
+**Status:** Implemented (2026-11-16). UI mockup: https://claude.ai/artifact/GugcoAjCHd6sWoryfc4bSA
 **Covers:** A third Ôn tập mode next to Flashcard and Trộn AI: the learner sees the Vietnamese meaning and the definition, and must type the full English word/phrase from memory, helped by a letter-pattern hint that scales with the word's CEFR level, a limited "Gợi ý" button, and a skip.
 **Platform:** web only (`apps/web`). Flutter later, separately.
 
