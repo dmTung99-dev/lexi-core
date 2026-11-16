@@ -30,6 +30,7 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
   const [result, setResult] = useState<RecallOutcome | null>(null);
   const [audioFailed, setAudioFailed] = useState(false);
 
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playWhenReady = useRef(false);
   const timer = useRef<number | null>(null);
@@ -99,9 +100,26 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
     } else if (audioRef.current) {
       play(audioRef.current);
     }
+    inputRef.current?.focus();
+  }
+
+  function handleSkip() {
+    finish("skipped");
+    inputRef.current?.focus();
   }
 
   const { slots, overflow } = fillSlots(record.headword, revealed, typed);
+  const placeholder = fillSlots(record.headword, revealed, "")
+    .slots.map((s) => (s.source === "empty" ? "_" : s.ch))
+    .join("");
+  // Group letter slots per word part so lines wrap only at separators.
+  const parts: Array<{ sep: boolean; items: typeof slots }> = [];
+  for (const s of slots) {
+    const sep = s.kind === "sep";
+    const last = parts[parts.length - 1];
+    if (!sep && last && !last.sep) last.items.push(s);
+    else parts.push({ sep, items: [s] });
+  }
   const mask = (t: string) => maskHeadword(t, record.headword);
   const correct = result === "clean" || result === "hinted";
   const showAnswer = result === "wrong" || result === "skipped";
@@ -118,14 +136,19 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
       {record.definition && <p className="recall-definition">{mask(record.definition)}</p>}
 
       <div className="recall-pattern" role="group" aria-label="Gợi ý độ dài">
-        {slots.map((s, i) =>
-          s.kind === "sep" ? (
+        {parts.map((p, i) =>
+          p.sep ? (
             <span key={i} className="recall-sep">
-              {s.ch === " " ? " " : s.ch}
+              {/* U+00A0: a plain space would collapse at a flex item edge */}
+              {p.items[0].ch === " " ? "\u00A0" : p.items[0].ch}
             </span>
           ) : (
-            <span key={i} className={`recall-slot recall-slot-${s.source}`}>
-              {s.source === "empty" ? "_" : s.ch}
+            <span key={i} className="recall-word">
+              {p.items.map((s, j) => (
+                <span key={j} className={`recall-slot recall-slot-${s.source}`}>
+                  {s.source === "empty" ? "_" : s.ch}
+                </span>
+              ))}
             </span>
           )
         )}
@@ -142,7 +165,9 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
 
       <div className={inputWrapClass}>
         <input
+          ref={inputRef}
           className="recall-input"
+          placeholder={placeholder}
           aria-label="Gõ từ tiếng Anh"
           value={typed}
           readOnly={result !== null}
@@ -153,7 +178,7 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
           spellCheck={false}
           onChange={(e) => setTyped(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
               e.preventDefault();
               submit();
             }
@@ -174,6 +199,7 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
         <button
           type="button"
           className="recall-btn"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={handleHint}
           disabled={result !== null || (listenMode && (audioFailed || !ttsLang))}
         >
@@ -182,7 +208,8 @@ export function RecallTypingCard({ record, onDone }: RecallTypingCardProps) {
         <button
           type="button"
           className="recall-btn recall-btn-skip"
-          onClick={() => finish("skipped")}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleSkip}
           disabled={result !== null || !listenMode}
         >
           Bỏ qua

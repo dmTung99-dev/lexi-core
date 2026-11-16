@@ -241,4 +241,28 @@ describe("RecallTypingCard", () => {
     expect(screen.getByText("Đáp án")).toBeTruthy();
     expect(screen.queryByText(/boom|lỗi/i)).toBeNull();
   });
+
+  it("keeps focus on the input after clicking a hint", async () => {
+    await setup();
+    const btn = screen.getByRole("button", { name: "Gợi ý (3)" });
+    expect(fireEvent.mouseDown(btn)).toBe(false);
+    fireEvent.click(btn);
+    expect(document.activeElement).toBe(input());
+  });
+
+  it("ignores Enter while an IME composition is active", async () => {
+    const { onDone } = await setup();
+    type("behind schedule");
+    fireEvent.keyDown(input(), { key: "Enter", isComposing: true });
+    expect(screen.queryByText("✓ Chính xác")).toBeNull();
+    enter();
+    expect(screen.getByText("✓ Chính xác")).toBeTruthy();
+    advance(1200);
+    expect(onDone).toHaveBeenCalled();
+  });
+
+  it("uses the pattern as the input placeholder", async () => {
+    await setup(PLAN);
+    expect(input().placeholder).toBe("____");
+  });
 });

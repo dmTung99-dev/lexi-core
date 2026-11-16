@@ -1237,6 +1237,17 @@ button.btn-primary:disabled {
   color: var(--accent);
 }
 
+.recall-slot-conflict {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.recall-word {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .recall-overflow {
   color: var(--danger);
 }

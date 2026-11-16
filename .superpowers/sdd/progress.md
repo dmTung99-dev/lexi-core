@@ -2533,4 +2533,4 @@ Plan: docs/superpowers/plans/2026-11-11-prep-continuity.md. Base 6b4ed2c, run on
 ## 2026-11-16 — Gõ từ (recall typing)
 
 - Spec: `docs/superpowers/specs/2026-11-16-recall-typing-design.md`. Branch `feat/recall-typing`. Web only.
-- Task 3: complete (practice page wiring: third "Gõ từ" chip, sentence-free pool, quality 5 only for clean, 3-group summary, "Ôn tập lại ngay" keeps Gõ từ; README + spec status).
+- Complete: Task 1 recall logic (`recallHint.ts`: pattern/hints/live fill/compare/mask), Task 2 `RecallTypingCard`, Task 3 practice page wiring ( third "Gõ từ" chip, sentence-free pool, quality 5 only for clean, 3-group summary, "Ôn tập lại ngay" keeps Gõ từ; README + spec status).

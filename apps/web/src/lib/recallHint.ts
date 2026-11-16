@@ -119,7 +119,7 @@ export function hintReveal(headword: string, revealed: Set<number>, typed: strin
 export interface RecallSlot {
   kind: "sep" | "letter";
   ch: string;
-  source: "typed" | "revealed" | "empty";
+  source: "typed" | "revealed" | "empty" | "conflict";
 }
 
 export function fillSlots(
@@ -134,7 +134,12 @@ export function fillSlots(
     if (isSeparator(h[i])) {
       slots.push({ kind: "sep", ch: h[i], source: "revealed" });
     } else if (i < t.length) {
-      slots.push({ kind: "letter", ch: t[i], source: "typed" });
+      // A revealed slot whose typed char differs shows the revealed letter (a hint must stay visible).
+      if (revealed.has(i) && t[i].toLowerCase() !== h[i].toLowerCase()) {
+        slots.push({ kind: "letter", ch: h[i], source: "conflict" });
+      } else {
+        slots.push({ kind: "letter", ch: t[i], source: "typed" });
+      }
     } else if (revealed.has(i)) {
       slots.push({ kind: "letter", ch: h[i], source: "revealed" });
     } else {
@@ -161,9 +166,19 @@ export function answersMatch(input: string, headword: string): boolean {
 export function maskHeadword(text: string, headword: string): string {
   const h = collapse(headword);
   if (!h) return text;
-  const escaped = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/['’]/g, "['’]");
+  const escaped = esc(h).replace(/ /g, "\\s+");
   const single = !h.includes(" ");
-  const suffix = single ? "(?:es|ed|ing|s|d)?" : "";
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}${suffix}(?![\\p{L}\\p{N}])`, "giu");
+  let body = escaped;
+  if (single) {
+    const alts = [`${escaped}(?:es|ed|ing|s|d)?`];
+    const last = h[h.length - 1];
+    const stem = esc(h.slice(0, -1));
+    if (last === "e") alts.push(`${stem}(?:ing|ed)`);
+    if (last === "y" && h.length > 1 && !/[aeiou]/i.test(h[h.length - 2])) alts.push(`${stem}i(?:es|ed)`);
+    if (/[b-df-hj-np-tv-z]/i.test(last)) alts.push(`${escaped}${esc(last)}(?:ed|ing)`);
+    body = `(?:${alts.join("|")})`;
+  }
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, "giu");
   return text.replace(re, "___");
 }

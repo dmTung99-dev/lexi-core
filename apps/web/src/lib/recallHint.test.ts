@@ -58,8 +58,21 @@ describe("recallHint", () => {
   it("maskHeadword handles hyphenated headwords", () => {
     expect(maskHeadword("a heads-up call", "heads-up")).toBe("a ___ call");
   });
-  it("fillSlots: typed char wins over revealed letter", () => {
-    expect(fillSlots("borrow", new Set([1]), "bx").slots[1]).toEqual({ kind: "letter", ch: "x", source: "typed" });
+  it("maskHeadword covers e-drop, y->i, doubled consonant and apostrophes", () => {
+    expect(maskHeadword("the act of negotiating", "negotiate")).toBe("the act of ___");
+    expect(maskHeadword("He studied", "study")).toBe("He ___");
+    expect(maskHeadword("She studies", "study")).toBe("She ___");
+    expect(maskHeadword("It stopped", "stop")).toBe("It ___");
+    expect(maskHeadword("stopping now", "stop")).toBe("___ now");
+    expect(maskHeadword("I don’t know", "don't")).toBe("I ___ know");
+  });
+  it("fillSlots: revealed letter shows (conflict) when typed char differs", () => {
+    expect(fillSlots("borrow", new Set([1]), "bx").slots[1]).toEqual({ kind: "letter", ch: "o", source: "conflict" });
+    expect(fillSlots("borrow", new Set([1]), "bo").slots[1]).toEqual({ kind: "letter", ch: "o", source: "typed" });
+    const revealed = hintReveal("borrow", new Set(), "barrow");
+    const shown = fillSlots("borrow", revealed, "barrow").slots.map((x) => x.ch).join("");
+    expect(shown).not.toBe("barrow");
+    expect(fillSlots("borrow", new Set([1]), "barrow").slots[1]).toEqual({ kind: "letter", ch: "o", source: "conflict" });
     expect(fillSlots("borrow", new Set([1]), "b").slots[1]).toEqual({ kind: "letter", ch: "o", source: "revealed" });
   });
 });
