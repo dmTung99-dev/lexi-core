@@ -17,7 +17,7 @@
 - Pre-reveal fractions: A1/A2 **0**, B1 **0.15**, B2 **0.25**, C1 **0.35**, C2 **0.40**; `round(fraction × letters)`; ≥ 1 for B1+ when letters ≥ 4; never more than `floor(letters / 2)`; deterministic per headword.
 - Separators (always shown, never hidden): space, `-`, `'`, `’`, `.`, `/`.
 - Hints: **3** presses; each reveals `max(1, ceil(0.25 × eligible))`; eligible = hidden letters not already typed correctly at that slot; never reveal the last hidden letter; a press with nothing eligible is disabled and does not consume a hint.
-- "Bỏ qua" enabled only when hints left = 0.
+- Listen hint: when letter hints left = 0 **or** `hintAvailable` is false, the hint button becomes **"Nghe phát âm"** (replayable, restarts the preloaded audio, marks hinted; disabled when the audio failed). "Bỏ qua" is enabled from that same moment.
 - Delays: correct **1200 ms**, wrong/skipped **2000 ms**.
 - Compare: trim, collapse whitespace, lowercase, NFC, `’`→`'`, `–`/`—`→`-`.
 - Scoring: `clean` → quality 5; `hinted`/`wrong`/`skipped` → quality 1.
@@ -134,6 +134,9 @@ Layout per the mockup: level badge (`record.cefrLevel.toUpperCase()`), meaning (
   - `"wrong answer shows the answer and reports wrong after 2000 ms"` → type "behind schedual", Enter; "Đáp án" + "behind schedule" shown; `onDone("wrong")` at 2000 ms.
   - `"a hint makes a correct answer count as hinted"` → click "Gợi ý (3)"; label becomes "Gợi ý (2)"; type correct; Enter; after 1200 ms `onDone("hinted")`.
   - `"skip unlocks only after 3 hints and reports skipped"` → "Bỏ qua" disabled; click hint ×3 (type nothing); "Bỏ qua" enabled; click; `onDone("skipped")` at 2000 ms.
+  - `"after the letter hints the button becomes a replayable listen hint"` → click "Gợi ý" ×3; a button "Nghe phát âm" appears; clicking it twice calls the stub audio's `play()` twice (and resets `currentTime` to 0 before each); a correct answer afterwards reports `"hinted"`.
+  - `"listen hint and skip unlock early when no letter is eligible"` → for "plan" (A2), type "pla" and press Gợi ý until disabled-for-letters → "Nghe phát âm" and "Bỏ qua" available even though hints remain.
+  - `"listen hint is disabled when the audio failed"` → `getPronunciationUrl` rejects → after 3 hints "Nghe phát âm" is disabled; "Bỏ qua" still works.
   - `"Enter twice and Enter during the pause report once"` → type correct, Enter, Enter, advance 1200 ms → `onDone` called once; input is read-only after submit.
   - `"typed letters fill the pattern"` → type "beh"; the pattern's first three slots show b, e, h.
   - `"empty Enter does nothing"`.

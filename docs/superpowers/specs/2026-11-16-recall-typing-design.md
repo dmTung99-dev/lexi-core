@@ -66,7 +66,8 @@ Count = `round(fraction × letters)`, at least 1 for B1+ when the word has ≥ 4
 ### 3.4 Gợi ý and Bỏ qua
 - Up to **3** presses. Each reveals `max(1, ceil(25% of eligible letters))` more, never the last hidden letter (at least one letter always stays hidden until the answer is revealed).
 - **Eligible letters (owner-approved):** hidden letters whose slot the learner has **not already typed correctly** (empty or wrong at that position). A hint never spends itself on a letter already typed right. If no letter is eligible, the press reveals nothing and does not use up a hint (the button is disabled in that state).
-- "Bỏ qua" enables once all 3 hints are used (owner: "nhắc 2-3 lần mà không được thì có thể bỏ qua").
+- **Last hint — listen (owner-approved):** once the letter hints are used up **or** no letter is eligible any more, the "Gợi ý" button becomes **"Nghe phát âm"**, which plays the preloaded pronunciation and can be pressed any number of times (each press restarts it). Pressing it marks the word hinted (it normally already is). If the audio is unavailable the button is disabled.
+- "Bỏ qua" enables at the same moment the listen hint becomes available (owner: "nhắc 2-3 lần mà không được thì có thể bỏ qua").
 - Any hint press marks the word **hinted** for scoring (§3.6). Pre-revealed letters do not.
 
 ### 3.5 Checking and rhythm
