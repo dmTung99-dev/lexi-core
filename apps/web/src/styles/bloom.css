@@ -1178,6 +1178,174 @@ button.btn-primary:disabled {
   border: none;
 }
 
+/* ---- Gõ từ (RecallTypingCard) ---- */
+.recall-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 16px);
+  text-align: center;
+}
+
+.recall-level {
+  font-size: max(var(--type-min), calc(12px * var(--type-scale)));
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.recall-meaning p {
+  margin: 0;
+  font-size: calc(20px * var(--type-scale));
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.recall-definition {
+  margin: 0;
+  font-style: italic;
+  font-size: max(var(--type-min), calc(14px * var(--type-scale)));
+  color: var(--ink-soft);
+}
+
+.recall-pattern {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: calc(22px * var(--type-scale));
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.recall-slot {
+  min-width: 1ch;
+  margin: 0 2px;
+}
+
+.recall-slot-empty {
+  color: var(--ink-soft);
+}
+
+.recall-slot-revealed {
+  color: var(--accent);
+}
+
+.recall-overflow {
+  color: var(--danger);
+}
+
+.recall-answer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.recall-answer-label {
+  font-size: max(var(--type-min), calc(12px * var(--type-scale)));
+  color: var(--ink-soft);
+}
+
+.recall-answer-word {
+  font-weight: 700;
+  font-size: calc(17px * var(--type-scale));
+  color: var(--ink);
+}
+
+.recall-answer-ipa {
+  font-size: max(var(--type-min), calc(13px * var(--type-scale)));
+  color: var(--ink-soft);
+}
+
+.recall-input-wrap {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.recall-input-wrap.recall-ok {
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+
+.recall-input-wrap.recall-bad {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.recall-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: calc(18px * var(--type-scale));
+  outline: none;
+}
+
+.recall-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  font-size: max(var(--type-min), calc(14px * var(--type-scale)));
+}
+
+.recall-feedback-ok {
+  color: var(--success);
+}
+
+.recall-feedback-bad {
+  color: var(--danger);
+}
+
+.recall-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.recall-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: max(var(--type-min), calc(14px * var(--type-scale)));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recall-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.recall-btn-skip {
+  color: var(--ink-soft);
+}
+
+/* Phone 16px input size comes from the global iOS input guard. */
+
 .practice-filters {
   display: flex;
   gap: 12px;
