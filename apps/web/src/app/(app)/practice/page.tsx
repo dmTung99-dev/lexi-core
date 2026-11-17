@@ -304,6 +304,11 @@ function PracticePageContent() {
             Gõ từ
           </button>
         </div>
+        {practiceMode === "recall" && (
+          <p className="practice-mode-note">
+            Xem nghĩa và định nghĩa, gõ lại đầy đủ từ tiếng Anh. Chỉ ôn từ và cụm từ (bỏ qua mục dạng câu).
+          </p>
+        )}
         <p className="practice-preview-count">{previewWords.length} từ khớp bộ lọc hiện tại.</p>
         <button className="btn-primary" onClick={() => handleStart()} disabled={previewWords.length === 0}>
           Bắt đầu
@@ -345,23 +350,28 @@ function PracticePageContent() {
   }
 
   const isRecall = sessionResults.some((r) => r.outcome !== undefined);
-  const recallGroups: { title: string; className: string; mark: string; items: SessionGradeResult[] }[] = [
+  const recallGroups: {
+    title: string;
+    note: string;
+    className: string;
+    items: SessionGradeResult[];
+  }[] = [
     {
       title: "Tự nhớ được",
+      note: "Giãn lịch ôn như bình thường",
       className: "practice-result-item-ok",
-      mark: "✔",
       items: sessionResults.filter((r) => r.outcome === "clean"),
     },
     {
       title: "Đúng nhờ gợi ý",
+      note: "Sẽ quay lại ôn sớm",
       className: "practice-result-item-hint",
-      mark: "💡",
       items: sessionResults.filter((r) => r.outcome === "hinted"),
     },
     {
       title: "Sai / bỏ qua",
+      note: "Sẽ quay lại ôn sớm",
       className: "practice-result-item-no",
-      mark: "✘",
       items: sessionResults.filter((r) => r.outcome === "wrong" || r.outcome === "skipped"),
     },
   ];
@@ -387,24 +397,66 @@ function PracticePageContent() {
 
   return (
     <div>
-      <h2 className="scr-title">Kết quả ôn tập</h2>
-      <div className="practice-result-circle" style={{ ["--pct" as unknown as string]: `${percent}%` }}>
-        <span>{percent}%</span>
-      </div>
-      <p className="practice-result-sub">
-        Đúng {correctCount} / {totalCount} từ
-      </p>
       {isRecall ? (
-        recallGroups
-          .filter((g) => g.items.length > 0)
-          .map((g) => (
-            <section key={g.title} className="practice-result-group">
-              <h3 className="practice-result-group-title">{g.title}</h3>
-              <ul className="practice-result-list">
-                {g.items.map((result) => renderResultRow(result, g.className, g.mark))}
-              </ul>
-            </section>
-          ))
+        <div className="practice-result-header">
+          <div
+            className="practice-result-circle practice-result-circle-recall"
+            style={{ ["--pct" as unknown as string]: `${percent}%` }}
+          >
+            <span>{percent}%</span>
+          </div>
+          <div>
+            <h2 className="scr-title">Kết quả ôn tập</h2>
+            <p className="practice-result-sub">
+              Tự nhớ được {correctCount} / {totalCount} từ · {recallGroups[1].items.length} từ nhờ gợi ý ·{" "}
+              {recallGroups[2].items.length} từ sai hoặc bỏ qua
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h2 className="scr-title">Kết quả ôn tập</h2>
+          <div className="practice-result-circle" style={{ ["--pct" as unknown as string]: `${percent}%` }}>
+            <span>{percent}%</span>
+          </div>
+          <p className="practice-result-sub">
+            Đúng {correctCount} / {totalCount} từ
+          </p>
+        </>
+      )}
+      {isRecall ? (
+        <div className="practice-result-columns">
+          {recallGroups
+            .filter((g) => g.items.length > 0)
+            .map((g) => (
+              <section key={g.title} className={`practice-result-col ${g.className}`}>
+                <header className="practice-result-col-head">
+                  <h3 className="practice-result-group-title">{g.title}</h3>
+                  <span className="practice-result-col-count">{g.items.length}</span>
+                </header>
+                <p className="practice-result-col-note">{g.note}</p>
+                <ul className="practice-result-col-list">
+                  {g.items.map((result) => {
+                    const record = sessionWords.find((w) => w.id === result.vocabRecordId);
+                    if (!record) return null;
+                    return (
+                      <li key={result.vocabRecordId}>
+                        <div className="practice-result-col-text">
+                          <span className="practice-result-headword">{record.headword}</span>
+                          <span className="practice-result-meaning">{record.meaning}</span>
+                        </div>
+                        <PronunciationButton
+                          text={record.headword}
+                          language={ttsLanguageCode(record.targetLanguage)}
+                          tier="word"
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+        </div>
       ) : (
         <ul className="practice-result-list">
           {sessionResults.map((result) =>
@@ -416,7 +468,7 @@ function PracticePageContent() {
           )}
         </ul>
       )}
-      <div className="practice-result-actions">
+      <div className={`practice-result-actions${isRecall ? " practice-result-actions-recall" : ""}`}>
         <button
           type="button"
           className="btn-secondary"
@@ -436,7 +488,7 @@ function PracticePageContent() {
             handleStart(next);
           }}
         >
-          Ôn tập lại ngay
+          {isRecall ? "Ôn tập lại ngay (Gõ từ)" : "Ôn tập lại ngay"}
         </button>
       </div>
     </div>

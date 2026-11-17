@@ -173,29 +173,33 @@ export default function VocabBankPage() {
 
   return (
     <>
-      <h2 className="scr-title">Ngân hàng từ vựng</h2>
-      <p className="scr-sub">{records.length} từ trong Ngân hàng từ vựng.</p>
+      <div className="vb-header">
+        <div className="vb-header-text">
+          <h2 className="scr-title">Ngân hàng từ vựng</h2>
+          <p className="scr-sub">{records.length} từ trong Ngân hàng từ vựng.</p>
+        </div>
+        <div className="vb-search">
+          <input
+            type="text"
+            aria-label="Tìm từ"
+            placeholder="Tìm theo từ hoặc nghĩa…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query !== "" && (
+            <button
+              type="button"
+              className="vb-search-clear"
+              aria-label="Xoá tìm kiếm"
+              onClick={() => setQuery("")}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
       {deleteError && <p role="alert">Lỗi xoá từ: {deleteError}</p>}
       {refineError && <p role="alert">{refineError}</p>}
-      <div className="vb-search">
-        <input
-          type="text"
-          aria-label="Tìm từ"
-          placeholder="Tìm theo từ hoặc nghĩa…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query !== "" && (
-          <button
-            type="button"
-            className="vb-search-clear"
-            aria-label="Xoá tìm kiếm"
-            onClick={() => setQuery("")}
-          >
-            ✕
-          </button>
-        )}
-      </div>
       <div className="vb-toolbar">
         <button className={`vb-chip${!filterActive ? " active" : ""}`} onClick={clearFilters}>
           Tất cả ({records.length})

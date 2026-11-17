@@ -3,8 +3,6 @@ import type { VocabRecord } from "./vocabRecords";
 export type RecallOutcome = "clean" | "hinted" | "wrong" | "skipped";
 
 export const RECALL_HINTS = 3;
-export const RECALL_CORRECT_MS = 1200;
-export const RECALL_WRONG_MS = 2000;
 
 const SEPARATORS = new Set([" ", "-", "'", "’", ".", "/"]);
 

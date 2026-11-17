@@ -88,26 +88,26 @@ describe("RecallTypingCard", () => {
     expect(screen.queryByText(/behind schedule/)).toBeNull();
   });
 
-  it("correct answer goes green and reports clean after 1200 ms", async () => {
+  it("correct answer goes green and waits for a second Enter to report clean", async () => {
     const { onDone } = await setup();
     type("Behind schedule");
     enter();
     expect(screen.getByText("✓ Chính xác")).toBeTruthy();
-    advance(1199);
+    advance(10000);
     expect(onDone).not.toHaveBeenCalled();
-    advance(1);
+    enter();
     expect(onDone).toHaveBeenCalledWith("clean");
   });
 
-  it("wrong answer shows the answer and reports wrong after 2000 ms", async () => {
+  it("wrong answer shows the answer and reports wrong on the next Enter", async () => {
     const { onDone } = await setup();
     type("behind schedual");
     enter();
     expect(screen.getByText("Đáp án")).toBeTruthy();
     expect(screen.getByText("behind schedule")).toBeTruthy();
-    advance(1999);
+    advance(10000);
     expect(onDone).not.toHaveBeenCalled();
-    advance(1);
+    enter();
     expect(onDone).toHaveBeenCalledWith("wrong");
   });
 
@@ -117,7 +117,7 @@ describe("RecallTypingCard", () => {
     expect(screen.getByRole("button", { name: "Gợi ý (2)" })).toBeTruthy();
     type("behind schedule");
     enter();
-    advance(1200);
+    enter();
     expect(onDone).toHaveBeenCalledWith("hinted");
   });
 
@@ -128,9 +128,9 @@ describe("RecallTypingCard", () => {
     for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: /^Gợi ý/ }));
     expect(skip().disabled).toBe(false);
     fireEvent.click(skip());
-    advance(1999);
+    advance(10000);
     expect(onDone).not.toHaveBeenCalled();
-    advance(1);
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
     expect(onDone).toHaveBeenCalledWith("skipped");
   });
 
@@ -147,7 +147,7 @@ describe("RecallTypingCard", () => {
     expect(audio.play).toHaveBeenCalledTimes(2);
     type("behind schedule");
     enter();
-    advance(1200);
+    enter();
     expect(onDone).toHaveBeenCalledWith("hinted");
   });
 
@@ -170,19 +170,55 @@ describe("RecallTypingCard", () => {
     for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: /^Gợi ý/ }));
     expect((screen.getByRole("button", { name: "Nghe phát âm" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Bỏ qua" }));
-    advance(2000);
+    enter();
     expect(onDone).toHaveBeenCalledWith("skipped");
   });
 
-  it("Enter twice and Enter during the pause report once", async () => {
+  it("further Enters and Tiếp tục after advancing report only once", async () => {
     const { onDone } = await setup();
     type("behind schedule");
     enter();
-    enter();
     expect(input().readOnly).toBe(true);
-    advance(1200);
+    enter();
+    enter();
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it("a held-down (repeating) Enter does not advance past the result", async () => {
+    const { onDone } = await setup();
+    type("behind schedule");
+    enter();
+    fireEvent.keyDown(input(), { key: "Enter", repeat: true });
+    expect(onDone).not.toHaveBeenCalled();
     enter();
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it("Tab uses the hint button: letter hints, then listen, then replay after grading", async () => {
+    const { onDone } = await setup();
+    const tab = (extra: Record<string, unknown> = {}) =>
+      fireEvent.keyDown(input(), { key: "Tab", ...extra });
+    tab();
+    expect(screen.getByRole("button", { name: "Gợi ý (2)" })).toBeTruthy();
+    tab({ repeat: true });
+    expect(screen.getByRole("button", { name: "Gợi ý (2)" })).toBeTruthy();
+    tab({ shiftKey: true });
+    expect(screen.getByRole("button", { name: "Gợi ý (2)" })).toBeTruthy();
+    tab();
+    tab();
+    expect(screen.getByRole("button", { name: "Nghe phát âm" })).toBeTruthy();
+    const audio = StubAudio.instances[0];
+    tab();
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    type("behind schedule");
+    enter();
+    const playsAfterGrade = vi.mocked(audio.play).mock.calls.length;
+    tab();
+    expect(audio.play).toHaveBeenCalledTimes(playsAfterGrade + 1);
+    expect(onDone).not.toHaveBeenCalled();
+    enter();
+    expect(onDone).toHaveBeenCalledWith("hinted");
   });
 
   it("typed letters fill the pattern", async () => {
@@ -257,12 +293,13 @@ describe("RecallTypingCard", () => {
     expect(screen.queryByText("✓ Chính xác")).toBeNull();
     enter();
     expect(screen.getByText("✓ Chính xác")).toBeTruthy();
-    advance(1200);
+    enter();
     expect(onDone).toHaveBeenCalled();
   });
 
-  it("uses the pattern as the input placeholder", async () => {
+  it("shows the length pattern as slots, not as an input placeholder", async () => {
     await setup(PLAN);
-    expect(input().placeholder).toBe("____");
+    expect(input().placeholder).toBe("");
+    expect(screen.getByLabelText("Gợi ý độ dài").querySelectorAll(".recall-slot").length).toBe(4);
   });
 });

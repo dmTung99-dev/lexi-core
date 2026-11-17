@@ -694,11 +694,12 @@ describe("PracticePage (Gõ từ recall mode)", () => {
   async function typeAnswer(value: string) {
     const el = await answerInput();
     fireEvent.change(el, { target: { value } });
-    fireEvent.keyDown(el, { key: "Enter" });
+    fireEvent.keyDown(el, { key: "Enter" }); // grade
+    fireEvent.keyDown(el, { key: "Enter" }); // next word
   }
   async function playCleanThenHinted() {
     await typeAnswer("alpha");
-    // wait for the next card (the first card unmounts after its pause)
+    // wait for the next card
     await screen.findByText("Từ 2 / 2", {}, { timeout: 3000 });
     fireEvent.click(await screen.findByRole("button", { name: /Gợi ý/ }));
     await typeAnswer("alpha");
@@ -749,7 +750,9 @@ describe("PracticePage (Gõ từ recall mode)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     await playCleanThenHinted();
     expect(screen.getByText("50%")).toBeInTheDocument();
-    expect(screen.getByText("Đúng 1 / 2 từ")).toBeInTheDocument();
+    expect(
+      screen.getByText("Tự nhớ được 1 / 2 từ · 1 từ nhờ gợi ý · 0 từ sai hoặc bỏ qua")
+    ).toBeInTheDocument();
     expect(screen.getByText("Tự nhớ được")).toBeInTheDocument();
     expect(screen.getByText("Đúng nhờ gợi ý")).toBeInTheDocument();
     expect(screen.queryByText("Sai / bỏ qua")).toBeNull();
@@ -759,7 +762,7 @@ describe("PracticePage (Gõ từ recall mode)", () => {
     await setupRecall(two());
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     await playCleanThenHinted();
-    fireEvent.click(screen.getByRole("button", { name: "Ôn tập lại ngay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ôn tập lại ngay (Gõ từ)" }));
     expect(await answerInput()).toBeInTheDocument();
   });
 });
