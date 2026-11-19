@@ -8,6 +8,8 @@ export interface PronunciationCacheKey {
   language: "vi" | "en";
   voiceId: string;
   text: string;
+  /** Cloud Run voice slot that renders voiceId; omitted = the service default. */
+  voice?: "male1" | "male2" | "female1" | "female2";
 }
 
 export interface MinimalCacheFile {
@@ -44,7 +46,7 @@ export async function getOrCreatePronunciation(
   const file = bucket.file(path);
   const [exists] = await file.exists();
   if (!exists) {
-    const audio = await synthesizeViaCloudRun(serviceUrl, key.text, key.language);
+    const audio = await synthesizeViaCloudRun(serviceUrl, key.text, key.language, key.voice);
     await file.save(audio, { metadata: { contentType: "audio/wav" } });
   }
   return publicDownloadUrl(bucket.name, path);

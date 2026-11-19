@@ -8,9 +8,13 @@ if (getApps().length === 0) {
   initializeApp();
 }
 
-const VOICE_IDS: Record<"vi" | "en", string> = {
-  vi: "vi_VN-vais1000-medium",
-  en: "en_US-lessac-medium",
+// voiceId names the model (and keys the shared audio cache); voice is the
+// Cloud Run service's voice slot for it. English uses hfc_female, not the
+// service default lessac: lessac garbles consonant clusters in isolated words
+// (e.g. "significant" -> "si-kən-di-fi-kənt"); owner A/B-tested 2026-11-19.
+const VOICES: Record<"vi" | "en", { voiceId: string; voice?: "female2" }> = {
+  vi: { voiceId: "vi_VN-vais1000-medium" },
+  en: { voiceId: "en_US-hfc_female-medium", voice: "female2" },
 };
 
 export interface GetPronunciationRequest {
@@ -54,8 +58,9 @@ export async function getPronunciationHandler(
     const url = await getOrCreatePronunciation(getStorage().bucket(), serviceUrl, {
       tier,
       language,
-      voiceId: VOICE_IDS[language],
+      voiceId: VOICES[language].voiceId,
       text,
+      voice: VOICES[language].voice,
     });
     return { url };
   } catch (err) {

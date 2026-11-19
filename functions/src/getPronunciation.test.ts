@@ -69,6 +69,25 @@ describe("getPronunciationHandler", () => {
     );
     expect(result).toEqual({ url: "https://firebasestorage.googleapis.com/x?alt=media" });
   });
+
+  it("renders English with the hfc_female voice (lessac garbles isolated words)", async () => {
+    vi.stubEnv("TTS_STT_SERVICE_URL", "https://tts-stt.a.run.app");
+    vi.mocked(getOrCreatePronunciation).mockResolvedValue("u");
+
+    await getPronunciationHandler(makeRequest({ text: "significant", language: "en", tier: "word" }));
+
+    expect(getOrCreatePronunciation).toHaveBeenCalledWith(
+      { name: "lexi-core.firebasestorage.app" },
+      "https://tts-stt.a.run.app",
+      {
+        tier: "word",
+        language: "en",
+        voiceId: "en_US-hfc_female-medium",
+        voice: "female2",
+        text: "significant",
+      }
+    );
+  });
 });
 
 describe("getPronunciation region", () => {

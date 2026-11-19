@@ -98,11 +98,17 @@ describe("getOrCreatePronunciation", () => {
     await getOrCreatePronunciation(bucket, "https://tts-stt.a.run.app", {
       tier: "sentence",
       language: "en",
-      voiceId: "en_US-lessac-medium",
+      voiceId: "en_US-hfc_female-medium",
       text: "hello",
+      voice: "female2",
     });
 
-    expect(synthesizeViaCloudRun).toHaveBeenCalledWith("https://tts-stt.a.run.app", "hello", "en");
+    expect(synthesizeViaCloudRun).toHaveBeenCalledWith(
+      "https://tts-stt.a.run.app",
+      "hello",
+      "en",
+      "female2"
+    );
     expect(save).toHaveBeenCalledWith(Buffer.from("wav-bytes"), {
       metadata: { contentType: "audio/wav" },
     });
